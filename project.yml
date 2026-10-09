@@ -1,0 +1,24 @@
+name: GhostBrowser
+options:
+  bundleIdPrefix: com.local.privacy
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+targets:
+  GhostBrowser:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: GhostBrowser
+    settings:
+      base:
+        PRODUCT_NAME: "GhostBrowser"
+        PRODUCT_BUNDLE_IDENTIFIER: "com.local.privacy.GhostBrowser"
+        TARGETED_DEVICE_FAMILY: "2" # 2 = iPad only
+        INFOPLIST_FILE: "GhostBrowser/Info.plist"
+        SWIFT_VERSION: "5.9"
+        ENABLE_BITCODE: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGN_IDENTITY: ""
