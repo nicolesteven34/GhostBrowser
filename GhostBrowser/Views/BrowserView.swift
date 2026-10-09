@@ -106,10 +106,22 @@ public struct BrowserView: UIViewRepresentable {
             webView.customUserAgent = privacyProfile.effectiveUserAgent
         }
 
+        // Handle navigation to newly submitted URL
+        if let targetURL = URL(string: currentURLString),
+           let current = webView.url?.absoluteString,
+           current != currentURLString,
+           !webView.isLoading {
+            webView.load(URLRequest(url: targetURL))
+        }
+
         // Check reload trigger
         if context.coordinator.lastReloadTrigger != reloadTrigger {
             context.coordinator.lastReloadTrigger = reloadTrigger
-            webView.reload()
+            if let targetURL = URL(string: currentURLString), webView.url?.absoluteString != currentURLString {
+                webView.load(URLRequest(url: targetURL))
+            } else {
+                webView.reload()
+            }
         }
 
         // Check wipe trigger (Hard privacy reset)
@@ -149,6 +161,13 @@ public struct BrowserView: UIViewRepresentable {
                 DispatchQueue.main.async {
                     self?.parent.canGoForward = view.canGoForward
                 }
+            }
+
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("GhostWebViewGoBack"), object: nil, queue: .main) { [weak self] _ in
+                self?.webView?.goBack()
+            }
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("GhostWebViewGoForward"), object: nil, queue: .main) { [weak self] _ in
+                self?.webView?.goForward()
             }
         }
 
