@@ -38,26 +38,24 @@ public struct BrowserView: UIViewRepresentable {
     public func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
 
-        // 1. Storage isolation
-        if privacyProfile.ephemeralMode {
+        // 1. RAM-only Ephemeral Mode (Zero disk persistence)
+        if privacyProfile.ephemeralRAMMode {
             configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         } else {
             configuration.websiteDataStore = WKWebsiteDataStore.default()
         }
 
-        // 2. Setup User Content Controller
         let userContentController = WKUserContentController()
 
-        // Inject Privacy Configuration
-        let configScriptSource = privacyProfile.generateJSConfig()
+        // 2. Inject Active Privacy Profile & Apple Device Signature
         let configScript = WKUserScript(
-            source: configScriptSource,
+            source: privacyProfile.generateJSConfig(),
             injectionTime: .atDocumentStart,
             forMainFrameOnly: false
         )
         userContentController.addUserScript(configScript)
 
-        // Inject Anti-Fingerprinting Engine
+        // 3. Inject Stealth Anti-Fingerprinting Engine
         if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
            let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
             let antiFpScript = WKUserScript(
@@ -68,8 +66,8 @@ public struct BrowserView: UIViewRepresentable {
             userContentController.addUserScript(antiFpScript)
         }
 
-        // Apply Declarative Content Blocker Rules
-        if privacyProfile.blockTrackers {
+        // 4. Apply Native Block Rules
+        if privacyProfile.blockCommercialTrackers {
             ContentBlockerManager.shared.loadContentBlockerRules { ruleList in
                 if let ruleList = ruleList {
                     userContentController.add(ruleList)
@@ -78,8 +76,6 @@ public struct BrowserView: UIViewRepresentable {
         }
 
         configuration.userContentController = userContentController
-
-        // Media playback privacy
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = .all
 
@@ -88,43 +84,42 @@ public struct BrowserView: UIViewRepresentable {
         webView.customUserAgent = privacyProfile.effectiveUserAgent
         webView.allowsBackForwardNavigationGestures = true
 
-        // Observers for progress and back/forward state
         context.coordinator.setupObservers(for: webView)
-
-        // Initial default URL
-        if let url = URL(string: "https://duckduckgo.com") {
-            webView.load(URLRequest(url: url))
-        }
-
         context.coordinator.webView = webView
+
+        // Load local offline Start Page by default
+        context.coordinator.loadLocalStartPage(in: webView)
+
         return webView
     }
 
     public func updateUIView(_ webView: WKWebView, context: Context) {
-        // Handle User-Agent updates
+        // Synchronize User-Agent
         if webView.customUserAgent != privacyProfile.effectiveUserAgent {
             webView.customUserAgent = privacyProfile.effectiveUserAgent
         }
 
         // Handle navigation to newly submitted URL
-        if let targetURL = URL(string: currentURLString),
-           let current = webView.url?.absoluteString,
-           current != currentURLString,
-           !webView.isLoading {
+        if currentURLString.isEmpty || currentURLString == "local://startpage" {
+            // Already on start page or empty
+        } else if let targetURL = URL(string: currentURLString),
+                  let current = webView.url?.absoluteString,
+                  current != currentURLString,
+                  !webView.isLoading {
             webView.load(URLRequest(url: targetURL))
         }
 
-        // Check reload trigger
+        // Handle reload trigger
         if context.coordinator.lastReloadTrigger != reloadTrigger {
             context.coordinator.lastReloadTrigger = reloadTrigger
-            if let targetURL = URL(string: currentURLString), webView.url?.absoluteString != currentURLString {
-                webView.load(URLRequest(url: targetURL))
+            if currentURLString == "local://startpage" {
+                context.coordinator.loadLocalStartPage(in: webView)
             } else {
                 webView.reload()
             }
         }
 
-        // Check wipe trigger (Hard privacy reset)
+        // Handle session wipe trigger
         if context.coordinator.lastWipeTrigger != wipeTrigger {
             context.coordinator.lastWipeTrigger = wipeTrigger
             context.coordinator.nukeSession(webView: webView)
@@ -171,17 +166,52 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
+        public func loadLocalStartPage(in webView: WKWebView) {
+            if let startURL = Bundle.main.url(forResource: "startpage", withExtension: "html"),
+               let html = try? String(contentsOf: startURL, encoding: .utf8) {
+                webView.loadHTMLString(html, baseURL: Bundle.main.bundleURL)
+                parent.currentURLString = "local://startpage"
+            }
+        }
+
+        public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            // Intercept internal ghost-search query from start page
+            if url.scheme == "ghost-search" {
+                let query = url.host ?? url.path.replacingOccurrences(of: "/", with: "")
+                if let decoded = query.removingPercentEncoding,
+                   let searchURL = parent.privacyProfile.searchEngine.searchURL(for: decoded) {
+                    decisionHandler(.cancel)
+                    DispatchQueue.main.async {
+                        self.parent.currentURLString = searchURL.absoluteString
+                        webView.load(URLRequest(url: searchURL))
+                    }
+                    return
+                }
+            }
+
+            decisionHandler(.allow)
+        }
+
         public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             parent.isLoading = true
             if let url = webView.url?.absoluteString {
-                parent.currentURLString = url
+                if !url.contains("startpage.html") {
+                    parent.currentURLString = url
+                }
             }
         }
 
         public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.isLoading = false
             if let url = webView.url?.absoluteString {
-                parent.currentURLString = url
+                if !url.contains("startpage.html") {
+                    parent.currentURLString = url
+                }
             }
         }
 
@@ -192,11 +222,10 @@ public struct BrowserView: UIViewRepresentable {
         public func nukeSession(webView: WKWebView) {
             let dataStore = webView.configuration.websiteDataStore
             let types = WKWebsiteDataStore.allWebsiteDataTypes()
-            dataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) {
+            dataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) { [weak self] in
                 DispatchQueue.main.async {
-                    if let home = URL(string: "https://duckduckgo.com") {
-                        webView.load(URLRequest(url: home))
-                    }
+                    guard let self = self else { return }
+                    self.loadLocalStartPage(in: webView)
                 }
             }
         }

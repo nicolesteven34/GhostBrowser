@@ -2,8 +2,8 @@ import SwiftUI
 
 public struct ContentView: View {
     @StateObject private var privacyProfile = PrivacyProfile()
-    @State private var currentURLString: String = "https://duckduckgo.com"
-    @State private var inputURLText: String = "https://duckduckgo.com"
+    @State private var currentURLString: String = "local://startpage"
+    @State private var inputURLText: String = ""
     @State private var canGoBack: Bool = false
     @State private var canGoForward: Bool = false
     @State private var isLoading: Bool = false
@@ -15,11 +15,10 @@ public struct ContentView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // iPad Top Navigation Toolbar
+            // Safari-style iPad Toolbar
             HStack(spacing: 12) {
                 // Back & Forward
                 Button(action: {
-                    // Handled via WKWebView back
                     NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewGoBack"), object: nil)
                 }) {
                     Image(systemName: "chevron.backward")
@@ -35,6 +34,16 @@ public struct ContentView: View {
                 }
                 .disabled(!canGoForward)
 
+                // Home (Local Start Page)
+                Button(action: {
+                    currentURLString = "local://startpage"
+                    inputURLText = ""
+                    reloadTrigger += 1
+                }) {
+                    Image(systemName: "house")
+                        .font(.system(size: 15, weight: .medium))
+                }
+
                 // Reload / Stop
                 Button(action: {
                     reloadTrigger += 1
@@ -43,17 +52,17 @@ public struct ContentView: View {
                         .font(.system(size: 15, weight: .medium))
                 }
 
-                // Address & Search Bar
-                HStack {
+                // Safari Search & Address Bar
+                HStack(spacing: 8) {
                     Image(systemName: "lock.shield.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(.blue)
                         .font(.system(size: 14))
 
-                    TextField("Search or enter website address...", text: $inputURLText)
+                    TextField("Search or enter website name...", text: $inputURLText)
                         .font(.system(size: 14))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .keyboardType(.URL)
+                        .keyboardType(.webSearch)
                         .onSubmit {
                             submitNavigation()
                         }
@@ -66,33 +75,33 @@ public struct ContentView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
 
-                // Privacy Shield Control Button
+                // Active Profile & Privacy Shield Trigger
                 Button(action: {
                     showSettingsSheet.toggle()
                 }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "shield.checkered")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.blue)
-                        Text("Shield")
+                    HStack(spacing: 6) {
+                        Image(systemName: "applelogo")
                             .font(.system(size: 13, weight: .semibold))
+                        Text(privacyProfile.selectedDevice.rawValue.components(separatedBy: " ").prefix(2).joined(separator: " "))
+                            .font(.system(size: 12, weight: .semibold))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.blue.opacity(0.12))
+                    .foregroundColor(.blue)
                     .cornerRadius(8)
                 }
                 .popover(isPresented: $showSettingsSheet) {
                     PrivacySettingsView(privacyProfile: privacyProfile)
-                        .frame(minWidth: 460, minHeight: 580)
+                        .frame(minWidth: 480, minHeight: 620)
                 }
 
-                // Panic Button (Wipe Everything Now)
+                // Instant Panic Button (Zero Disk/RAM Trace)
                 Button(action: {
                     showWipeAlert = true
                 }) {
@@ -104,29 +113,30 @@ public struct ContentView: View {
                         .clipShape(Circle())
                 }
                 .alert("Panic Wipe Session?", isPresented: $showWipeAlert) {
-                    Button("Wipe & Reset", role: .destructive) {
+                    Button("Wipe & Return Home", role: .destructive) {
                         wipeTrigger += 1
-                        inputURLText = "https://duckduckgo.com"
+                        inputURLText = ""
+                        currentURLString = "local://startpage"
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("This instantly purges all memory, caches, cookies, and resets the browser to DuckDuckGo.")
+                    Text("Immediately purges all in-memory caches, cookies, and resets the browser to the offline start page.")
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color(.systemBackground))
 
-            // Thin progress indicator
+            // Thin loading progress bar
             if isLoading && estimatedProgress < 1.0 {
                 ProgressView(value: estimatedProgress, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .accentColor))
+                    .progressViewStyle(LinearProgressViewStyle(tint: .blue))
                     .frame(height: 2)
             } else {
                 Divider()
             }
 
-            // The Hardened Browser WebKit View
+            // WebKit Browser View
             BrowserView(
                 privacyProfile: privacyProfile,
                 currentURLString: $currentURLString,
@@ -138,7 +148,11 @@ public struct ContentView: View {
                 wipeTrigger: $wipeTrigger
             )
             .onChange(of: currentURLString) { newURL in
-                inputURLText = newURL
+                if newURL == "local://startpage" {
+                    inputURLText = ""
+                } else {
+                    inputURLText = newURL
+                }
             }
         }
     }
@@ -147,17 +161,22 @@ public struct ContentView: View {
         var query = inputURLText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.isEmpty { return }
 
-        if !query.contains("://") && (query.contains(".") && !query.contains(" ")) {
-            query = "https://" + query
-        } else if !query.contains("://") {
-            // Perform privacy search via DuckDuckGo
-            if let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                query = "https://duckduckgo.com/?q=\(encoded)"
+        if query.contains("://") {
+            currentURLString = query
+        } else if query.contains(".") && !query.contains(" ") {
+            currentURLString = "https://" + query
+        } else {
+            // Route through user's chosen search provider
+            if let searchTarget = privacyProfile.searchEngine.searchURL(for: query) {
+                currentURLString = searchTarget.absoluteString
+            } else {
+                // If local start page / direct only, fallback to SearXNG or Startpage
+                if let fallback = SearchEngine.startpage.searchURL(for: query) {
+                    currentURLString = fallback.absoluteString
+                }
             }
         }
 
-        currentURLString = query
-        inputURLText = query
         reloadTrigger += 1
     }
 }

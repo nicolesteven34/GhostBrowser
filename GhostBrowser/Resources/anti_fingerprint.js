@@ -1,60 +1,136 @@
 /**
- * GhostBrowser Anti-Fingerprint Engine
+ * GhostBrowser Stealth Engine
  * Injected at document_start in all frames before any website scripts run.
+ * Emulates authentic Apple hardware signatures and neutralizes fingerprinting vectors.
  */
 (function() {
     'use strict';
 
-    // Retrieve active privacy configuration passed from Swift
-    const config = window.__GHOST_CONFIG__ || {
+    const cfg = window.__GHOST_CONFIG__ || {
+        userAgent: "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+        platform: "iPad",
+        maxTouchPoints: 10,
+        hardwareConcurrency: 10,
+        deviceMemory: 16,
+        webglVendor: "Apple Inc.",
+        webglRenderer: "Apple M4",
+        screenWidth: 1024,
+        screenHeight: 1366,
         blockCanvas: true,
         blockAudio: true,
         maskWebGL: true,
         blockWebRTC: true,
-        shieldSensors: true,
         stripReferrer: true,
-        hardwareConcurrency: 4,
-        deviceMemory: 8,
-        webglVendor: "Apple Inc.",
-        webglRenderer: "Apple GPU",
+        shieldSensors: true,
         sessionSeed: Math.random()
     };
 
-    // Helper: Pseudo-random generator seeded per session
-    function getNoise(seed, offset) {
-        const x = Math.sin(seed + offset) * 10000;
-        return (x - Math.floor(x)) * 0.00001;
+    // Helper: Make functions appear native to anti-spoofing tests
+    const nativeToString = Function.prototype.toString;
+    function makeNative(fn, name) {
+        Object.defineProperty(fn, 'name', { value: name, configurable: true });
+        const dummy = function() { return `function ${name}() { [native code] }`; };
+        fn.toString = dummy;
+        dummy.toString = () => "function toString() { [native code] }";
+        return fn;
     }
 
     // =========================================================================
-    // 1. CANVAS FINGERPRINTING SPOOFER
-    // Perturbs image data by imperceptible micro-variations to defeat hash matching
+    // 1. AUTHENTIC APPLE NAVIGATOR SPOOFING
     // =========================================================================
-    if (config.blockCanvas) {
+    try {
+        const navProto = Object.getPrototypeOf(navigator);
+
+        // Platform
+        Object.defineProperty(navigator, 'platform', {
+            get: makeNative(() => cfg.platform, 'get platform'),
+            configurable: true,
+            enumerable: true
+        });
+
+        // Vendor (Always Apple Computer, Inc. on authentic Apple devices)
+        Object.defineProperty(navigator, 'vendor', {
+            get: makeNative(() => "Apple Computer, Inc.", 'get vendor'),
+            configurable: true,
+            enumerable: true
+        });
+
+        // Touch points (Realistic: 10 for iPad, 5 for iPhone, 0 for Mac)
+        Object.defineProperty(navigator, 'maxTouchPoints', {
+            get: makeNative(() => cfg.maxTouchPoints, 'get maxTouchPoints'),
+            configurable: true,
+            enumerable: true
+        });
+
+        // CPU Cores & RAM
+        Object.defineProperty(navigator, 'hardwareConcurrency', {
+            get: makeNative(() => cfg.hardwareConcurrency, 'get hardwareConcurrency'),
+            configurable: true,
+            enumerable: true
+        });
+
+        Object.defineProperty(navigator, 'deviceMemory', {
+            get: makeNative(() => cfg.deviceMemory, 'get deviceMemory'),
+            configurable: true,
+            enumerable: true
+        });
+
+        // Ensure automation/webdriver flags are completely absent
+        if ('webdriver' in navigator) {
+            delete Object.getPrototypeOf(navigator).webdriver;
+        }
+
+        // Neutralize Battery API
+        if ('getBattery' in navigator) {
+            delete navigator.getBattery;
+        }
+    } catch (e) {
+        // Fallback
+    }
+
+    // =========================================================================
+    // 2. SCREEN DIMENSION SPOOFING
+    // Matches the selected Apple device's physical viewport
+    // =========================================================================
+    try {
+        if (cfg.screenWidth && cfg.screenHeight) {
+            Object.defineProperty(screen, 'width', { get: () => cfg.screenWidth, configurable: true });
+            Object.defineProperty(screen, 'availWidth', { get: () => cfg.screenWidth, configurable: true });
+            Object.defineProperty(screen, 'height', { get: () => cfg.screenHeight, configurable: true });
+            Object.defineProperty(screen, 'availHeight', { get: () => cfg.screenHeight, configurable: true });
+        }
+        Object.defineProperty(screen, 'colorDepth', { get: () => 24, configurable: true });
+        Object.defineProperty(screen, 'pixelDepth', { get: () => 24, configurable: true });
+    } catch (e) {
+        // Ignore
+    }
+
+    // =========================================================================
+    // 3. CANVAS FINGERPRINTING SCRAMBLER
+    // Adds imperceptible micro-variations so hash generation cannot track you
+    // =========================================================================
+    if (cfg.blockCanvas) {
         try {
             const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
             const originalToBlob = HTMLCanvasElement.prototype.toBlob;
             const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
 
-            function addNoiseToContext(ctx, width, height) {
+            function applyMicroJitter(ctx, width, height) {
                 try {
-                    const imageData = originalGetImageData.call(ctx, 0, 0, width, height);
-                    const data = imageData.data;
-                    const step = Math.max(1, Math.floor(data.length / 500));
-                    for (let i = 0; i < data.length; i += step * 4) {
-                        // Apply slight shift to 1 color channel
-                        data[i] = (data[i] + 1) % 256;
+                    const img = originalGetImageData.call(ctx, 0, 0, width, height);
+                    const d = img.data;
+                    const step = Math.max(1, Math.floor(d.length / 400));
+                    for (let i = 0; i < d.length; i += step * 4) {
+                        d[i] = (d[i] ^ 1);
                     }
-                    ctx.putImageData(imageData, 0, 0);
-                } catch (e) {
-                    // Context might be tainted
-                }
+                    ctx.putImageData(img, 0, 0);
+                } catch (err) {}
             }
 
             HTMLCanvasElement.prototype.toDataURL = function(...args) {
                 if (this.width > 0 && this.height > 0) {
                     const ctx = this.getContext('2d');
-                    if (ctx) addNoiseToContext(ctx, this.width, this.height);
+                    if (ctx) applyMicroJitter(ctx, this.width, this.height);
                 }
                 return originalToDataURL.apply(this, args);
             };
@@ -62,185 +138,118 @@
             HTMLCanvasElement.prototype.toBlob = function(callback, ...args) {
                 if (this.width > 0 && this.height > 0) {
                     const ctx = this.getContext('2d');
-                    if (ctx) addNoiseToContext(ctx, this.width, this.height);
+                    if (ctx) applyMicroJitter(ctx, this.width, this.height);
                 }
                 return originalToBlob.call(this, callback, ...args);
             };
 
             CanvasRenderingContext2D.prototype.getImageData = function(...args) {
-                const imgData = originalGetImageData.apply(this, args);
-                if (imgData && imgData.data && imgData.data.length > 0) {
-                    const step = Math.max(1, Math.floor(imgData.data.length / 500));
-                    for (let i = 0; i < imgData.data.length; i += step * 4) {
-                        imgData.data[i] = (imgData.data[i] + 1) % 256;
+                const img = originalGetImageData.apply(this, args);
+                if (img && img.data && img.data.length > 0) {
+                    const step = Math.max(1, Math.floor(img.data.length / 400));
+                    for (let i = 0; i < img.data.length; i += step * 4) {
+                        img.data[i] = (img.data[i] ^ 1);
                     }
                 }
-                return imgData;
+                return img;
             };
-        } catch (err) {
-            console.warn('[GhostBrowser] Canvas protection init failure:', err);
-        }
+        } catch (e) {}
     }
 
     // =========================================================================
-    // 2. WEBGL HARDWARE MASKING
-    // Spoofs GPU Vendor & Renderer (prevents hardware identification)
+    // 4. WEBGL GPU EMULATION
+    // Returns authentic Apple Silicon GPU signatures
     // =========================================================================
-    if (config.maskWebGL) {
+    if (cfg.maskWebGL) {
         try {
-            const hookWebGL = function(target) {
-                if (!target || !target.prototype) return;
-                const originalGetParameter = target.prototype.getParameter;
-                const originalGetExtension = target.prototype.getExtension;
-
-                target.prototype.getParameter = function(parameter) {
-                    // UNMASKED_VENDOR_WEBGL = 0x9245 (37445)
+            const hookWebGL = function(proto) {
+                if (!proto) return;
+                const origGetParameter = proto.getParameter;
+                proto.getParameter = function(parameter) {
+                    // UNMASKED_VENDOR_WEBGL (0x9245)
                     if (parameter === 37445) {
-                        return config.webglVendor;
+                        return cfg.webglVendor || "Apple Inc.";
                     }
-                    // UNMASKED_RENDERER_WEBGL = 0x9246 (37446)
+                    // UNMASKED_RENDERER_WEBGL (0x9246)
                     if (parameter === 37446) {
-                        return config.webglRenderer;
+                        return cfg.webglRenderer || "Apple GPU";
                     }
-                    return originalGetParameter.apply(this, arguments);
+                    return origGetParameter.apply(this, arguments);
                 };
+                makeNative(proto.getParameter, 'getParameter');
             };
 
-            if (window.WebGLRenderingContext) hookWebGL(window.WebGLRenderingContext);
-            if (window.WebGL2RenderingContext) hookWebGL(window.WebGL2RenderingContext);
-        } catch (err) {
-            console.warn('[GhostBrowser] WebGL protection init failure:', err);
-        }
+            if (window.WebGLRenderingContext) hookWebGL(window.WebGLRenderingContext.prototype);
+            if (window.WebGL2RenderingContext) hookWebGL(window.WebGL2RenderingContext.prototype);
+        } catch (e) {}
     }
 
     // =========================================================================
-    // 3. AUDIO CONTEXT FINGERPRINT SPOOFER
-    // Perturbs frequency data so FFT-based acoustic fingerprints fail
+    // 5. AUDIOCONTEXT ACOUSTIC FINGERPRINT JITTER
     // =========================================================================
-    if (config.blockAudio) {
+    if (cfg.blockAudio) {
         try {
             if (window.AudioBuffer) {
                 const origGetChannelData = AudioBuffer.prototype.getChannelData;
                 AudioBuffer.prototype.getChannelData = function(channel) {
                     const data = origGetChannelData.apply(this, arguments);
-                    const noise = getNoise(config.sessionSeed, channel);
-                    for (let i = 0; i < data.length; i += 100) {
-                        data[i] = data[i] + noise;
+                    const noise = ((Math.sin(cfg.sessionSeed + channel) * 10000) % 1) * 0.00001;
+                    for (let i = 0; i < data.length; i += 80) {
+                        data[i] += noise;
                     }
                     return data;
                 };
             }
 
             if (window.AnalyserNode) {
-                const origGetFloatFreq = AnalyserNode.prototype.getFloatFrequencyData;
-                AnalyserNode.prototype.getFloatFrequencyData = function(array) {
-                    origGetFloatFreq.apply(this, arguments);
-                    for (let i = 0; i < array.length; i += 20) {
-                        array[i] += 0.0001;
-                    }
-                };
-
                 const origGetByteFreq = AnalyserNode.prototype.getByteFrequencyData;
                 AnalyserNode.prototype.getByteFrequencyData = function(array) {
                     origGetByteFreq.apply(this, arguments);
-                    for (let i = 0; i < array.length; i += 20) {
+                    for (let i = 0; i < array.length; i += 25) {
                         array[i] = (array[i] + 1) % 256;
                     }
                 };
             }
-        } catch (err) {
-            console.warn('[GhostBrowser] Audio protection init failure:', err);
-        }
+        } catch (e) {}
     }
 
     // =========================================================================
-    // 4. WEBRTC LOCAL IP LEAK SHIELD
-    // Prevents websites from discovering local network & VPN-bypassing IP addresses
+    // 6. WEBRTC IP LEAK DEFENSE
+    // Eliminates local IP and VPN bypass disclosures
     // =========================================================================
-    if (config.blockWebRTC) {
+    if (cfg.blockWebRTC) {
         try {
-            const blockRTC = function() {
-                throw new Error('[GhostBrowser] WebRTC is disabled to prevent IP leaks.');
+            window.RTCPeerConnection = function() {
+                throw new Error('[Safari] WebRTC is disabled for privacy protection.');
             };
-
-            window.RTCPeerConnection = blockRTC;
-            window.webkitRTCPeerConnection = blockRTC;
+            window.webkitRTCPeerConnection = window.RTCPeerConnection;
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia = blockRTC;
+                navigator.mediaDevices.getUserMedia = function() {
+                    return Promise.reject(new Error('[Safari] Permission denied by privacy policy.'));
+                };
             }
-        } catch (err) {
-            console.warn('[GhostBrowser] WebRTC protection failure:', err);
-        }
+        } catch (e) {}
     }
 
     // =========================================================================
-    // 5. HARDWARE & NAVIGATOR PROPERTIES NORMALIZATION
-    // Standardizes CPU cores and RAM to prevent cross-site clustering
+    // 7. STRIP REFERRERS
     // =========================================================================
-    try {
-        Object.defineProperty(navigator, 'hardwareConcurrency', {
-            get: () => config.hardwareConcurrency || 4,
-            configurable: true
-        });
-
-        Object.defineProperty(navigator, 'deviceMemory', {
-            get: () => config.deviceMemory || 8,
-            configurable: true
-        });
-
-        // Strip Battery API (frequently used for tracking across sessions)
-        if ('getBattery' in navigator) {
-            Object.defineProperty(navigator, 'getBattery', {
-                value: () => Promise.reject(new Error('Battery API disabled by user policy.')),
-                configurable: true
-            });
-        }
-    } catch (err) {
-        console.warn('[GhostBrowser] Navigator normalization failure:', err);
-    }
-
-    // =========================================================================
-    // 6. SENSOR & ORIENTATION SHIELD
-    // Blocks gyroscope, accelerometer & device orientation fingerprinting
-    // =========================================================================
-    if (config.shieldSensors) {
-        try {
-            window.addEventListener('deviceorientation', function(e) {
-                e.stopImmediatePropagation();
-            }, true);
-
-            window.addEventListener('devicemotion', function(e) {
-                e.stopImmediatePropagation();
-            }, true);
-        } catch (err) {
-            // Ignore
-        }
-    }
-
-    // =========================================================================
-    // 7. STRIP REFERRER
-    // Prevents target websites from knowing what site you clicked from
-    // =========================================================================
-    if (config.stripReferrer) {
+    if (cfg.stripReferrer) {
         try {
             Object.defineProperty(document, 'referrer', {
                 get: () => '',
                 configurable: true
             });
-        } catch (err) {
-            // Ignore
-        }
+        } catch (e) {}
     }
 
     // =========================================================================
-    // 8. SCREEN DEPTH NORMALIZATION
+    // 8. SHIELD SENSORS
     // =========================================================================
-    try {
-        Object.defineProperty(screen, 'colorDepth', { get: () => 24, configurable: true });
-        Object.defineProperty(screen, 'pixelDepth', { get: () => 24, configurable: true });
-    } catch (err) {
-        // Ignore
+    if (cfg.shieldSensors) {
+        try {
+            window.addEventListener('deviceorientation', e => e.stopImmediatePropagation(), true);
+            window.addEventListener('devicemotion', e => e.stopImmediatePropagation(), true);
+        } catch (e) {}
     }
-
-    console.info('[GhostBrowser] Stealth privacy shield active.');
 })();

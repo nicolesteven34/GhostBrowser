@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Start Page</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(255, 255, 255, 0.08);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --accent-blue: #0A84FF;
+            --accent-green: #30D158;
+            --accent-cyan: #64D2FF;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-color: #F2F2F7;
+                --card-bg: #FFFFFF;
+                --card-border: rgba(0, 0, 0, 0.08);
+                --text-primary: #000000;
+                --text-secondary: #6C6C70;
+                --accent-blue: #007AFF;
+                --accent-green: #34C759;
+                --accent-cyan: #00C7BE;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .search-box {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            padding: 12px 18px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .search-box svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text-secondary);
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 17px;
+            outline: none;
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .shield-card {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 22px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .shield-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .shield-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 17px;
+        }
+
+        .shield-badge {
+            background: rgba(48, 209, 88, 0.18);
+            color: var(--accent-green);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.2px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .favorites-grid {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .fav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .fav-icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 14px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 20px;
+            transition: transform 0.15s ease;
+        }
+
+        .fav-item:active .fav-icon {
+            transform: scale(0.94);
+        }
+
+        .fav-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Safari Privacy Guard</h1>
+            <p>Native WebKit Engine &bull; Zero Corporate Telemetry &bull; Isolated RAM</p>
+        </div>
+
+        <form class="search-box" id="searchForm" onsubmit="handleSearch(event)">
+            <svg viewBox="0 0 24 24">
+                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search or enter website name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </form>
+
+        <div class="shield-card">
+            <div class="shield-card-header">
+                <div class="shield-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#0A84FF">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                    </svg>
+                    <span>Privacy & Fingerprint Report</span>
+                </div>
+                <div class="shield-badge">HARDENED</div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Device Persona</span>
+                    <span class="metric-value" id="profileName">iPad Pro (M4)</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Fingerprint Shield</span>
+                    <span class="metric-value" style="color: var(--accent-green);">Active (Anti-Hash)</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">WebRTC IP Shield</span>
+                    <span class="metric-value" style="color: var(--accent-green);">No IP Leaks</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Storage Profile</span>
+                    <span class="metric-value">RAM-Only (Ephemeral)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="favorites-grid">
+            <div class="fav-item" onclick="navigate('https://wikipedia.org')">
+                <div class="fav-icon">W</div>
+                <span class="fav-label">Wikipedia</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://github.com')">
+                <div class="fav-icon">GH</div>
+                <span class="fav-label">GitHub</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://archive.org')">
+                <div class="fav-icon">IA</div>
+                <span class="fav-label">Archive</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://news.ycombinator.com')">
+                <div class="fav-icon">Y</div>
+                <span class="fav-label">Hacker News</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateProfileInfo(name) {
+            if (name) {
+                document.getElementById('profileName').textContent = name;
+            }
+        }
+
+        function navigate(url) {
+            window.location.href = url;
+        }
+
+        function handleSearch(e) {
+            e.preventDefault();
+            const input = document.getElementById('searchInput');
+            let query = input.value.trim();
+            if (!query) return;
+
+            if (query.includes('://')) {
+                window.location.href = query;
+            } else if (query.includes('.') && !query.includes(' ')) {
+                window.location.href = 'https://' + query;
+            } else {
+                // Read configured engine or notify Swift coordinator
+                window.location.href = 'ghost-search://' + encodeURIComponent(query);
+            }
+        }
+    </script>
+</body>
+</html>

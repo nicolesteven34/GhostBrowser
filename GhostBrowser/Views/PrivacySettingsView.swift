@@ -7,12 +7,64 @@ public struct PrivacySettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Defenses & Hardening")) {
-                    Toggle(isOn: $privacyProfile.blockTrackers) {
+                Section(header: Text("Device Persona & Hardware Signature")) {
+                    Picker("Active Device Profile", selection: $privacyProfile.selectedDevice) {
+                        ForEach(AppleDeviceProfile.allCases) { device in
+                            Text(device.rawValue).tag(device)
+                        }
+                    }
+
+                    if privacyProfile.selectedDevice == .custom {
+                        TextField("Custom User-Agent string...", text: $privacyProfile.customUserAgent)
+                            .font(.system(.caption, design: .monospaced))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Active Signature Specs:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        HStack {
+                            Text("Platform:").fontWeight(.medium)
+                            Text(privacyProfile.effectivePlatform)
+                            Spacer()
+                            Text("Touch Points:").fontWeight(.medium)
+                            Text("\(privacyProfile.effectiveTouchPoints)")
+                        }
+                        .font(.footnote)
+
+                        HStack {
+                            Text("CPU Cores:").fontWeight(.medium)
+                            Text("\(privacyProfile.effectiveCores)")
+                            Spacer()
+                            Text("RAM:").fontWeight(.medium)
+                            Text("\(privacyProfile.effectiveRAM) GB")
+                        }
+                        .font(.footnote)
+
+                        HStack {
+                            Text("GPU Model:").fontWeight(.medium)
+                            Text(privacyProfile.effectiveRenderer)
+                        }
+                        .font(.footnote)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section(header: Text("Search Provider")) {
+                    Picker("Search Engine", selection: $privacyProfile.searchEngine) {
+                        ForEach(SearchEngine.allCases) { engine in
+                            Text(engine.rawValue).tag(engine)
+                        }
+                    }
+                }
+
+                Section(header: Text("Hardened Defenses")) {
+                    Toggle(isOn: $privacyProfile.blockCommercialTrackers) {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("Block Commercial Trackers & Ads")
-                                Text("Strips Google, Meta, TikTok, Criteo & commercial analytics")
+                                Text("Native WebKit rules block Google, Meta, TikTok, Criteo")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -20,23 +72,23 @@ public struct PrivacySettingsView: View {
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.blockCanvas) {
+                    Toggle(isOn: $privacyProfile.blockCanvasFingerprint) {
                         Label {
                             VStack(alignment: .leading) {
-                                Text("Canvas Fingerprint Masking")
-                                Text("Perturbs HTML5 canvas pixel rendering with per-session noise")
+                                Text("Canvas Fingerprint Scrambling")
+                                Text("Perturbs canvas pixels with per-session micro-variations")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "paintbrush.fill").foregroundColor(.purple)
+                            Image(systemName: "paintpalette.fill").foregroundColor(.purple)
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.maskWebGL) {
+                    Toggle(isOn: $privacyProfile.maskWebGLRenderer) {
                         Label {
                             VStack(alignment: .leading) {
-                                Text("WebGL GPU Spoofing")
-                                Text("Masks underlying Apple GPU vendor and renderer signatures")
+                                Text("WebGL GPU Emulation")
+                                Text("Enforces selected Apple Silicon GPU signatures")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -44,11 +96,11 @@ public struct PrivacySettingsView: View {
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.blockAudio) {
+                    Toggle(isOn: $privacyProfile.blockAudioFingerprint) {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("AudioContext Noise Jitter")
-                                Text("Defeats acoustic oscillator and FFT frequency fingerprinting")
+                                Text("Scrambles oscillator & acoustic FFT tracking hashes")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -56,11 +108,11 @@ public struct PrivacySettingsView: View {
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.blockWebRTC) {
+                    Toggle(isOn: $privacyProfile.blockWebRTCIPLeak) {
                         Label {
                             VStack(alignment: .leading) {
-                                Text("WebRTC Leak Shield")
-                                Text("Blocks local and VPN bypass IP discovery")
+                                Text("WebRTC IP Leak Shield")
+                                Text("Blocks LAN & VPN-bypass IP queries")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -68,11 +120,11 @@ public struct PrivacySettingsView: View {
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.stripReferrer) {
+                    Toggle(isOn: $privacyProfile.stripReferrers) {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("Strip HTTP Referrers")
-                                Text("Prevents destination sites from knowing prior visited URLs")
+                                Text("Prevents sites from tracking your navigation origin")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -84,7 +136,7 @@ public struct PrivacySettingsView: View {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("Sensor & Gyroscope Shield")
-                                Text("Blocks accelerometer and device orientation APIs")
+                                Text("Silences device motion and orientation sensors")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -92,11 +144,11 @@ public struct PrivacySettingsView: View {
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.ephemeralMode) {
+                    Toggle(isOn: $privacyProfile.ephemeralRAMMode) {
                         Label {
                             VStack(alignment: .leading) {
-                                Text("Ephemeral Storage (Zero Disk Cache)")
-                                Text("RAM-only storage; nothing is written to iPad flash storage")
+                                Text("RAM-Only Ephemeral Mode")
+                                Text("Zero disk cache or cookies stored on iPad flash memory")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -104,48 +156,11 @@ public struct PrivacySettingsView: View {
                         }
                     }
                 }
-
-                Section(header: Text("Identity & User-Agent Spoofing")) {
-                    Picker("User-Agent Preset", selection: $privacyProfile.selectedUserAgent) {
-                        ForEach(UserAgentPreset.allCases) { preset in
-                            Text(preset.rawValue).tag(preset)
-                        }
-                    }
-
-                    if privacyProfile.selectedUserAgent == .custom {
-                        TextField("Enter custom User-Agent string...", text: $privacyProfile.customUserAgentText)
-                            .font(.system(.subheadline, design: .monospaced))
-                    }
-                }
-
-                Section(header: Text("Hardware Signature Spoofing")) {
-                    Picker("Virtual GPU Renderer", selection: $privacyProfile.selectedGPU) {
-                        ForEach(GPUPreset.allCases) { gpu in
-                            Text(gpu.rawValue).tag(gpu)
-                        }
-                    }
-
-                    Stepper("CPU Cores: \(privacyProfile.cpuCores)", value: $privacyProfile.cpuCores, in: 2...32, step: 2)
-                    Stepper("RAM Reported: \(privacyProfile.memoryGB) GB", value: $privacyProfile.memoryGB, in: 2...64, step: 2)
-                }
-
-                Section {
-                    Button(role: .cancel) {
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Apply & Close")
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                    }
-                }
             }
-            .navigationTitle("Privacy & Fingerprint Controls")
+            .navigationTitle("Browser Persona & Privacy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
                     }

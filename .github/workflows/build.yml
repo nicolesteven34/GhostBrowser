@@ -56,14 +56,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.0
-          name: GhostBrowser v1.0.0
+          tag_name: v1.1.0
+          name: GhostBrowser v1.1.0
           body: |
-            ## GhostBrowser for iPadOS (v1.0.0)
-            Unsigned `.ipa` ready for sideloading via Sideloadly or AltStore on Windows.
-
-            - Download `GhostBrowser.ipa` below.
-            - Open Sideloadly on your Windows PC, plug in your iPad, and drag this IPA into it.
+            ## GhostBrowser v1.1.0 (Native Apple Profiles & Sleek App Icon)
+            - Authentic Apple device signatures (iPad Pro M4, iPad Air M2, iPad Mini 6, iPhone 15 Pro Max, MacBook Pro M3 Max).
+            - Offline local Safari start page (Zero third-party search dependencies).
+            - Configurable search provider (Local, SearXNG, Startpage, Brave, DuckDuckGo, Google).
+            - Custom high-res obsidian & electric-blue Safari compass app icon.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
