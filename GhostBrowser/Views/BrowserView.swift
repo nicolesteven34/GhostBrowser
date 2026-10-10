@@ -38,9 +38,11 @@ public struct BrowserView: UIViewRepresentable {
     public func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
 
-        // 1. Data Store: Default (persistent) prevents "Incognito Detected"
+        // 1. Data Store: Independent persistent profile data store on iOS 17+
         if privacyProfile.ephemeralRAMMode {
             configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
+        } else if #available(iOS 17.0, *) {
+            configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: privacyProfile.sessionDataStoreID)
         } else {
             configuration.websiteDataStore = WKWebsiteDataStore.default()
         }
@@ -95,8 +97,12 @@ public struct BrowserView: UIViewRepresentable {
         context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
         context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
 
-        // Load local start page initially
-        context.coordinator.loadLocalStartPage()
+        // Load initial content
+        if currentURLString == "local://startpage" || currentURLString.isEmpty {
+            context.coordinator.loadLocalStartPage()
+        } else {
+            context.coordinator.loadURL(currentURLString)
+        }
 
         return webView
     }
@@ -189,6 +195,8 @@ public struct BrowserView: UIViewRepresentable {
                 DispatchQueue.main.async {
                     if target == "ghost-action://regenerate" {
                         self.parent.privacyProfile.regenerateRealisticIdentity()
+                    } else if target == "ghost-action://rotateseed" {
+                        self.parent.privacyProfile.rotateIdentitySeed()
                     } else {
                         self.loadURL(target)
                     }
@@ -233,6 +241,15 @@ public struct BrowserView: UIViewRepresentable {
 
             if urlString == "local://startpage" || urlString.isEmpty {
                 loadLocalStartPage()
+                return
+            }
+
+            if urlString.hasPrefix("ghost-action://") {
+                if urlString.contains("regenerate") {
+                    parent.privacyProfile.regenerateRealisticIdentity()
+                } else if urlString.contains("rotateseed") {
+                    parent.privacyProfile.rotateIdentitySeed()
+                }
                 return
             }
 

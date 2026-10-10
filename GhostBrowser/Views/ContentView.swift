@@ -170,6 +170,7 @@ public struct ContentView: View {
                     reloadTrigger: $reloadTrigger,
                     wipeTrigger: $wipeTrigger
                 )
+                .id(privacyProfile.sessionDataStoreID)
                 .edgesIgnoringSafeArea(.bottom)
             }
 

@@ -188,22 +188,6 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         }
     }
 
-    public func screenWidth(displayZoom: Bool = false) -> Int {
-        if displayZoom {
-            switch self {
-            case .iPadProM4_13: return 834
-            case .iPadAirM2_11: return 694
-            case .iPadMini6_A15: return 632
-            case .iPhone15ProMax_A17: return 375
-            case .iPhone14_A15: return 320
-            case .macBookProM3Max_16: return 1512
-            case .macBookAirM2_13: return 1280
-            default: return screenWidth
-            }
-        }
-        return screenWidth
-    }
-
     public var screenWidth: Int {
         switch self {
         case .iPadProM4_13: return 1024
@@ -215,22 +199,6 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         case .macBookAirM2_13: return 1470
         case .custom: return 1024
         }
-    }
-
-    public func screenHeight(displayZoom: Bool = false) -> Int {
-        if displayZoom {
-            switch self {
-            case .iPadProM4_13: return 1112
-            case .iPadAirM2_11: return 926
-            case .iPadMini6_A15: return 950
-            case .iPhone15ProMax_A17: return 812
-            case .iPhone14_A15: return 693
-            case .macBookProM3Max_16: return 982
-            case .macBookAirM2_13: return 832
-            default: return screenHeight
-            }
-        }
-        return screenHeight
     }
 
     public var screenHeight: Int {
@@ -273,7 +241,7 @@ public class PrivacyProfile: ObservableObject {
     @Published public var deterministicHardwareSeeding: Bool = true
     @Published public var sessionSeed: Int = Int.random(in: 100000...999999)
     @Published public var buildIndex: Int = Int.random(in: 0...4)
-    @Published public var displayZoom: Bool = false
+    @Published public var sessionDataStoreID: UUID = UUID()
 
     // Defense Switches
     @Published public var blockCommercialTrackers: Bool = true
@@ -288,13 +256,18 @@ public class PrivacyProfile: ObservableObject {
     public init() {}
 
     public func rotateIdentitySeed() {
+        let oldStore = sessionDataStoreID
         sessionSeed = Int.random(in: 100000...999999)
         buildIndex = (buildIndex + 1) % 5
-        displayZoom.toggle()
+        sessionDataStoreID = UUID()
+        if #available(iOS 17.0, *) {
+            WKWebsiteDataStore.remove(forIdentifier: oldStore, completionHandler: nil)
+        }
     }
 
     @discardableResult
     public func regenerateRealisticIdentity() -> AppleDeviceProfile {
+        let oldStore = sessionDataStoreID
         let realisticPool: [AppleDeviceProfile] = [
             .iPhone15ProMax_A17,
             .iPadAirM2_11,
@@ -309,7 +282,10 @@ public class PrivacyProfile: ObservableObject {
         self.selectedDevice = chosen
         self.sessionSeed = Int.random(in: 100000...999999)
         self.buildIndex = Int.random(in: 0...4)
-        self.displayZoom = Bool.random()
+        self.sessionDataStoreID = UUID()
+        if #available(iOS 17.0, *) {
+            WKWebsiteDataStore.remove(forIdentifier: oldStore, completionHandler: nil)
+        }
         return chosen
     }
 
@@ -325,8 +301,8 @@ public class PrivacyProfile: ObservableObject {
     public var effectiveCores: Int { selectedDevice.cpuCores }
     public var effectiveRAM: Int { selectedDevice.ramGB }
     public var effectiveRenderer: String { selectedDevice.webglRenderer }
-    public var effectiveScreenWidth: Int { selectedDevice.screenWidth(displayZoom: displayZoom) }
-    public var effectiveScreenHeight: Int { selectedDevice.screenHeight(displayZoom: displayZoom) }
+    public var effectiveScreenWidth: Int { selectedDevice.screenWidth }
+    public var effectiveScreenHeight: Int { selectedDevice.screenHeight }
     public var effectiveDevicePixelRatio: Double { selectedDevice.devicePixelRatio }
 
     public var visitorID: String {
