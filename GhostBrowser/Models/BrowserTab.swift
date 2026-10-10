@@ -27,6 +27,16 @@ public struct BrowserTab: Identifiable, Equatable {
         self.estimatedProgress = estimatedProgress
     }
 
+    public var host: String? {
+        guard let url = URL(string: urlString), let h = url.host, !h.isEmpty else { return nil }
+        return h
+    }
+
+    public var faviconURL: URL? {
+        guard let h = host, h != "local" && !urlString.contains("startpage.html") else { return nil }
+        return URL(string: "https://icons.duckduckgo.com/ip3/\(h).ico")
+    }
+
     public static func == (lhs: BrowserTab, rhs: BrowserTab) -> Bool {
         lhs.id == rhs.id &&
         lhs.urlString == rhs.urlString &&

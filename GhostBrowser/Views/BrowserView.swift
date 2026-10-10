@@ -260,12 +260,15 @@ public struct BrowserView: UIViewRepresentable {
         }
 
         public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            // Links with target="_blank" open in a new tab seamlessly
-            if let url = navigationAction.request.url, !url.absoluteString.isEmpty, url.absoluteString != "about:blank" {
+            // Only user-tapped links with target="_blank" open a new tab seamlessly
+            if navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url,
+               !url.absoluteString.isEmpty,
+               url.scheme == "http" || url.scheme == "https" {
                 NotificationCenter.default.post(name: NSNotification.Name("GhostOpenNewTab"), object: url.absoluteString)
-            } else if navigationAction.targetFrame == nil {
-                webView.load(navigationAction.request)
             }
+            // For script popups, iframe probes, or window.open('about:blank') calls,
+            // return nil without mutating or blanking out the current webView.
             return nil
         }
 
@@ -434,6 +437,11 @@ public struct BrowserView: UIViewRepresentable {
             }
 
             if url.scheme == "http" || url.scheme == "https" || url.scheme == "about" || url.scheme == "file" {
+                // Prevent background script probes from navigating the active page to about:blank
+                if url.absoluteString == "about:blank" && navigationAction.targetFrame?.isMainFrame == true && currentLoadedURL != nil && currentLoadedURL != "local://startpage" {
+                    decisionHandler(.cancel, preferences)
+                    return
+                }
                 decisionHandler(.allow, preferences)
                 return
             }

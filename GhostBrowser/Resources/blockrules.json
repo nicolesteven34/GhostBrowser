@@ -33,7 +33,8 @@
     },
     {
         "trigger": {
-            "url-filter": ".*(fingerprintjs\\.com|fpjs\\.sh|fpcdn\\.io).*"
+            "url-filter": ".*(fingerprintjs\\.com|fpjs\\.sh|fpcdn\\.io).*",
+            "unless-domain": ["fingerprint.com", "fingerprintjs.com", "fingerprint-scan.com"]
         },
         "action": {
             "type": "block"

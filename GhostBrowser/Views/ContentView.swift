@@ -286,7 +286,7 @@ public struct ContentView: View {
         let isActive = (tab.id == activeTabID)
 
         HStack(spacing: 8) {
-            // Tab Status Icon / Loading Spinner
+            // Tab Status Icon / Loading Spinner / Favicon
             if tab.isLoading {
                 ProgressView()
                     .scaleEffect(0.65)
@@ -295,6 +295,22 @@ public struct ContentView: View {
                 Image(systemName: "shield.lefthalf.filled")
                     .font(.system(size: 12))
                     .foregroundColor(isActive ? .blue : .secondary)
+            } else if let favURL = tab.faviconURL {
+                AsyncImage(url: favURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 14, height: 14)
+                            .cornerRadius(3)
+                    default:
+                        Image(systemName: "globe")
+                            .font(.system(size: 12))
+                            .foregroundColor(isActive ? .blue : .secondary)
+                    }
+                }
+                .frame(width: 14, height: 14)
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: 12))

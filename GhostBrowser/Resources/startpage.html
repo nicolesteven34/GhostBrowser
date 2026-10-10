@@ -317,11 +317,17 @@
         .favorites-grid {
             width: 100%;
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 12px;
         }
 
-        @media (max-width: 500px) {
+        @media (max-width: 600px) {
+            .favorites-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 420px) {
             .favorites-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
@@ -347,13 +353,31 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 16px;
+            font-size: 15px;
             color: var(--accent-blue);
-            transition: transform 0.15s ease;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.15s ease, border-color 0.15s ease;
         }
 
         .fav-item:active .fav-icon {
             transform: scale(0.92);
+        }
+
+        .fav-img {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+
+        .fav-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-weight: 700;
         }
 
         .fav-label {
@@ -472,31 +496,102 @@
             </div>
         </div>
 
-        <!-- Quick Fingerprint Test Destinations & Favorites -->
-        <div class="favorites-section-title">Test Targets &amp; Favorites</div>
+        <!-- Quick Test Targets from more.txt -->
+        <div class="favorites-section-title">Bot &amp; Fingerprint Test Targets</div>
         <div class="favorites-grid">
             <div class="fav-item" onclick="navigate('https://fingerprint.com/demo/')">
-                <div class="fav-icon" style="color: #FF5D22; border-color: rgba(255, 93, 34, 0.3);">FP</div>
+                <div class="fav-icon" style="border-color: rgba(255, 93, 34, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/fingerprint.com.ico" alt="FP" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #FF5D22;">FP</span>
+                </div>
                 <span class="fav-label">Fingerprint</span>
             </div>
-            <div class="fav-item" onclick="navigate('https://label-nutritional-chess-analysis.trycloudflare.com')">
-                <div class="fav-icon" style="color: #30D158; border-color: rgba(48, 209, 88, 0.3);">GD</div>
-                <span class="fav-label">GhostDetect</span>
+            <div class="fav-item" onclick="navigate('https://fingerprint-scan.com/')">
+                <div class="fav-icon" style="border-color: rgba(10, 132, 255, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/fingerprint-scan.com.ico" alt="FS" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #0A84FF;">FS</span>
+                </div>
+                <span class="fav-label">FP Scan</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://ipfighter.com/bot-detection')">
+                <div class="fav-icon" style="border-color: rgba(255, 69, 58, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/ipfighter.com.ico" alt="IP" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #FF453A;">IPF</span>
+                </div>
+                <span class="fav-label">IPFighter</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://browserinsight.net/bot-detection')">
+                <div class="fav-icon" style="border-color: rgba(48, 209, 88, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/browserinsight.net.ico" alt="BI" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #30D158;">BIN</span>
+                </div>
+                <span class="fav-label">Insight</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://pixelscan.net/bot-check')">
+                <div class="fav-icon" style="border-color: rgba(191, 90, 242, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/pixelscan.net.ico" alt="PS" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #BF5AF2;">PSC</span>
+                </div>
+                <span class="fav-label">PixelScan</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://scrapfly.io/web-scraping-tools/automation-detector')">
+                <div class="fav-icon" style="border-color: rgba(255, 159, 10, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/scrapfly.io.ico" alt="SF" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #FF9F0A;">SFL</span>
+                </div>
+                <span class="fav-label">Scrapfly</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://pixelscan.dev/bot')">
+                <div class="fav-icon" style="border-color: rgba(100, 210, 255, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/pixelscan.dev.ico" alt="PD" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #64D2FF;">P-Dev</span>
+                </div>
+                <span class="fav-label">PixelDev</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://proxydetect.live/')">
+                <div class="fav-icon" style="border-color: rgba(255, 55, 95, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/proxydetect.live.ico" alt="PD" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #FF375F;">PXL</span>
+                </div>
+                <span class="fav-label">ProxyDetect</span>
             </div>
             <div class="fav-item" onclick="navigate('https://browserleaks.com/canvas')">
-                <div class="fav-icon" style="color: #BF5AF2; border-color: rgba(191, 90, 242, 0.3);">BL</div>
+                <div class="fav-icon" style="border-color: rgba(191, 90, 242, 0.35);">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/browserleaks.com.ico" alt="BL" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none; color: #BF5AF2;">BL</span>
+                </div>
                 <span class="fav-label">BrowserLeaks</span>
             </div>
-            <div class="fav-item" onclick="navigate('https://wikipedia.org')">
-                <div class="fav-icon">W</div>
-                <span class="fav-label">Wikipedia</span>
+            <div class="fav-item" onclick="navigate('https://label-nutritional-chess-analysis.trycloudflare.com')">
+                <div class="fav-icon" style="border-color: rgba(48, 209, 88, 0.35);">
+                    <span class="fav-fallback" style="color: #30D158;">GD</span>
+                </div>
+                <span class="fav-label">GhostDetect</span>
             </div>
+        </div>
+
+        <!-- Favorites Section -->
+        <div class="favorites-section-title">Favorites</div>
+        <div class="favorites-grid">
             <div class="fav-item" onclick="navigate('https://apple.com')">
-                <div class="fav-icon">&#63743;</div>
+                <div class="fav-icon">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/apple.com.ico" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none;">&#63743;</span>
+                </div>
                 <span class="fav-label">Apple</span>
             </div>
+            <div class="fav-item" onclick="navigate('https://wikipedia.org')">
+                <div class="fav-icon">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/wikipedia.org.ico" alt="W" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none;">W</span>
+                </div>
+                <span class="fav-label">Wikipedia</span>
+            </div>
             <div class="fav-item" onclick="navigate('https://github.com')">
-                <div class="fav-icon">GH</div>
+                <div class="fav-icon">
+                    <img class="fav-img" src="https://icons.duckduckgo.com/ip3/github.com.ico" alt="GH" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="fav-fallback" style="display: none;">GH</span>
+                </div>
                 <span class="fav-label">GitHub</span>
             </div>
         </div>

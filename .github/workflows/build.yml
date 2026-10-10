@@ -56,24 +56,33 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v2.5.0
-          name: GhostBrowser v2.5.0 (Multi-Tab Safari Architecture & State Preservation)
+          tag_name: v2.5.1
+          name: GhostBrowser v2.5.1 (Blank Page Elimination, Real Favicon Engine & Test Targets)
           body: |
-            ## GhostBrowser v2.5.0 (Multi-Tab Safari Architecture & State Preservation)
-            - **Safari Multi-Tab Browsing Engine**:
-              - Apple Safari-style horizontal tab bar with active tab elevation, custom status icons, truncated page titles, close buttons, and `+` new tab button.
-              - Instant tab switching with zero reload: tabs remain alive in a background ZStack preserving DOM state, form entries, and exact scroll position.
-              - Quick new tab action in both the top toolbar and horizontal tab bar.
-              - Automatic handling of `target="_blank"` and popups opening into new tabs seamlessly.
-              - Tab-scoped navigation controls (Back, Forward, Reload, Address Bar, and Progress Bar automatically target the active tab).
-            - **Unified Identity Partitioning Across Tabs**:
-              - All open tabs share the isolated `WKWebsiteDataStore` UUID for clean cookie sharing within a session.
-              - Identity rotation and Panic Wipe cleanly purge and refresh data stores across all tabs simultaneously.
-            - **Preserved Stealth & Anti-Tampering Protections**:
-              - 0 Tampering detection on `fingerprint.com` (Suspect Score: 0).
+            ## GhostBrowser v2.5.1 (Blank Page Elimination, Real Favicon Engine & Test Targets)
+            - **Blank Screen Bug Elimination on Fingerprint.com**:
+              - Fixed `createWebViewWith` popup handler: background scripts probing `window.open('about:blank')` no longer hijack or overwrite the active webView.
+              - Added main-frame safeguard in `decidePolicyFor`: script-initiated `about:blank` navigations are blocked while active web sessions are loaded.
+              - Added content blocker rule exemptions for test domains (`fingerprint.com`, `fingerprintjs.com`, `fingerprint-scan.com`) so first-party CDNs load seamlessly.
+            - **Real Website Favicon (.ico) Engine**:
+              - Tab bar capsules dynamically stream and display real website `.ico` / favicons using `AsyncImage` with smooth fallback to globe icons.
+              - Home page test targets & favorites display their live genuine brand favicons with graceful offline monogram fallbacks.
+            - **Integrated Test Target Suite**:
+              - Added all 7 new requested bot and anti-detection test targets to the Start Page:
+                - `https://fingerprint-scan.com/` (Hardware hash & Castle.io checks)
+                - `https://browserinsight.net/bot-detection` (Bot & fraud detection)
+                - `https://pixelscan.net/bot-check` (PixelScan bot checker)
+                - `https://ipfighter.com/bot-detection` (Headless & focus detector)
+                - `https://scrapfly.io/web-scraping-tools/automation-detector` (Scrapfly automation detection)
+                - `https://pixelscan.dev/bot` (PixelScan dev bot tests)
+                - `https://proxydetect.live/` (Proxy & network tests)
+                - `https://fingerprint.com/demo/` (Fingerprint Pro demo)
+                - `https://browserleaks.com/canvas` (BrowserLeaks canvas/WebGL)
+                - `https://label-nutritional-chess-analysis.trycloudflare.com` (GhostDetect verification)
+            - **Preserved Stealth Integrity**:
+              - 0 tampering detection on `fingerprint.com` (Suspect Score: 0).
               - 0/100 Bot Score on `fingerprint-scan.com`.
-              - Same-device visitor ID rotation maintained across identity refreshes.
-              - `document.hasFocus()` focus integrity and Media Devices API completeness preserved across all tabs.
+              - Same-device visitor ID rotation preserved.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
