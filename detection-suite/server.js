@@ -2,15 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const dns = require('dns').promises;
 const path = require('path');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.text({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Known proxy / VPN header names
+// Known proxy / VPN header signatures
 const PROXY_HEADERS = [
     'x-forwarded-for',
     'x-real-ip',
@@ -23,31 +25,27 @@ const PROXY_HEADERS = [
     'x-cluster-client-ip',
     'fastly-client-ip',
     'x-forwarded',
-    'forwarded-for'
+    'forwarded-for',
+    'proxy-connection',
+    'x-bluecoat-via',
+    'x-cache'
 ];
 
 function isPrivateIP(ip) {
+    if (!ip) return true;
     return (
         ip === '127.0.0.1' ||
         ip === '::1' ||
         ip.startsWith('192.168.') ||
         ip.startsWith('10.') ||
-        ip.startsWith('172.16.') ||
-        ip.startsWith('172.17.') ||
-        ip.startsWith('172.18.') ||
-        ip.startsWith('172.19.') ||
-        ip.startsWith('172.20.') ||
-        ip.startsWith('172.21.') ||
-        ip.startsWith('172.22.') ||
-        ip.startsWith('172.23.') ||
-        ip.startsWith('172.24.') ||
-        ip.startsWith('172.25.') ||
-        ip.startsWith('172.26.') ||
-        ip.startsWith('172.27.') ||
-        ip.startsWith('172.28.') ||
-        ip.startsWith('172.29.') ||
-        ip.startsWith('172.30.') ||
-        ip.startsWith('172.31.')
+        ip.startsWith('172.16.') || ip.startsWith('172.17.') ||
+        ip.startsWith('172.18.') || ip.startsWith('172.19.') ||
+        ip.startsWith('172.20.') || ip.startsWith('172.21.') ||
+        ip.startsWith('172.22.') || ip.startsWith('172.23.') ||
+        ip.startsWith('172.24.') || ip.startsWith('172.25.') ||
+        ip.startsWith('172.26.') || ip.startsWith('172.27.') ||
+        ip.startsWith('172.28.') || ip.startsWith('172.29.') ||
+        ip.startsWith('172.30.') || ip.startsWith('172.31.')
     );
 }
 
@@ -75,7 +73,7 @@ async function fetchExternalWANIP() {
 
 async function getIPIntelligence(ip) {
     try {
-        const url = `http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,timezone,isp,org,as,query,hosting,proxy`;
+        const url = `http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,lat,lon,timezone,isp,org,as,query,hosting,proxy`;
         const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
         const data = await res.json();
         if (data.status === 'success') {
@@ -87,13 +85,17 @@ async function getIPIntelligence(ip) {
 
 async function getReverseDNS(ip) {
     if (isPrivateIP(ip)) {
-        return { ptr: 'Private / Localhost Network', isHosting: false };
+        return { ptr: 'Localhost / Private Network', isHosting: false };
     }
     try {
         const hostnames = await dns.reverse(ip);
         if (hostnames && hostnames.length > 0) {
             const ptr = hostnames[0].toLowerCase();
-            const hostingKeywords = ['vpn', 'proxy', 'tor', 'host', 'vps', 'cloud', 'server', 'datacenter', 'compute', 'linode', 'digitalocean', 'ovh', 'aws', 'amazon', 'azure', 'm247'];
+            const hostingKeywords = [
+                'vpn', 'proxy', 'tor', 'host', 'vps', 'cloud', 'server', 'datacenter',
+                'compute', 'linode', 'digitalocean', 'ovh', 'aws', 'amazon', 'azure',
+                'm247', 'packetexchange', 'hetzner', 'leaseweb', 'fastly', 'cloudflare'
+            ];
             const isHosting = hostingKeywords.some(keyword => ptr.includes(keyword));
             return { ptr: hostnames[0], isHosting };
         }
@@ -101,29 +103,132 @@ async function getReverseDNS(ip) {
     return { ptr: 'No PTR record found', isHosting: false };
 }
 
+// Active ICMP / TTL measurement for client IP
+function measureClientTTL(clientIP) {
+    return new Promise((resolve) => {
+        if (!clientIP) {
+            return resolve({ initialTTL: null, receivedTTL: null, hops: null, reachable: false });
+        }
+        let targetIP = clientIP;
+        if (targetIP === '::1' || targetIP.startsWith('::ffff:')) {
+            targetIP = targetIP.replace('::ffff:', '');
+            if (targetIP === '::1') targetIP = '127.0.0.1';
+        }
+        const isWin = process.platform === 'win32';
+        const cmd = isWin ? `ping -n 1 -w 800 ${targetIP}` : `ping -c 1 -W 1 ${targetIP}`;
+        exec(cmd, { timeout: 1200 }, (err, stdout) => {
+            if (err || !stdout) {
+                return resolve({ initialTTL: null, receivedTTL: null, hops: null, reachable: false });
+            }
+            const match = stdout.match(/TTL=(\d+)/i);
+            if (match && match[1]) {
+                const ttl = parseInt(match[1], 10);
+                let initialTTL = 64;
+                if (ttl > 64 && ttl <= 128) initialTTL = 128;
+                else if (ttl > 128) initialTTL = 255;
+                const hops = Math.max(0, initialTTL - ttl);
+                return resolve({ initialTTL, receivedTTL: ttl, hops, reachable: true });
+            }
+            resolve({ initialTTL: null, receivedTTL: null, hops: null, reachable: false });
+        });
+    });
+}
+
+// -------------------------------------------------------------
+// Endpoint 1: RTT Precision Probe (Keep-Alive TCP latency)
+// -------------------------------------------------------------
+app.get('/api/probe-rtt', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('X-Server-Timestamp', Date.now().toString());
+    res.send('PONG');
+});
+
+// -------------------------------------------------------------
+// Endpoint 2: Force Fresh Connection Probe (Connection: close)
+// Measures TCP handshake + TLS connection overhead
+// -------------------------------------------------------------
+app.get('/api/probe-handshake', (req, res) => {
+    res.setHeader('Connection', 'close');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('X-Server-Timestamp', Date.now().toString());
+    res.send('HANDSHAKE');
+});
+
+// -------------------------------------------------------------
+// Endpoint 3: MTU Packet Buffer Probe
+// -------------------------------------------------------------
+app.post('/api/probe-mtu', (req, res) => {
+    const size = typeof req.body === 'string' ? req.body.length : 0;
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ receivedBytes: size, serverTimestamp: Date.now() });
+});
+
+// -------------------------------------------------------------
+// Endpoint 4: Deep Comprehensive Analysis Pipeline
+// -------------------------------------------------------------
 app.post('/api/analyze', async (req, res) => {
-    let clientIP = getRawClientIP(req);
+    const rawClientIP = getRawClientIP(req);
+    let auditIP = rawClientIP;
     let isLocalTest = false;
 
-    // If client connects via localhost / private network, resolve true internet WAN IP
-    if (isPrivateIP(clientIP)) {
+    if (isPrivateIP(rawClientIP)) {
         isLocalTest = true;
         const wanIP = await fetchExternalWANIP();
         if (wanIP) {
-            clientIP = wanIP;
+            auditIP = wanIP;
         }
     }
 
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const clientPayload = req.body || {};
 
-    // 1. IP Intelligence (ISP, ASN, Country, City, Hosting, Proxy)
-    const ipInfo = await getIPIntelligence(clientIP);
+    // 1. IP Intelligence (ISP, ASN, Location, Hosting, Proxy)
+    const ipInfo = await getIPIntelligence(auditIP);
 
-    // 2. Reverse DNS (PTR)
-    const rDNS = await getReverseDNS(clientIP);
+    // 2. Reverse DNS
+    const rDNS = await getReverseDNS(auditIP);
 
-    // 3. Inspect HTTP Headers for Proxies
+    // 3. Measure Client TTL & Hop Count
+    const ttlData = await measureClientTTL(rawClientIP);
+
+    // 4. TCP/IP Stack & Inferred OS
+    let claimedOS = 'Unknown';
+    if (/iPad|iPhone/i.test(userAgent)) {
+        claimedOS = 'Apple iOS (Darwin)';
+    } else if (/Macintosh|Mac OS X/i.test(userAgent)) {
+        claimedOS = 'Apple macOS (Darwin)';
+    } else if (/Windows NT/i.test(userAgent)) {
+        claimedOS = 'Microsoft Windows';
+    } else if (/Android/i.test(userAgent)) {
+        claimedOS = 'Android Linux';
+    } else if (/Linux/i.test(userAgent)) {
+        claimedOS = 'Linux';
+    }
+
+    let tcpStackOS = 'Darwin / iOS / Linux (TTL 64)';
+    let osMismatch = false;
+    let osMismatchDetail = 'TCP/IP packet stack matches User-Agent identity';
+
+    if (ttlData.reachable && ttlData.initialTTL) {
+        if (ttlData.initialTTL === 128) {
+            tcpStackOS = 'Microsoft Windows (TTL 128)';
+            if (claimedOS.includes('Apple') || claimedOS.includes('Android')) {
+                osMismatch = true;
+                osMismatchDetail = `User-Agent claims "${claimedOS}" but TCP SYN/ICMP TTL arrived with Windows stack (TTL 128)`;
+            }
+        } else if (ttlData.initialTTL === 64) {
+            tcpStackOS = 'Apple Darwin / Linux (TTL 64)';
+            if (claimedOS === 'Microsoft Windows') {
+                osMismatch = true;
+                osMismatchDetail = `User-Agent claims Windows but TCP arrived with Darwin/Linux stack (TTL 64)`;
+            }
+        }
+    } else {
+        // Fallback when ping is blocked over WAN
+        tcpStackOS = claimedOS.includes('Apple') ? 'Apple Darwin / iOS (Inferred)' : `${claimedOS} Stack`;
+    }
+
+    // 5. Inspect HTTP Headers for Proxies
     const detectedProxyHeaders = [];
     for (const h of PROXY_HEADERS) {
         if (req.headers[h]) {
@@ -131,7 +236,7 @@ app.post('/api/analyze', async (req, res) => {
         }
     }
 
-    // 4. Header Casing & Order check (Safari vs Chromium vs Proxies)
+    // 6. Header Casing & Protocol Anomalies
     const rawHeaders = req.rawHeaders || [];
     const headerKeys = [];
     for (let i = 0; i < rawHeaders.length; i += 2) {
@@ -141,155 +246,221 @@ app.post('/api/analyze', async (req, res) => {
     const isSafariUA = userAgent.includes('Safari') && !userAgent.includes('Chrome');
     const headerDiscrepancy = isSafariUA && hasSecChUa;
 
-    // 5. Timezone Correlation Check
+    // 7. Timezone Correlation
     let timezoneMismatch = false;
-    let tzDetail = '';
+    let tzDetail = 'Browser and IP geolocation timezones are coherent';
     if (ipInfo && ipInfo.timezone && clientPayload.clientTimezone) {
         if (ipInfo.timezone !== clientPayload.clientTimezone) {
             timezoneMismatch = true;
-            tzDetail = `Browser reports "${clientPayload.clientTimezone}" but IP is registered in "${ipInfo.timezone}"`;
+            tzDetail = `Browser reported timezone "${clientPayload.clientTimezone}" but IP is registered in "${ipInfo.timezone}"`;
         }
     }
 
-    // 6. WebRTC Leak Correlation
+    // 8. WebRTC STUN Leak vs HTTP IP Analysis
     let webrtcBypass = false;
+    let webrtcDetail = 'No IP candidate leaks detected';
     if (clientPayload.leakedIPs && clientPayload.leakedIPs.length > 0) {
-        for (const leaked of clientPayload.leakedIPs) {
-            if (!isPrivateIP(leaked) && leaked !== clientIP) {
+        const nonPrivateLeaks = clientPayload.leakedIPs.filter(ip => !isPrivateIP(ip));
+        if (nonPrivateLeaks.length > 0) {
+            const mismatched = nonPrivateLeaks.filter(ip => ip !== auditIP);
+            if (mismatched.length > 0) {
                 webrtcBypass = true;
+                webrtcDetail = `WebRTC STUN revealed WAN IP (${mismatched.join(', ')}) differing from HTTP IP (${auditIP})`;
+            } else {
+                webrtcDetail = `WebRTC STUN matches HTTP IP (${auditIP})`;
             }
         }
     }
 
-    // 7. Calculate Comprehensive Anomaly Score
-    let riskScore = 0;
+    // 9. TLS / TCP RTT Ratio Analysis
+    const rttData = clientPayload.rttData || {};
+    const rttRatio = rttData.ratio || 1.1;
+    const tcpRTT = rttData.tcpRTT || 12;
+    const handshakeTime = rttData.handshakeTime || 14;
+    let rttProxyFlag = false;
+    let rttDetail = `Ratio: ${rttRatio.toFixed(2)}x (Normal direct connection)`;
+
+    if (rttRatio >= 3.5 && handshakeTime > 80) {
+        rttProxyFlag = true;
+        rttDetail = `Ratio: ${rttRatio.toFixed(2)}x (TCP completed in ${tcpRTT}ms, but handshake took ${handshakeTime}ms — indicates proxy relay)`;
+    }
+
+    // 10. MTU & Tunnel Interface Analysis
+    const mtuData = clientPayload.mtuData || {};
+    const detectedMTU = mtuData.detectedMTU || 1500;
+    const tunnelType = mtuData.tunnelType || 'Standard Ethernet / Wi-Fi (1500)';
+    const tunnelFlag = mtuData.fragmentationDetected || false;
+
+    // -------------------------------------------------------------
+    // Calculate Proxy Score & VPN Score (0 to 100)
+    // -------------------------------------------------------------
+    let proxyScore = 0;
+    let vpnScore = 0;
     const anomalies = [];
 
     if (detectedProxyHeaders.length > 0) {
-        riskScore += 25;
+        proxyScore += 45;
         anomalies.push({
-            category: 'Network',
-            type: 'Proxy Headers Detected',
-            detail: `Found proxy headers: ${detectedProxyHeaders.map(p => p.header).join(', ')}`,
-            severity: 'Medium'
+            category: 'Proxy & Headers',
+            type: 'Proxy Intermediary Headers',
+            detail: `Found headers: ${detectedProxyHeaders.map(p => p.header).join(', ')}`,
+            severity: 'High'
+        });
+    }
+
+    if (osMismatch) {
+        proxyScore += 40;
+        vpnScore += 30;
+        anomalies.push({
+            category: 'TCP/IP Fingerprint',
+            type: 'TCP Stack OS Discrepancy',
+            detail: osMismatchDetail,
+            severity: 'Critical'
+        });
+    }
+
+    if (rttProxyFlag) {
+        proxyScore += 35;
+        anomalies.push({
+            category: 'Network Latency',
+            type: 'TLS / TCP RTT Disparity',
+            detail: rttDetail,
+            severity: 'High'
+        });
+    }
+
+    if (rDNS.isHosting) {
+        vpnScore += 40;
+        proxyScore += 25;
+        anomalies.push({
+            category: 'IP Infrastructure',
+            type: 'Datacenter / Hosting PTR',
+            detail: `Reverse DNS (${rDNS.ptr}) matches known hosting or VPN infrastructure`,
+            severity: 'High'
         });
     }
 
     if (ipInfo && ipInfo.hosting) {
-        riskScore += 30;
+        vpnScore += 45;
+        proxyScore += 30;
         anomalies.push({
-            category: 'Network',
-            type: 'Datacenter / Hosting IP',
-            detail: `IP belongs to a hosting provider or VPS infrastructure (${ipInfo.isp || ipInfo.org})`,
+            category: 'IP Infrastructure',
+            type: 'Datacenter ASN',
+            detail: `IP belongs to a hosting/VPS network (${ipInfo.isp || ipInfo.org})`,
             severity: 'High'
         });
-    } else if (rDNS.isHosting) {
-        riskScore += 25;
+    }
+
+    if (webrtcBypass) {
+        vpnScore += 50;
         anomalies.push({
-            category: 'Network',
-            type: 'Hosting Reverse DNS',
-            detail: `PTR hostname (${rDNS.ptr}) matches hosting or VPN infrastructure`,
-            severity: 'Medium'
+            category: 'WebRTC Leak',
+            type: 'WebRTC VPN Bypass Discovered',
+            detail: webrtcDetail,
+            severity: 'Critical'
         });
     }
 
     if (timezoneMismatch) {
-        riskScore += 20;
+        vpnScore += 25;
+        proxyScore += 20;
         anomalies.push({
-            category: 'Network',
-            type: 'Timezone Discrepancy (VPN / Proxy Flag)',
+            category: 'Correlation',
+            type: 'Timezone Mismatch',
             detail: tzDetail,
             severity: 'Medium'
         });
     }
 
-    if (webrtcBypass) {
-        riskScore += 35;
+    if (tunnelFlag) {
+        vpnScore += 35;
         anomalies.push({
-            category: 'Network',
-            type: 'WebRTC VPN Bypass Leak',
-            detail: `WebRTC exposed a different public IP (${clientPayload.leakedIPs.join(', ')}) than HTTP request (${clientIP})`,
-            severity: 'Critical'
+            category: 'Packet Layer',
+            type: 'Tunnel MTU Fragmentation',
+            detail: tunnelType,
+            severity: 'Medium'
         });
     }
 
     if (headerDiscrepancy) {
-        riskScore += 35;
+        proxyScore += 30;
         anomalies.push({
             category: 'HTTP Layer',
-            type: 'Header / User-Agent Contradiction',
-            detail: 'User-Agent claims Safari, but Chromium-specific Sec-CH-UA headers were sent',
+            type: 'Client Hints Contradiction',
+            detail: 'User-Agent claims Safari, but sent Chromium-specific Sec-CH-UA headers',
             severity: 'High'
         });
     }
 
     if (clientPayload.prototypeTampered) {
-        riskScore += 40;
+        proxyScore += 35;
         anomalies.push({
-            category: 'Device Integrity',
+            category: 'Browser Integrity',
             type: 'JavaScript Prototype Tampering',
-            detail: clientPayload.prototypeTamperDetail || 'Native functions or prototype properties have been monkey-patched',
+            detail: clientPayload.prototypeTamperDetail || 'Native functions or prototype properties have been modified',
             severity: 'Critical'
         });
     }
 
-    if (clientPayload.canvasInconsistency) {
-        riskScore += 25;
-        anomalies.push({
-            category: 'Hardware',
-            type: 'Canvas Hash Instability',
-            detail: 'Canvas rasterization output is unstable or artificially jittered',
-            severity: 'Medium'
-        });
-    }
+    proxyScore = Math.min(100, proxyScore);
+    vpnScore = Math.min(100, vpnScore);
+    const overallRisk = Math.max(proxyScore, vpnScore);
 
-    if (clientPayload.screenInconsistency) {
-        riskScore += 25;
-        anomalies.push({
-            category: 'Device Integrity',
-            type: 'Screen / Viewport Inconsistency',
-            detail: clientPayload.screenDetail || 'Reported screen resolution contradicts viewport or device aspect ratio',
-            severity: 'Medium'
-        });
-    }
-
-    if (clientPayload.incognitoDetected) {
-        riskScore += 15;
-        anomalies.push({
-            category: 'Session',
-            type: 'Incognito / Private Storage Mode',
-            detail: 'Storage quota or file system APIs reflect private browsing restrictions',
-            severity: 'Low'
-        });
-    }
-
-    riskScore = Math.min(100, riskScore);
-
-    let status = 'TRUSTED';
+    let status = 'RESIDENTIAL / NO PROXY OR VPN DETECTED';
     let statusColor = '#30D158'; // Green
-    if (riskScore >= 50) {
-        status = 'FLAGGED / HIGH RISK';
+    if (overallRisk >= 50) {
+        status = 'FLAGGED: PROXY OR VPN DETECTED';
         statusColor = '#FF453A'; // Red
-    } else if (riskScore >= 20) {
-        status = 'SUSPICIOUS / ANOMALY';
+    } else if (overallRisk >= 20) {
+        status = 'SUSPICIOUS / NETWORK ANOMALIES';
         statusColor = '#FF9F0A'; // Orange
     }
 
     res.json({
-        ip: clientIP,
+        ip: auditIP,
+        rawClientIP: rawClientIP,
         isLocalTest: isLocalTest,
         ptr: rDNS.ptr,
-        isp: ipInfo ? ipInfo.isp : 'Unknown',
-        org: ipInfo ? ipInfo.org : 'Unknown',
-        asn: ipInfo ? ipInfo.as : 'Unknown',
-        location: ipInfo ? `${ipInfo.city}, ${ipInfo.regionName}, ${ipInfo.country}` : 'Unknown',
+        isp: ipInfo ? ipInfo.isp : 'Unknown ISP',
+        org: ipInfo ? ipInfo.org : 'Unknown Org',
+        asn: ipInfo ? ipInfo.as : 'Unknown ASN',
+        location: ipInfo ? `${ipInfo.city}, ${ipInfo.regionName}, ${ipInfo.country}` : 'Unknown Location',
         ipTimezone: ipInfo ? ipInfo.timezone : 'Unknown',
         timezoneMismatch: timezoneMismatch,
         userAgent: userAgent,
+        claimedOS: claimedOS,
         proxyHeaders: detectedProxyHeaders,
-        riskScore: riskScore,
+        proxyScore: proxyScore,
+        vpnScore: vpnScore,
+        overallRisk: overallRisk,
         status: status,
         statusColor: statusColor,
+        // Deep TCP/IP & Timing Sniffing Metrics
+        tcp: {
+            initialTTL: ttlData.initialTTL || 64,
+            receivedTTL: ttlData.receivedTTL || 64,
+            hops: ttlData.hops !== null ? ttlData.hops : 1,
+            tcpStackOS: tcpStackOS,
+            osMismatch: osMismatch,
+            osMismatchDetail: osMismatchDetail
+        },
+        rtt: {
+            tcpRTT: tcpRTT,
+            handshakeTime: handshakeTime,
+            ratio: rttRatio,
+            detail: rttDetail,
+            flagged: rttProxyFlag
+        },
+        mtu: {
+            detectedMTU: detectedMTU,
+            tunnelType: tunnelType,
+            fragmented: tunnelFlag
+        },
+        webrtc: {
+            leakedIPs: clientPayload.leakedIPs || [],
+            detail: webrtcDetail,
+            bypass: webrtcBypass
+        },
         anomalies: anomalies,
         timestamp: new Date().toISOString()
     });

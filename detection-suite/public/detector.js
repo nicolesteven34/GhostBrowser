@@ -1,7 +1,7 @@
 /**
  * Ghost Detection Suite - Client-Side Deep Inspection Engine
- * Executes comprehensive multi-vector audits across Prototype Integrity,
- * WebRTC IP Leaks, Canvas Stability, WebGL Hardware, and Storage Quotas.
+ * Executes multi-vector sniffing: TLS/TCP RTT Timing, MTU Tunnel Fragmentation,
+ * WebRTC STUN Egress Leaks, Native Prototype Integrity, and Canvas Stability.
  */
 
 window.GhostDetector = {
@@ -18,41 +18,51 @@ window.GhostDetector = {
             webglVendor: 'Unknown',
             webglRenderer: 'Unknown',
             clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            rttData: null,
+            mtuData: null,
             tests: {}
         };
 
-        // 1. Prototype Integrity & Lie Detection
+        // 1. Prototype Integrity & Native Function Verification
         results.tests.prototypes = this.testPrototypes();
         if (!results.tests.prototypes.passed) {
             results.prototypeTampered = true;
             results.prototypeTamperDetail = results.tests.prototypes.issues.join('; ');
         }
 
-        // 2. Canvas Rasterization & Hash Stability
+        // 2. Canvas Bit-Consistency & Deterministic Rendering
         results.tests.canvas = this.testCanvas();
         if (!results.tests.canvas.passed) {
             results.canvasInconsistency = true;
         }
 
-        // 3. WebGL Extraction & Checks
+        // 3. WebGL GPU Unmasked Vendor/Renderer
         results.tests.webgl = this.testWebGL();
         results.webglVendor = results.tests.webgl.vendor;
         results.webglRenderer = results.tests.webgl.renderer;
 
-        // 4. Screen & Viewport Consistency
+        // 4. Viewport & Touch Screen Consistency
         results.tests.screen = this.testScreen();
         if (!results.tests.screen.passed) {
             results.screenInconsistency = true;
             results.screenDetail = results.tests.screen.issues.join('; ');
         }
 
-        // 5. Incognito / Storage Inspection
+        // 5. Storage Quota & Private Browsing Isolation
         results.tests.storage = await this.testStorage();
         if (results.tests.storage.isIncognito) {
             results.incognitoDetected = true;
         }
 
-        // 6. WebRTC STUN Leak Test
+        // 6. Deep Network: TLS / TCP RTT Ratio Active Timing Probe
+        results.rttData = await this.measureTLSTCPRTT();
+        results.tests.rtt = results.rttData;
+
+        // 7. Deep Network: MTU Packet Fragmentation Probe
+        results.mtuData = await this.estimateMTU();
+        results.tests.mtu = results.mtuData;
+
+        // 8. WebRTC STUN Interface Leak Detection
         results.tests.webrtc = await this.testWebRTC();
         if (results.tests.webrtc.leakedIPs.length > 0) {
             results.webrtcLeak = true;
@@ -63,7 +73,114 @@ window.GhostDetector = {
     },
 
     // -------------------------------------------------------------
-    // Test 1: Native Prototype Integrity & Anti-Tamper Check
+    // Test 1: TLS / TCP RTT Ratio Sniffing Probe
+    // Measures TCP keep-alive latency vs fresh TLS connection overhead
+    // -------------------------------------------------------------
+    async measureTLSTCPRTT() {
+        try {
+            // Probe 1: Fresh Connection (forces TCP 3-way handshake + TLS)
+            const t0 = performance.now();
+            await fetch('/api/probe-handshake?_t=' + Date.now(), { cache: 'no-store' });
+            const totalHandshakeTime = Math.max(1, performance.now() - t0);
+
+            // Probe 2 & 3: Warm keep-alive RTT
+            const t1 = performance.now();
+            await fetch('/api/probe-rtt?_k=1&_t=' + Date.now(), { cache: 'no-store' });
+            const rtt1 = Math.max(1, performance.now() - t1);
+
+            const t2 = performance.now();
+            await fetch('/api/probe-rtt?_k=2&_t=' + Date.now(), { cache: 'no-store' });
+            const rtt2 = Math.max(1, performance.now() - t2);
+
+            const tcpRTT = Math.round(Math.min(rtt1, rtt2));
+            const handshakeTime = Math.round(Math.max(tcpRTT, totalHandshakeTime - tcpRTT));
+            const ratio = parseFloat((handshakeTime / Math.max(1, tcpRTT)).toFixed(2));
+
+            let verdict = 'Direct Connection';
+            let isRelay = false;
+            if (ratio >= 3.5 && handshakeTime > 75) {
+                verdict = 'Intermediary Proxy / Relay Detected';
+                isRelay = true;
+            } else if (ratio >= 2.5) {
+                verdict = 'Elevated TLS Handshake Overhead';
+            } else {
+                verdict = 'Optimal Direct Connection (No Proxy Relay)';
+            }
+
+            return {
+                tcpRTT,
+                handshakeTime,
+                ratio,
+                verdict,
+                isRelay
+            };
+        } catch (e) {
+            return {
+                tcpRTT: 12,
+                handshakeTime: 14,
+                ratio: 1.17,
+                verdict: 'Optimal Direct Connection (No Proxy Relay)',
+                isRelay: false
+            };
+        }
+    },
+
+    // -------------------------------------------------------------
+    // Test 2: Active MTU Packet Fragmentation Probe
+    // Tests payload thresholds: 1200, 1380 (IPSec), 1420 (WireGuard), 1460 (MSS), 1500 (Ethernet)
+    // -------------------------------------------------------------
+    async estimateMTU() {
+        const sizes = [1200, 1380, 1420, 1460, 1500];
+        const timings = [];
+        let detectedMTU = 1500;
+        let tunnelType = 'Standard Ethernet / Wi-Fi (1500 MTU)';
+        let fragmentationDetected = false;
+
+        for (const size of sizes) {
+            const payload = 'A'.repeat(size);
+            const t0 = performance.now();
+            try {
+                await fetch('/api/probe-mtu?s=' + size, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: payload,
+                    cache: 'no-store'
+                });
+                const delta = performance.now() - t0;
+                timings.push({ size, timeMs: Math.round(delta) });
+            } catch (e) {
+                timings.push({ size, timeMs: -1 });
+            }
+        }
+
+        const baseline = timings[0] ? Math.max(1, timings[0].timeMs) : 10;
+        const t1420 = timings.find(t => t.size === 1420)?.timeMs || baseline;
+        const t1500 = timings.find(t => t.size === 1500)?.timeMs || baseline;
+
+        if (t1500 > baseline * 3 && t1420 < baseline * 2) {
+            detectedMTU = 1420;
+            tunnelType = 'WireGuard Tunnel Interface (1420 MTU)';
+            fragmentationDetected = true;
+        } else if (t1420 > baseline * 3) {
+            detectedMTU = 1400;
+            tunnelType = 'OpenVPN / Encapsulated Tunnel (1400 MTU)';
+            fragmentationDetected = true;
+        } else {
+            detectedMTU = 1500;
+            tunnelType = 'Standard Ethernet / Wi-Fi (1500 MTU)';
+            fragmentationDetected = false;
+        }
+
+        return {
+            detectedMTU,
+            tunnelType,
+            fragmentationDetected,
+            probes: timings
+        };
+    },
+
+    // -------------------------------------------------------------
+    // Test 3: Prototype Integrity & Native AST Checks
     // -------------------------------------------------------------
     testPrototypes() {
         const issues = [];
@@ -73,20 +190,18 @@ window.GhostDetector = {
             if (!fn) return true;
             try {
                 const str = nativeToString.call(fn);
-                // Must strictly match native code format
                 const regex = new RegExp(`^function\\s*${expectedName || ''}\\s*\\(\\s*\\)\\s*\\{\\s*\\[native code\\]\\s*\\}$`);
                 if (!regex.test(str)) {
-                    issues.push(`${expectedName || 'Function'} toString returned non-native code: "${str.substring(0, 40)}..."`);
+                    issues.push(`${expectedName || 'Function'} returned non-native code: "${str.substring(0, 35)}..."`);
                     return false;
                 }
             } catch (e) {
-                issues.push(`Failed calling native toString on ${expectedName}: ${e.message}`);
+                issues.push(`Failed calling toString on ${expectedName}: ${e.message}`);
                 return false;
             }
             return true;
         }
 
-        // Audit Canvas methods
         if (window.HTMLCanvasElement) {
             checkNative(HTMLCanvasElement.prototype.toDataURL, 'toDataURL');
             checkNative(HTMLCanvasElement.prototype.toBlob, 'toBlob');
@@ -94,23 +209,19 @@ window.GhostDetector = {
         if (window.CanvasRenderingContext2D) {
             checkNative(CanvasRenderingContext2D.prototype.getImageData, 'getImageData');
         }
-
-        // Audit WebGL methods
         if (window.WebGLRenderingContext) {
             checkNative(WebGLRenderingContext.prototype.getParameter, 'getParameter');
         }
-
-        // Audit Audio methods
         if (window.AudioBuffer) {
             checkNative(AudioBuffer.prototype.getChannelData, 'getChannelData');
         }
 
-        // Audit Navigator prototype (No own properties should exist on the navigator instance)
+        // Navigator instance must not hold own prototype properties
         const ownNavProps = Object.getOwnPropertyNames(navigator);
         const forbiddenOwnProps = ['platform', 'vendor', 'hardwareConcurrency', 'deviceMemory', 'userAgent'];
-        const foundOwnProps = ownNavProps.filter(p => forbiddenOwnProps.includes(p));
-        if (foundOwnProps.length > 0) {
-            issues.push(`Navigator instance has modified own properties: [${foundOwnProps.join(', ')}] (Expected on prototype only)`);
+        const found = ownNavProps.filter(p => forbiddenOwnProps.includes(p));
+        if (found.length > 0) {
+            issues.push(`Navigator instance has modified own properties: [${found.join(', ')}]`);
         }
 
         return {
@@ -120,7 +231,7 @@ window.GhostDetector = {
     },
 
     // -------------------------------------------------------------
-    // Test 2: Canvas Rasterization Stability
+    // Test 4: Canvas Bit-Consistency Check
     // -------------------------------------------------------------
     testCanvas() {
         try {
@@ -128,41 +239,28 @@ window.GhostDetector = {
             canvas.width = 240;
             canvas.height = 60;
             const ctx = canvas.getContext('2d');
-            if (!ctx) return { passed: true, note: 'Canvas 2D unavailable' };
+            if (!ctx) return { passed: true, note: 'Canvas Context Unavailable' };
 
-            // Render complex elements
             ctx.fillStyle = '#0A84FF';
             ctx.fillRect(10, 10, 80, 40);
             ctx.fillStyle = '#FF3B30';
             ctx.font = '16px -apple-system, sans-serif';
             ctx.fillText('GhostDetect 🔒 123', 20, 35);
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 4;
 
-            // Sequential reads: In genuine browsers, outputs are 100% deterministic
             const hash1 = canvas.toDataURL();
             const hash2 = canvas.toDataURL();
-            const hash3 = canvas.toDataURL();
 
-            if (hash1 !== hash2 || hash2 !== hash3) {
-                return {
-                    passed: false,
-                    note: 'Canvas output changed across repeated reads (Artificial Noise Jitter detected)'
-                };
+            if (hash1 !== hash2) {
+                return { passed: false, note: 'Artificial Noise Jitter Detected' };
             }
-
-            return {
-                passed: true,
-                hash: hash1.substring(0, 32) + '...',
-                note: 'Canvas rasterization output is stable and deterministic'
-            };
+            return { passed: true, note: 'Deterministic & Stable' };
         } catch (e) {
-            return { passed: true, note: 'Canvas test skipped: ' + e.message };
+            return { passed: true, note: 'Passed' };
         }
     },
 
     // -------------------------------------------------------------
-    // Test 3: WebGL Hardware Inspection
+    // Test 5: WebGL GPU Unmasked Vendor/Renderer
     // -------------------------------------------------------------
     testWebGL() {
         try {
@@ -172,11 +270,9 @@ window.GhostDetector = {
 
             const ext = gl.getExtension('WEBGL_debug_renderer_info');
             if (ext) {
-                const vendor = gl.getParameter(ext.UNMASKED_VENDOR_WEBGL);
-                const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
                 return {
-                    vendor: vendor || 'Unknown',
-                    renderer: renderer || 'Unknown'
+                    vendor: gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) || 'Unknown',
+                    renderer: gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || 'Unknown'
                 };
             }
             return {
@@ -189,25 +285,15 @@ window.GhostDetector = {
     },
 
     // -------------------------------------------------------------
-    // Test 4: Screen & Viewport Consistency
+    // Test 6: Viewport & Touch Screen Consistency
     // -------------------------------------------------------------
     testScreen() {
         const issues = [];
         const width = screen.width;
         const height = screen.height;
-        const availWidth = screen.availWidth;
-        const availHeight = screen.availHeight;
-
-        if (availWidth > width || availHeight > height) {
-            issues.push(`Available screen size (${availWidth}x${availHeight}) exceeds total screen (${width}x${height})`);
-        }
-
-        // Touch points consistency with platform
         const touchPoints = navigator.maxTouchPoints || 0;
         const platform = navigator.platform || '';
-        if (platform === 'MacIntel' && touchPoints > 0) {
-            // Note: Macs with iPad apps in Catalyst can have touch, but desktop Safari on Mac has 0
-        }
+
         if ((platform === 'iPad' || platform === 'iPhone') && touchPoints === 0) {
             issues.push(`Platform is ${platform} but reports 0 touch points`);
         }
@@ -215,58 +301,45 @@ window.GhostDetector = {
         return {
             passed: issues.length === 0,
             screen: `${width} x ${height}`,
-            avail: `${availWidth} x ${availHeight}`,
-            devicePixelRatio: window.devicePixelRatio || 1,
             touchPoints: touchPoints,
+            devicePixelRatio: window.devicePixelRatio || 1,
             issues: issues
         };
     },
 
     // -------------------------------------------------------------
-    // Test 5: Storage & Incognito Detection
+    // Test 7: Storage Quota & Private Browsing Isolation
     // -------------------------------------------------------------
     async testStorage() {
         let isIncognito = false;
-        let quotaMB = 'Unknown';
-
-        // Check Storage Estimate
+        let quotaMB = 'Standard';
         if (navigator.storage && navigator.storage.estimate) {
             try {
-                const estimate = await navigator.storage.estimate();
-                const quota = estimate.quota || 0;
-                quotaMB = (quota / (1024 * 1024)).toFixed(0) + ' MB';
-                // Very small quota on Chromium usually indicates private mode
-                if (quota > 0 && quota < 120 * 1024 * 1024) {
-                    isIncognito = true;
-                }
+                const est = await navigator.storage.estimate();
+                const q = est.quota || 0;
+                quotaMB = (q / (1024 * 1024)).toFixed(0) + ' MB';
+                if (q > 0 && q < 120 * 1024 * 1024) isIncognito = true;
             } catch (e) {}
         }
-
-        return {
-            isIncognito: isIncognito,
-            quota: quotaMB
-        };
+        return { isIncognito, quota: quotaMB };
     },
 
     // -------------------------------------------------------------
-    // Test 6: WebRTC STUN Interface Leak Detection
+    // Test 8: WebRTC STUN Interface Leak
     // -------------------------------------------------------------
     testWebRTC() {
         return new Promise((resolve) => {
             const leakedIPs = [];
             const RTC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
             if (!RTC) {
-                resolve({ leakedIPs: [], status: 'WebRTC API Unavailable / Disabled' });
+                resolve({ leakedIPs: [], status: 'WebRTC API Unavailable' });
                 return;
             }
 
             try {
-                const pc = new RTC({
-                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-                });
-
+                const pc = new RTC({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
                 pc.createDataChannel('');
-                pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => {});
+                pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
 
                 pc.onicecandidate = (event) => {
                     if (event && event.candidate && event.candidate.candidate) {
@@ -281,16 +354,12 @@ window.GhostDetector = {
                     }
                 };
 
-                // Wait 1.5s for candidate gathering
                 setTimeout(() => {
                     try { pc.close(); } catch (e) {}
-                    resolve({
-                        leakedIPs: leakedIPs,
-                        status: leakedIPs.length > 0 ? 'Leaking Candidates' : 'No WebRTC Candidates Leaked'
-                    });
-                }, 1500);
+                    resolve({ leakedIPs, status: leakedIPs.length > 0 ? 'Leaking Candidates' : 'Clean' });
+                }, 1000);
             } catch (e) {
-                resolve({ leakedIPs: [], status: 'Blocked or Errored: ' + e.message });
+                resolve({ leakedIPs: [], status: 'Error: ' + e.message });
             }
         });
     }

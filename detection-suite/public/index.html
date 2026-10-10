@@ -3,193 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostDetect &bull; Deep Fingerprint &amp; Proxy Anomaly Suite</title>
+    <title>GhostDetect &bull; Live Deep Anomaly, Proxy &amp; VPN Sniffing Engine</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="wrapper">
+        <!-- Header -->
         <header class="header">
             <div class="brand">
                 <div class="brand-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <circle cx="12" cy="12" r="3"/>
                     </svg>
                 </div>
                 <div>
-                    <h1>GhostDetect Suite</h1>
-                    <p class="subtitle">Deep Network, Proxy, Device &amp; Prototype Tamper Audit</p>
+                    <h1>GhostDetect Engine</h1>
+                    <p class="subtitle">Live Proxy, VPN, TCP/IP &amp; Hardware Fingerprint Sniffing Suite</p>
                 </div>
             </div>
-            <button class="btn-refresh" onclick="runFullAudit()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                </svg>
-                Re-Run Audit
-            </button>
+            <div class="header-actions">
+                <span class="live-pill"><span class="pulse-dot"></span> LIVE ENGINE</span>
+                <button class="btn-primary" onclick="runFullAudit()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    <span>Run Again</span>
+                </button>
+            </div>
         </header>
 
-        <!-- Main Score Hero -->
-        <section class="hero-card">
-            <div class="score-container">
-                <div class="score-circle" id="scoreCircle">
-                    <span class="score-value" id="scoreValue">--</span>
-                    <span class="score-label">Anomaly Score</span>
+        <!-- Detection Engine Hero (Modeled after ProxyDetect.live) -->
+        <section class="engine-hero">
+            <div class="hero-left">
+                <div class="engine-title-bar">
+                    <span class="engine-tag">REAL-TIME TRAFFIC &amp; DEVICE SNIFFER</span>
+                    <div class="verdict-container">
+                        <div id="verdictBadge" class="verdict-badge">SNIFFING...</div>
+                    </div>
                 </div>
-                <div class="score-details">
-                    <div class="status-badge" id="statusBadge">ANALYZING...</div>
-                    <h2 id="statusHeadline">Running diagnostic pipeline...</h2>
-                    <p id="statusSummary">Inspecting HTTP/TCP transport, prototype chains, and hardware consistency.</p>
+                <h2 id="engineHeadline">Analyzing transport layer &amp; signatures...</h2>
+                <p id="engineSummary" class="hero-desc">
+                    Sniffing TCP/IP packet hops, TLS/TCP RTT ratio, MTU tunnel fragmentation, and native WebKit prototype integrity.
+                </p>
+                <div class="hero-meta">
+                    <span id="engineTiming">⚡ Sniffed in --ms</span>
+                    <span class="meta-dot">&bull;</span>
+                    <span id="engineInterface">Interface: Active</span>
+                </div>
+                <div class="hero-buttons">
+                    <button class="btn-secondary" onclick="openRawModal()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                        </svg>
+                        <span>Inspect Raw Packet Data (JSON)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dual Score Gauges (Proxy Score & VPN Score) -->
+            <div class="hero-right">
+                <!-- Gauge 1: Proxy Score -->
+                <div class="gauge-card">
+                    <div class="gauge-header">
+                        <span class="gauge-title">Proxy Score</span>
+                        <span id="proxyScoreNum" class="gauge-value">0%</span>
+                    </div>
+                    <div class="gauge-bar-track">
+                        <div class="gauge-gradient-bar"></div>
+                        <div id="proxyMarker" class="gauge-marker" style="left: 0%;"></div>
+                    </div>
+                    <div class="gauge-scale">
+                        <span>0 (Clean)</span>
+                        <span>50</span>
+                        <span>100 (Proxy)</span>
+                    </div>
+                </div>
+
+                <!-- Gauge 2: VPN Score -->
+                <div class="gauge-card">
+                    <div class="gauge-header">
+                        <span class="gauge-title">VPN Score</span>
+                        <span id="vpnScoreNum" class="gauge-value">0%</span>
+                    </div>
+                    <div class="gauge-bar-track">
+                        <div class="gauge-gradient-bar"></div>
+                        <div id="vpnMarker" class="gauge-marker" style="left: 0%;"></div>
+                    </div>
+                    <div class="gauge-scale">
+                        <span>0 (Clean)</span>
+                        <span>50</span>
+                        <span>100 (VPN)</span>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 4 Grid Sections -->
+        <!-- 6 Deep Sniffing Cards -->
         <div class="grid">
-            <!-- 1. Network & Proxy Audit -->
+            <!-- 1. TCP/IP Stack & Fingerprint (p0f SYN Packet) -->
             <div class="card">
                 <div class="card-header">
-                    <span class="card-tag">NETWORK &amp; TRAFFIC</span>
-                    <h3>Proxy, VPN &amp; IP Intelligence</h3>
+                    <div class="card-tag">TRANSPORT LAYER</div>
+                    <h3>TCP/IP Stack &amp; Fingerprint</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <span class="label">Public IP</span>
-                        <span class="value" id="netIP">Resolving...</span>
+                        <span class="label">Initial TTL (Packet)</span>
+                        <span class="value" id="tcpInitialTTL">Sniffing...</span>
                     </div>
                     <div class="row">
-                        <span class="label">Location</span>
-                        <span class="value" id="netLocation">--</span>
+                        <span class="label">Received TTL</span>
+                        <span class="value" id="tcpReceivedTTL">Sniffing...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Calculated Hops</span>
+                        <span class="value" id="tcpHops">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Inferred TCP OS</span>
+                        <span class="value" id="tcpStackOS">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">User-Agent Claimed OS</span>
+                        <span class="value" id="tcpClaimedOS">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">OS Discrepancy Status</span>
+                        <span class="value" id="tcpMismatch">Checking...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Latency & TLS / TCP RTT Ratio (Active Sniffing) -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-tag">LATENCY &amp; RELAYS</div>
+                    <h3>TLS / TCP RTT Ratio</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">TCP Round Trip (RTT)</span>
+                        <span class="value" id="rttTCP">Measuring...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">TLS Handshake Overhead</span>
+                        <span class="value" id="rttHandshake">Measuring...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Calculated Ratio</span>
+                        <span class="value" id="rttRatio">--</span>
+                    </div>
+                    
+                    <!-- Timing Comparison Visual Bar -->
+                    <div class="timing-comparison">
+                        <div class="timing-label-row">
+                            <span>TCP RTT: <strong id="barTCPVal">--ms</strong></span>
+                            <span>TLS Handshake: <strong id="barTLSVal">--ms</strong></span>
+                        </div>
+                        <div class="dual-bar-track">
+                            <div id="barTCP" class="bar-tcp" style="width: 30%;"></div>
+                            <div id="barTLS" class="bar-tls" style="width: 70%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <span class="label">Relay Assessment</span>
+                        <span class="value" id="rttVerdict">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. MTU & Packet Tunnel Fragmentation -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-tag">PACKET MTU PROBE</div>
+                    <h3>MTU &amp; Tunnel Fragmentation</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">Probed MTU Boundary</span>
+                        <span class="value" id="mtuBoundary">Probing packets...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Interface Classification</span>
+                        <span class="value" id="mtuInterface">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">WireGuard / Tunnel Flag</span>
+                        <span class="value" id="mtuFlag">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Packet Fragmentation</span>
+                        <span class="value" id="mtuFragmented">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Network Egress & STUN Leaks -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-tag">NETWORK EGRESS</div>
+                    <h3>STUN Integrity &amp; WebRTC</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">HTTP Ingress IP</span>
+                        <span class="value" id="egressHttpIP">Resolving...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">WebRTC STUN Egress</span>
+                        <span class="value" id="egressStunIP">Gathering candidates...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Egress Continuity</span>
+                        <span class="value" id="egressContinuity">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Candidate Leak Status</span>
+                        <span class="value" id="egressLeakStatus">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. IP Intelligence & Proxy Headers -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-tag">INFRASTRUCTURE AUDIT</div>
+                    <h3>IP Routing &amp; Proxy Headers</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">Reverse DNS (PTR)</span>
+                        <span class="value" id="infraPTR">Resolving...</span>
                     </div>
                     <div class="row">
                         <span class="label">ISP / Organization</span>
-                        <span class="value" id="netISP">--</span>
+                        <span class="value" id="infraISP">--</span>
                     </div>
                     <div class="row">
-                        <span class="label">ASN</span>
-                        <span class="value" id="netASN">--</span>
+                        <span class="label">Autonomous System (ASN)</span>
+                        <span class="value" id="infraASN">--</span>
                     </div>
                     <div class="row">
-                        <span class="label">Reverse DNS (PTR)</span>
-                        <span class="value" id="netPTR">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Proxy Headers</span>
-                        <span class="value" id="netProxyHeaders">Checking...</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">WebRTC IP Leak</span>
-                        <span class="value" id="netWebRTC">Scanning...</span>
+                        <span class="label">Proxy Intermediary Headers</span>
+                        <span class="value" id="infraHeaders">Checking 15+ headers...</span>
                     </div>
                     <div class="row">
                         <span class="label">Timezone Coherence</span>
-                        <span class="value" id="netTimezone">--</span>
+                        <span class="value" id="infraTimezone">--</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. Anti-Tampering & Prototype Audit -->
+            <!-- 6. JavaScript Runtime & Anti-Tamper Engine -->
             <div class="card">
                 <div class="card-header">
-                    <span class="card-tag">ANTI-TAMPER AUDIT</span>
-                    <h3>Prototype &amp; Lie Detection</h3>
+                    <div class="card-tag">CLIENT INTEGRITY</div>
+                    <h3>Runtime &amp; Prototype Tampering</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <span class="label">Native toString Integrity</span>
-                        <span class="value" id="tamperToString">Checking...</span>
+                        <span class="label">Native toString Verification</span>
+                        <span class="value" id="tamperNative">Auditing AST...</span>
                     </div>
                     <div class="row">
                         <span class="label">Navigator Own Properties</span>
-                        <span class="value" id="tamperNavProps">Checking...</span>
+                        <span class="value" id="tamperNav">Checking...</span>
                     </div>
                     <div class="row">
-                        <span class="label">Canvas Prototype Integrity</span>
-                        <span class="value" id="tamperCanvas">Checking...</span>
+                        <span class="label">Canvas Bit-Consistency</span>
+                        <span class="value" id="tamperCanvas">Testing hash...</span>
                     </div>
                     <div class="row">
-                        <span class="label">WebGL Prototype Integrity</span>
-                        <span class="value" id="tamperWebGL">Checking...</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Audio Prototype Integrity</span>
-                        <span class="value" id="tamperAudio">Checking...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. Hardware & Render Pipeline -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-tag">HARDWARE SUBSYSTEM</span>
-                    <h3>Rendering &amp; Storage</h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <span class="label">WebGL Vendor</span>
-                        <span class="value" id="hwVendor">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">WebGL Renderer</span>
-                        <span class="value" id="hwRenderer">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Canvas Hash Stability</span>
-                        <span class="value" id="hwCanvasStability">Testing...</span>
+                        <span class="label">WebGL GPU Subsystem</span>
+                        <span class="value" id="tamperGPU">--</span>
                     </div>
                     <div class="row">
                         <span class="label">Storage Quota</span>
-                        <span class="value" id="hwStorage">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Incognito Detected</span>
-                        <span class="value" id="hwIncognito">--</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. Device & Identity Coherence -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-tag">DEVICE COHERENCE</span>
-                    <h3>Platform &amp; Viewport</h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <span class="label">Platform Reported</span>
-                        <span class="value" id="devPlatform">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Touch Points</span>
-                        <span class="value" id="devTouch">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Screen Dimension</span>
-                        <span class="value" id="devScreen">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Device Pixel Ratio</span>
-                        <span class="value" id="devDPR">--</span>
-                    </div>
-                    <div class="row">
-                        <span class="label">Hardware Concurrency</span>
-                        <span class="value" id="devCores">--</span>
+                        <span class="value" id="tamperStorage">--</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Anomaly Log Section -->
+        <!-- Anomaly Findings Log -->
         <section class="log-card">
-            <h3>Diagnostic Anomalies &amp; Finding Log</h3>
+            <h3>Diagnostic Anomalies &amp; Findings Log</h3>
             <div id="anomalyList" class="anomaly-list">
-                <div class="log-empty">No anomalies detected. Device profile appears genuine.</div>
+                <div class="log-empty">✓ No anomalies detected. Connection and hardware signatures appear authentic and clean.</div>
             </div>
         </section>
 
+        <!-- Footer -->
         <footer class="footer">
-            <p>GhostDetect Suite &bull; Self-Hosted Diagnostic Endpoint &bull; Zero External Telemetry</p>
+            <p>GhostDetect Suite &bull; Self-Hosted Deep Diagnostic Engine &bull; Zero External Telemetry</p>
         </footer>
+    </div>
+
+    <!-- Interactive Raw JSON Modal (ProxyDetect.live style) -->
+    <div id="rawModal" class="modal-backdrop hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Raw Diagnostic &amp; Packet JSON</h3>
+                <div class="modal-actions">
+                    <button class="btn-secondary btn-sm" onclick="copyRawJSON()">Copy JSON</button>
+                    <button class="btn-close" onclick="closeRawModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <pre><code id="rawJsonCode">Loading...</code></pre>
+            </div>
+        </div>
     </div>
 
     <script src="detector.js"></script>
