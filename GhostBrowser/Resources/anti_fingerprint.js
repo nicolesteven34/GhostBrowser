@@ -219,4 +219,110 @@
             }
         }
     } catch(e) {}
+
+    // =========================================================================
+    // 4. DOCUMENT FOCUS EMULATION (Headless / Bot Check Bypassing)
+    // =========================================================================
+    // Automated testing tools (Playwright/Puppeteer/Selenium) and background webviews
+    // return document.hasFocus() === false. Advanced bot scanners like ipfighter.com
+    // flag this as "no focus / headless bot indicator".
+    // We proxy Document.prototype.hasFocus to report true with native [native code] fidelity.
+    try {
+        if (typeof Document !== 'undefined' && Document.prototype) {
+            const nativeHasFocus = Document.prototype.hasFocus;
+            if (typeof nativeHasFocus === 'function') {
+                const proxyHasFocus = new Proxy(nativeHasFocus, {
+                    apply(target, thisArg, argArray) {
+                        return true;
+                    }
+                });
+                Object.defineProperty(Document.prototype, 'hasFocus', {
+                    value: proxyHasFocus,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+        }
+    } catch(e) {}
+
+    // =========================================================================
+    // 5. MEDIA DEVICES API ENHANCEMENT (Clean Audio/Video Input Reporting)
+    // =========================================================================
+    // Headless browsers or WKWebViews without camera/microphone permissions return
+    // navigator.mediaDevices as undefined or enumerateDevices() as empty [].
+    // ipfighter.com checks this and flags "Media Devices API: Missing".
+    // We ensure navigator.mediaDevices.enumerateDevices() resolves to genuine
+    // standard Safari audio and video device descriptors with native proxy fidelity.
+    try {
+        if (typeof navigator !== 'undefined') {
+            const standardDevices = [
+                {
+                    deviceId: "",
+                    groupId: "group_audio_01",
+                    kind: "audioinput",
+                    label: ""
+                },
+                {
+                    deviceId: "",
+                    groupId: "group_video_01",
+                    kind: "videoinput",
+                    label: ""
+                },
+                {
+                    deviceId: "",
+                    groupId: "group_audio_01",
+                    kind: "audiooutput",
+                    label: ""
+                }
+            ];
+
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function') {
+                const nativeEnumerate = navigator.mediaDevices.enumerateDevices;
+                navigator.mediaDevices.enumerateDevices = new Proxy(nativeEnumerate, {
+                    apply(target, thisArg, argArray) {
+                        return Reflect.apply(target, thisArg, argArray).then(devices => {
+                            if (!devices || devices.length === 0) {
+                                return standardDevices;
+                            }
+                            return devices;
+                        }).catch(() => {
+                            return standardDevices;
+                        });
+                    }
+                });
+            } else if (!navigator.mediaDevices) {
+                class StandardMediaDevices extends EventTarget {
+                    async enumerateDevices() {
+                        return standardDevices;
+                    }
+                    async getUserMedia(constraints) {
+                        throw new DOMException("Permission denied", "NotAllowedError");
+                    }
+                    getSupportedConstraints() {
+                        return {
+                            aspectRatio: true,
+                            channelCount: true,
+                            deviceId: true,
+                            echoCancellation: true,
+                            facingMode: true,
+                            frameRate: true,
+                            groupId: true,
+                            height: true,
+                            sampleRate: true,
+                            sampleSize: true,
+                            volume: true,
+                            width: true
+                        };
+                    }
+                }
+                Object.defineProperty(navigator, 'mediaDevices', {
+                    value: new StandardMediaDevices(),
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+        }
+    } catch(e) {}
 })();

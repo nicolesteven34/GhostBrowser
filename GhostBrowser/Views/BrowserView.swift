@@ -211,6 +211,17 @@ public struct BrowserView: UIViewRepresentable {
             return nil
         }
 
+        @available(iOS 15.0, *)
+        public func webView(
+            _ webView: WKWebView,
+            requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+            initiatedByFrame frame: WKFrameInfo,
+            type: WKMediaCaptureType,
+            decisionHandler: @escaping (WKPermissionDecision) -> Void
+        ) {
+            decisionHandler(.grant)
+        }
+
         public func loadLocalStartPage() {
             guard let webView = self.webView else { return }
             if let startURL = Bundle.main.url(forResource: "startpage", withExtension: "html"),
@@ -394,6 +405,9 @@ public struct BrowserView: UIViewRepresentable {
                     currentLoadedURL = url
                     parent.currentURLString = url
                 }
+            }
+            DispatchQueue.main.async {
+                webView.becomeFirstResponder()
             }
         }
 
