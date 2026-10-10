@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GhostDetect &bull; Deep Fingerprint &amp; Proxy Anomaly Suite</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <header class="header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1>GhostDetect Suite</h1>
+                    <p class="subtitle">Deep Network, Proxy, Device &amp; Prototype Tamper Audit</p>
+                </div>
+            </div>
+            <button class="btn-refresh" onclick="runFullAudit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Run Audit
+            </button>
+        </header>
+
+        <!-- Main Score Hero -->
+        <section class="hero-card">
+            <div class="score-container">
+                <div class="score-circle" id="scoreCircle">
+                    <span class="score-value" id="scoreValue">--</span>
+                    <span class="score-label">Anomaly Score</span>
+                </div>
+                <div class="score-details">
+                    <div class="status-badge" id="statusBadge">ANALYZING...</div>
+                    <h2 id="statusHeadline">Running diagnostic pipeline...</h2>
+                    <p id="statusSummary">Inspecting HTTP/TCP transport, prototype chains, and hardware consistency.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4 Grid Sections -->
+        <div class="grid">
+            <!-- 1. Network & Proxy Audit -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-tag">NETWORK &amp; TRAFFIC</span>
+                    <h3>Proxy, VPN &amp; IP Signals</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">Public IP</span>
+                        <span class="value" id="netIP">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Reverse DNS (PTR)</span>
+                        <span class="value" id="netPTR">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Proxy Headers</span>
+                        <span class="value" id="netProxyHeaders">Checking...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">WebRTC IP Leak</span>
+                        <span class="value" id="netWebRTC">Scanning...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Timezone Coherence</span>
+                        <span class="value" id="netTimezone">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Anti-Tampering & Prototype Audit -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-tag">ANTI-TAMPER AUDIT</span>
+                    <h3>Prototype &amp; Lie Detection</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">Native toString Integrity</span>
+                        <span class="value" id="tamperToString">Checking...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Navigator Own Properties</span>
+                        <span class="value" id="tamperNavProps">Checking...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Canvas Prototype Integrity</span>
+                        <span class="value" id="tamperCanvas">Checking...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">WebGL Prototype Integrity</span>
+                        <span class="value" id="tamperWebGL">Checking...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Audio Prototype Integrity</span>
+                        <span class="value" id="tamperAudio">Checking...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Hardware & Render Pipeline -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-tag">HARDWARE SUBSYSTEM</span>
+                    <h3>Rendering &amp; Storage</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">WebGL Vendor</span>
+                        <span class="value" id="hwVendor">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">WebGL Renderer</span>
+                        <span class="value" id="hwRenderer">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Canvas Hash Stability</span>
+                        <span class="value" id="hwCanvasStability">Testing...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Storage Quota</span>
+                        <span class="value" id="hwStorage">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Incognito Detected</span>
+                        <span class="value" id="hwIncognito">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Device & Identity Coherence -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-tag">DEVICE COHERENCE</span>
+                    <h3>Platform &amp; Viewport</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <span class="label">Platform Reported</span>
+                        <span class="value" id="devPlatform">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Touch Points</span>
+                        <span class="value" id="devTouch">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Screen Dimension</span>
+                        <span class="value" id="devScreen">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Device Pixel Ratio</span>
+                        <span class="value" id="devDPR">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Hardware Concurrency</span>
+                        <span class="value" id="devCores">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anomaly Log Section -->
+        <section class="log-card">
+            <h3>Diagnostic Anomalies &amp; Finding Log</h3>
+            <div id="anomalyList" class="anomaly-list">
+                <div class="log-empty">No anomalies detected. Device profile appears genuine.</div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>GhostDetect Suite &bull; Self-Hosted Diagnostic Endpoint &bull; Zero External Telemetry</p>
+        </footer>
+    </div>
+
+    <script src="detector.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
