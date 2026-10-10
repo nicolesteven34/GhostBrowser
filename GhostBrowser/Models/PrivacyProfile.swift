@@ -45,25 +45,74 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
-    public var userAgent: String {
+    public func userAgent(buildIndex: Int = 0) -> String {
         switch self {
         case .iPadProM4_13:
-            return "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+            let builds = [
+                "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .iPadAirM2_11:
-            return "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+            let builds = [
+                "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/604.1"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .iPadMini6_A15:
-            return "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+            let builds = [
+                "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPad; CPU OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Mobile/15E148 Safari/604.1"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .iPhone15ProMax_A17:
-            return "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+            let builds = [
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .iPhone14_A15:
-            return "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+            let builds = [
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5.1 Mobile/15E148 Safari/604.1"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .macBookProM3Max_16:
-            return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
+            let builds = [
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .macBookAirM2_13:
-            return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15"
+            let builds = [
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Safari/605.1.15"
+            ]
+            return builds[abs(buildIndex) % builds.count]
         case .custom:
             return ""
         }
+    }
+
+    public var userAgent: String {
+        userAgent(buildIndex: 0)
     }
 
     public var preferredContentMode: WKWebpagePreferences.ContentMode {
@@ -139,6 +188,22 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         }
     }
 
+    public func screenWidth(displayZoom: Bool = false) -> Int {
+        if displayZoom {
+            switch self {
+            case .iPadProM4_13: return 834
+            case .iPadAirM2_11: return 694
+            case .iPadMini6_A15: return 632
+            case .iPhone15ProMax_A17: return 375
+            case .iPhone14_A15: return 320
+            case .macBookProM3Max_16: return 1512
+            case .macBookAirM2_13: return 1280
+            default: return screenWidth
+            }
+        }
+        return screenWidth
+    }
+
     public var screenWidth: Int {
         switch self {
         case .iPadProM4_13: return 1024
@@ -150,6 +215,22 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         case .macBookAirM2_13: return 1470
         case .custom: return 1024
         }
+    }
+
+    public func screenHeight(displayZoom: Bool = false) -> Int {
+        if displayZoom {
+            switch self {
+            case .iPadProM4_13: return 1112
+            case .iPadAirM2_11: return 926
+            case .iPadMini6_A15: return 950
+            case .iPhone15ProMax_A17: return 812
+            case .iPhone14_A15: return 693
+            case .macBookProM3Max_16: return 982
+            case .macBookAirM2_13: return 832
+            default: return screenHeight
+            }
+        }
+        return screenHeight
     }
 
     public var screenHeight: Int {
@@ -191,6 +272,8 @@ public class PrivacyProfile: ObservableObject {
     @Published public var autoPurgeOnProfileSwitch: Bool = true
     @Published public var deterministicHardwareSeeding: Bool = true
     @Published public var sessionSeed: Int = Int.random(in: 100000...999999)
+    @Published public var buildIndex: Int = Int.random(in: 0...4)
+    @Published public var displayZoom: Bool = false
 
     // Defense Switches
     @Published public var blockCommercialTrackers: Bool = true
@@ -206,6 +289,8 @@ public class PrivacyProfile: ObservableObject {
 
     public func rotateIdentitySeed() {
         sessionSeed = Int.random(in: 100000...999999)
+        buildIndex = (buildIndex + 1) % 5
+        displayZoom.toggle()
     }
 
     @discardableResult
@@ -223,6 +308,8 @@ public class PrivacyProfile: ObservableObject {
         let chosen = candidates.randomElement() ?? .iPhone15ProMax_A17
         self.selectedDevice = chosen
         self.sessionSeed = Int.random(in: 100000...999999)
+        self.buildIndex = Int.random(in: 0...4)
+        self.displayZoom = Bool.random()
         return chosen
     }
 
@@ -230,7 +317,7 @@ public class PrivacyProfile: ObservableObject {
         if selectedDevice == .custom && !customUserAgent.isEmpty {
             return customUserAgent
         }
-        return selectedDevice.userAgent
+        return selectedDevice.userAgent(buildIndex: buildIndex)
     }
 
     public var effectivePlatform: String { selectedDevice.platform }
@@ -238,8 +325,8 @@ public class PrivacyProfile: ObservableObject {
     public var effectiveCores: Int { selectedDevice.cpuCores }
     public var effectiveRAM: Int { selectedDevice.ramGB }
     public var effectiveRenderer: String { selectedDevice.webglRenderer }
-    public var effectiveScreenWidth: Int { selectedDevice.screenWidth }
-    public var effectiveScreenHeight: Int { selectedDevice.screenHeight }
+    public var effectiveScreenWidth: Int { selectedDevice.screenWidth(displayZoom: displayZoom) }
+    public var effectiveScreenHeight: Int { selectedDevice.screenHeight(displayZoom: displayZoom) }
     public var effectiveDevicePixelRatio: Double { selectedDevice.devicePixelRatio }
 
     public var visitorID: String {

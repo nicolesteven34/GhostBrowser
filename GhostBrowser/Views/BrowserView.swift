@@ -334,6 +334,10 @@ public struct BrowserView: UIViewRepresentable {
                     DispatchQueue.main.async {
                         self.parent.privacyProfile.regenerateRealisticIdentity()
                     }
+                } else if url.host == "rotateseed" || url.path.contains("rotateseed") {
+                    DispatchQueue.main.async {
+                        self.parent.privacyProfile.rotateIdentitySeed()
+                    }
                 }
                 return
             }

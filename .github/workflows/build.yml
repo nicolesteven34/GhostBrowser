@@ -56,14 +56,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.8.0
-          name: GhostBrowser v1.8.0 (Live Hardware Visitor ID & Homepage Identity Hub)
+          tag_name: v1.9.0
+          name: GhostBrowser v1.9.0 (Same-Device Unique Identity Engine)
           body: |
-            ## GhostBrowser v1.8.0 (Live Hardware Visitor ID & Homepage Identity Hub)
-            - **Live Hardware Visitor ID Engine**: Cryptographically generates an authentic 20-character uppercase alphanumeric Visitor ID (matching Fingerprint.com format) derived from Canvas, Audio, Screen, WebGL, Platform, and Identity Seed.
-            - **Homepage Identity Hub**: The offline start page (`local://startpage`) now features a prominent Visitor ID card with single-tap clipboard copy, live device metrics, and an interactive "Regenerate Identity (✨)" action.
-            - **Synchronized Rotation**: Tapping Sparkles or Regenerate dynamically updates the Visitor ID on the start page, triggers an in-place session wipe, and translates to a fresh Visitor ID on Fingerprint.com.
-            - **Settings Modal Integration**: Displays the active formatted Visitor ID with a one-tap copy button in the Browser Persona & Privacy sheet.
+            ## GhostBrowser v1.9.0 (Same-Device Unique Identity Engine)
+            - **Same-Device Unique Identity Engine**: Generating a new identity under the *same* Apple device profile (e.g. iPad Pro) now reliably generates a brand new Visitor ID on Fingerprint.com.
+            - **Multi-Dimension Canvas Seeding**: WeakMap `seededCanvasSessions` seeds both text (240×60) and geometry (122×110) canvas images with deterministic single-seed guards, guaranteeing 100% bit-consistency (`hash1 === hash2`) and 0 Artificial Noise flags.
+            - **High-Entropy Continuous Audio Modulation**: Smooth sine wave modulation shifts the FingerprintJS audio sample sum by >0.05 (50× the float binning threshold), reliably producing distinct audio hashes across seeds.
+            - **Authentic Apple OS Build & Display Zoom Variance**: Incorporates realistic Apple minor OS builds (17.5, 17.5.1, 17.6, 17.6.1, 17.4.1) and display scaling (Standard vs Zoomed) for genuine in-family variation.
+            - **Auto-Dismissing Actions**: Tapping identity rotation in Settings immediately dismisses the modal and triggers an in-place session wipe and cache-busting reload of the active page.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -63,20 +63,26 @@
 
     if (cfg.deterministicHardwareSeeding) {
         // =========================================================================
-        // 2. Deterministic Canvas (toDataURL & getImageData with Single-Seed Guard)
+        // 2. Deterministic Canvas (toDataURL, getImageData & toBlob with Multi-Dim Guard)
         // =========================================================================
         if (window.HTMLCanvasElement && window.CanvasRenderingContext2D) {
             try {
                 const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
                 const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
                 const origPutImageData = CanvasRenderingContext2D.prototype.putImageData;
-                const seededCanvases = new WeakSet();
+                const seededCanvasSessions = new WeakMap();
 
                 function applyDeterministicCanvasSeed(canvas, ctx, width, height) {
-                    if (!canvas || seededCanvases.has(canvas)) return;
-                    seededCanvases.add(canvas); // GUARD: Seed once so hash1 === hash2 always
+                    if (!canvas || !ctx || width === 0 || height === 0 || width > 1200 || height > 900) return;
+                    let seededDims = seededCanvasSessions.get(canvas);
+                    if (!seededDims) {
+                        seededDims = new Set();
+                        seededCanvasSessions.set(canvas, seededDims);
+                    }
+                    const dimKey = `${width}x${height}`;
+                    if (seededDims.has(dimKey)) return;
+                    seededDims.add(dimKey); // GUARD: Seed once per dimension so hash1 === hash2 always
 
-                    if (width > 1200 || height > 900 || width === 0 || height === 0) return;
                     try {
                         const imgData = origGetImageData.call(ctx, 0, 0, width, height);
                         const d = imgData.data;
@@ -101,9 +107,20 @@
                     return origToDataURL.apply(this, args);
                 }, 'toDataURL');
 
+                if (HTMLCanvasElement.prototype.toBlob) {
+                    const origToBlob = HTMLCanvasElement.prototype.toBlob;
+                    HTMLCanvasElement.prototype.toBlob = wrapNative(origToBlob, function(callback, ...args) {
+                        const ctx = this.getContext('2d');
+                        if (ctx) {
+                            applyDeterministicCanvasSeed(this, ctx, this.width, this.height);
+                        }
+                        return origToBlob.call(this, callback, ...args);
+                    }, 'toBlob');
+                }
+
                 CanvasRenderingContext2D.prototype.getImageData = wrapNative(origGetImageData, function(sx, sy, sw, sh) {
                     const canvas = this.canvas;
-                    if (canvas && !seededCanvases.has(canvas)) {
+                    if (canvas) {
                         applyDeterministicCanvasSeed(canvas, this, canvas.width, canvas.height);
                     }
                     return origGetImageData.call(this, sx, sy, sw, sh);
@@ -113,7 +130,7 @@
         }
 
         // =========================================================================
-        // 3. Deterministic AudioContext (Single-Seed Guard)
+        // 3. Deterministic AudioContext (Single-Seed Guard & Smooth Wave Modulation)
         // =========================================================================
         if (window.AudioBuffer) {
             try {
@@ -124,14 +141,22 @@
                     const data = origGetChannelData.call(this, channel);
                     if (data && data.length > 0 && !seededAudioBuffers.has(this)) {
                         seededAudioBuffers.add(this); // GUARD: Seed once so audio buffer stays bit-consistent
-                        const step = Math.max(1, (data.length / 32) | 0);
-                        for (let i = 0; i < data.length; i += step) {
-                            const offset = (((i * 7919 + seed) % 5) - 2) * 0.0000005;
-                            data[i] += offset;
+                        const freq = 0.001 + (seed % 100) * 0.00005;
+                        const amp = 0.002 + ((seed >> 4) % 10) * 0.0005;
+                        for (let i = 0; i < data.length; i++) {
+                            data[i] += Math.sin(i * freq) * amp;
                         }
                     }
                     return data;
                 }, 'getChannelData');
+
+                if (AudioBuffer.prototype.copyFromChannel) {
+                    const origCopyFromChannel = AudioBuffer.prototype.copyFromChannel;
+                    AudioBuffer.prototype.copyFromChannel = wrapNative(origCopyFromChannel, function(destination, channelNumber, bufferOffset) {
+                        this.getChannelData(channelNumber || 0);
+                        return origCopyFromChannel.apply(this, arguments);
+                    }, 'copyFromChannel');
+                }
             } catch(e) {}
         }
 
