@@ -3,7 +3,9 @@ import WebKit
 
 public struct BrowserView: UIViewRepresentable {
     @ObservedObject var privacyProfile: PrivacyProfile
+    var tabID: UUID
     @Binding var currentURLString: String
+    @Binding var pageTitle: String
     @Binding var canGoBack: Bool
     @Binding var canGoForward: Bool
     @Binding var isLoading: Bool
@@ -13,7 +15,9 @@ public struct BrowserView: UIViewRepresentable {
 
     public init(
         privacyProfile: PrivacyProfile,
+        tabID: UUID,
         currentURLString: Binding<String>,
+        pageTitle: Binding<String>,
         canGoBack: Binding<Bool>,
         canGoForward: Binding<Bool>,
         isLoading: Binding<Bool>,
@@ -22,7 +26,9 @@ public struct BrowserView: UIViewRepresentable {
         wipeTrigger: Binding<Int>
     ) {
         self.privacyProfile = privacyProfile
+        self.tabID = tabID
         self._currentURLString = currentURLString
+        self._pageTitle = pageTitle
         self._canGoBack = canGoBack
         self._canGoForward = canGoForward
         self._isLoading = isLoading
@@ -110,6 +116,8 @@ public struct BrowserView: UIViewRepresentable {
     }
 
     public func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.parent = self
+
         // Detect device profile, user agent, or session seed changes
         let profileChanged = context.coordinator.lastProfileDevice != privacyProfile.selectedDevice
         let uaChanged = context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent
@@ -158,9 +166,21 @@ public struct BrowserView: UIViewRepresentable {
         private var progressObservation: NSKeyValueObservation?
         private var backObservation: NSKeyValueObservation?
         private var forwardObservation: NSKeyValueObservation?
+        private var titleObservation: NSKeyValueObservation?
+        private var notificationTokens: [NSObjectProtocol] = []
 
         init(_ parent: BrowserView) {
             self.parent = parent
+        }
+
+        deinit {
+            for token in notificationTokens {
+                NotificationCenter.default.removeObserver(token)
+            }
+            progressObservation?.invalidate()
+            backObservation?.invalidate()
+            forwardObservation?.invalidate()
+            titleObservation?.invalidate()
         }
 
         func setupObservers(for webView: WKWebView) {
@@ -182,12 +202,47 @@ public struct BrowserView: UIViewRepresentable {
                 }
             }
 
-            NotificationCenter.default.addObserver(forName: NSNotification.Name("GhostWebViewGoBack"), object: nil, queue: .main) { [weak self] _ in
+            titleObservation = webView.observe(\.title, options: .new) { [weak self] view, _ in
+                DispatchQueue.main.async {
+                    if let title = view.title, !title.isEmpty {
+                        self?.parent.pageTitle = title
+                    } else if self?.parent.currentURLString == "local://startpage" {
+                        self?.parent.pageTitle = "Start Page"
+                    }
+                }
+            }
+
+            let tabID = parent.tabID
+            let backToken = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("GhostWebViewGoBack_\(tabID)"),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
                 self?.webView?.goBack()
             }
-            NotificationCenter.default.addObserver(forName: NSNotification.Name("GhostWebViewGoForward"), object: nil, queue: .main) { [weak self] _ in
+            notificationTokens.append(backToken)
+
+            let forwardToken = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("GhostWebViewGoForward_\(tabID)"),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
                 self?.webView?.goForward()
             }
+            notificationTokens.append(forwardToken)
+
+            let reloadToken = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("GhostWebViewReload_\(tabID)"),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                if self?.currentLoadedURL == "local://startpage" {
+                    self?.loadLocalStartPage()
+                } else {
+                    self?.webView?.reload()
+                }
+            }
+            notificationTokens.append(reloadToken)
         }
 
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -205,7 +260,10 @@ public struct BrowserView: UIViewRepresentable {
         }
 
         public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            if navigationAction.targetFrame == nil {
+            // Links with target="_blank" open in a new tab seamlessly
+            if let url = navigationAction.request.url, !url.absoluteString.isEmpty, url.absoluteString != "about:blank" {
+                NotificationCenter.default.post(name: NSNotification.Name("GhostOpenNewTab"), object: url.absoluteString)
+            } else if navigationAction.targetFrame == nil {
                 webView.load(navigationAction.request)
             }
             return nil
@@ -240,6 +298,7 @@ public struct BrowserView: UIViewRepresentable {
                 html = html.replacingOccurrences(of: "{{SEED}}", with: "\(parent.privacyProfile.sessionSeed)")
 
                 self.currentLoadedURL = "local://startpage"
+                self.parent.pageTitle = "Start Page"
                 if self.parent.currentURLString != "local://startpage" {
                     DispatchQueue.main.async {
                         self.parent.currentURLString = "local://startpage"
@@ -396,6 +455,9 @@ public struct BrowserView: UIViewRepresentable {
                     parent.currentURLString = url
                 }
             }
+            if let host = webView.url?.host, !host.isEmpty {
+                parent.pageTitle = host
+            }
         }
 
         public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -405,6 +467,9 @@ public struct BrowserView: UIViewRepresentable {
                     currentLoadedURL = url
                     parent.currentURLString = url
                 }
+            }
+            if let title = webView.title, !title.isEmpty {
+                parent.pageTitle = title
             }
             DispatchQueue.main.async {
                 webView.becomeFirstResponder()
