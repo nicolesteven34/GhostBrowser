@@ -6,6 +6,7 @@
  * 1. 100% Bit-for-bit Canvas & Audio consistency (hash1 === hash2) across multiple calls.
  * 2. Distinct hardware parameters across personas and identity seeds.
  * 3. WeakMap/WeakSet-backed native function preservation (zero instance pollution).
+ * 4. Realistic Apple hardware spoofing for Screen, DPR, Platform, Cores, RAM, and WebGL.
  */
 (function() {
     'use strict';
@@ -21,23 +22,34 @@
 
     function wrapNative(originalFn, wrapperFn, name) {
         try {
-            Object.defineProperty(wrapperFn, 'name', { value: name || (originalFn ? originalFn.name : ''), configurable: true });
-            if (originalFn) {
-                Object.defineProperty(wrapperFn, 'length', { value: originalFn.length, configurable: true });
-                hookedFunctions.set(wrapperFn, originalFn);
-            }
+            const fnName = name || (originalFn ? originalFn.name : '');
+            Object.defineProperty(wrapperFn, 'name', { value: fnName, configurable: true });
+            Object.defineProperty(wrapperFn, 'length', { value: originalFn ? originalFn.length : 0, configurable: true });
+            hookedFunctions.set(wrapperFn, originalFn || null);
         } catch(e) {}
         return wrapperFn;
     }
 
     try {
         const customToString = function() {
+            if (this === customToString || this === Function.prototype.toString) {
+                return 'function toString() {\n    [native code]\n}';
+            }
             if (hookedFunctions.has(this)) {
-                return nativeToString.call(hookedFunctions.get(this));
+                const orig = hookedFunctions.get(this);
+                if (orig) {
+                    try {
+                        const s = nativeToString.call(orig);
+                        if (/^function\s.*?\{\s*\[native code]\s*}$/.test(s)) return s;
+                    } catch(e) {}
+                }
+                const name = this.name || '';
+                return 'function ' + name + '() {\n    [native code]\n}';
             }
             return nativeToString.call(this);
         };
         Object.defineProperty(customToString, 'name', { value: 'toString', configurable: true });
+        Object.defineProperty(customToString, 'length', { value: 0, configurable: true });
         hookedFunctions.set(customToString, nativeToString);
         Function.prototype.toString = customToString;
     } catch(e) {}
@@ -124,27 +136,15 @@
         }
 
         // =========================================================================
-        // 4. Screen Dimensions (On Prototype - Zero Instance Pollution)
+        // 4. Device Pixel Ratio (window.devicePixelRatio)
         // =========================================================================
-        if (window.Screen && cfg.screenWidth && cfg.screenHeight) {
+        if (cfg.devicePixelRatio) {
             try {
-                Object.defineProperty(Screen.prototype, 'width', {
-                    get: wrapNative(null, function() { return cfg.screenWidth; }, 'get width'),
-                    configurable: true,
-                    enumerable: true
-                });
-                Object.defineProperty(Screen.prototype, 'height', {
-                    get: wrapNative(null, function() { return cfg.screenHeight; }, 'get height'),
-                    configurable: true,
-                    enumerable: true
-                });
-                Object.defineProperty(Screen.prototype, 'availWidth', {
-                    get: wrapNative(null, function() { return cfg.screenWidth; }, 'get availWidth'),
-                    configurable: true,
-                    enumerable: true
-                });
-                Object.defineProperty(Screen.prototype, 'availHeight', {
-                    get: wrapNative(null, function() { return cfg.screenHeight; }, 'get availHeight'),
+                const origDprDesc = Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio') ||
+                                    Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+                const origDprGetter = origDprDesc ? origDprDesc.get : null;
+                Object.defineProperty(Window.prototype, 'devicePixelRatio', {
+                    get: wrapNative(origDprGetter, function() { return cfg.devicePixelRatio; }, 'get devicePixelRatio'),
                     configurable: true,
                     enumerable: true
                 });
@@ -152,20 +152,71 @@
         }
 
         // =========================================================================
-        // 5. Platform & Touch Points (On Navigator.prototype)
+        // 5. Screen Dimensions (On Screen.prototype - Zero Instance Pollution)
+        // =========================================================================
+        if (window.Screen && cfg.screenWidth && cfg.screenHeight) {
+            try {
+                const origW = Object.getOwnPropertyDescriptor(Screen.prototype, 'width');
+                const origH = Object.getOwnPropertyDescriptor(Screen.prototype, 'height');
+                const origAW = Object.getOwnPropertyDescriptor(Screen.prototype, 'availWidth');
+                const origAH = Object.getOwnPropertyDescriptor(Screen.prototype, 'availHeight');
+
+                Object.defineProperty(Screen.prototype, 'width', {
+                    get: wrapNative(origW ? origW.get : null, function() { return cfg.screenWidth; }, 'get width'),
+                    configurable: true,
+                    enumerable: true
+                });
+                Object.defineProperty(Screen.prototype, 'height', {
+                    get: wrapNative(origH ? origH.get : null, function() { return cfg.screenHeight; }, 'get height'),
+                    configurable: true,
+                    enumerable: true
+                });
+                Object.defineProperty(Screen.prototype, 'availWidth', {
+                    get: wrapNative(origAW ? origAW.get : null, function() { return cfg.screenWidth; }, 'get availWidth'),
+                    configurable: true,
+                    enumerable: true
+                });
+                Object.defineProperty(Screen.prototype, 'availHeight', {
+                    get: wrapNative(origAH ? origAH.get : null, function() { return cfg.screenHeight; }, 'get availHeight'),
+                    configurable: true,
+                    enumerable: true
+                });
+            } catch(e) {}
+        }
+
+        // =========================================================================
+        // 6. Platform, Touch, Cores & RAM (On Navigator.prototype)
         // =========================================================================
         if (window.Navigator) {
             try {
                 if (cfg.platform) {
+                    const origPlat = Object.getOwnPropertyDescriptor(Navigator.prototype, 'platform');
                     Object.defineProperty(Navigator.prototype, 'platform', {
-                        get: wrapNative(null, function() { return cfg.platform; }, 'get platform'),
+                        get: wrapNative(origPlat ? origPlat.get : null, function() { return cfg.platform; }, 'get platform'),
                         configurable: true,
                         enumerable: true
                     });
                 }
                 if (typeof cfg.maxTouchPoints === 'number') {
+                    const origTouch = Object.getOwnPropertyDescriptor(Navigator.prototype, 'maxTouchPoints');
                     Object.defineProperty(Navigator.prototype, 'maxTouchPoints', {
-                        get: wrapNative(null, function() { return cfg.maxTouchPoints; }, 'get maxTouchPoints'),
+                        get: wrapNative(origTouch ? origTouch.get : null, function() { return cfg.maxTouchPoints; }, 'get maxTouchPoints'),
+                        configurable: true,
+                        enumerable: true
+                    });
+                }
+                if (typeof cfg.hardwareConcurrency === 'number') {
+                    const origCores = Object.getOwnPropertyDescriptor(Navigator.prototype, 'hardwareConcurrency');
+                    Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', {
+                        get: wrapNative(origCores ? origCores.get : null, function() { return cfg.hardwareConcurrency; }, 'get hardwareConcurrency'),
+                        configurable: true,
+                        enumerable: true
+                    });
+                }
+                if (typeof cfg.deviceMemory === 'number') {
+                    const origRAM = Object.getOwnPropertyDescriptor(Navigator.prototype, 'deviceMemory');
+                    Object.defineProperty(Navigator.prototype, 'deviceMemory', {
+                        get: wrapNative(origRAM ? origRAM.get : null, function() { return cfg.deviceMemory; }, 'get deviceMemory'),
                         configurable: true,
                         enumerable: true
                     });
@@ -174,7 +225,7 @@
         }
 
         // =========================================================================
-        // 6. WebGL Renderer & Vendor Masking
+        // 7. WebGL Renderer & Vendor Masking
         // =========================================================================
         function patchWebGLContext(proto) {
             if (!proto) return;

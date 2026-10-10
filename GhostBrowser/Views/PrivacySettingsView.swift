@@ -92,11 +92,20 @@ public struct PrivacySettingsView: View {
                     .padding(.vertical, 4)
 
                     Button(action: {
+                        privacyProfile.regenerateRealisticIdentity()
+                    }) {
+                        Label("Generate New Realistic Device (Full Signature)", systemImage: "sparkles")
+                            .font(.footnote)
+                            .fontWeight(.medium)
+                            .foregroundColor(.purple)
+                    }
+
+                    Button(action: {
                         privacyProfile.rotateIdentitySeed()
                     }) {
-                        Label("Rotate Hardware Identity Seed", systemImage: "sparkles")
+                        Label("Rotate Seed Only (Keep Device)", systemImage: "arrow.triangle.2.circlepath")
                             .font(.footnote)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.secondary)
                     }
                 }
 

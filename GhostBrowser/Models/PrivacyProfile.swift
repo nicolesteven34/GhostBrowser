@@ -163,6 +163,19 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         case .custom: return 1366
         }
     }
+
+    public var devicePixelRatio: Double {
+        switch self {
+        case .iPhone15ProMax_A17, .iPhone14_A15:
+            return 3.0
+        case .iPadProM4_13, .iPadAirM2_11, .iPadMini6_A15:
+            return 2.0
+        case .macBookProM3Max_16, .macBookAirM2_13:
+            return 2.0
+        case .custom:
+            return 2.0
+        }
+    }
 }
 
 public class PrivacyProfile: ObservableObject {
@@ -194,6 +207,24 @@ public class PrivacyProfile: ObservableObject {
         sessionSeed = Int.random(in: 100000...999999)
     }
 
+    @discardableResult
+    public func regenerateRealisticIdentity() -> AppleDeviceProfile {
+        let realisticPool: [AppleDeviceProfile] = [
+            .iPhone15ProMax_A17,
+            .iPadAirM2_11,
+            .macBookProM3Max_16,
+            .iPadProM4_13,
+            .iPhone14_A15,
+            .macBookAirM2_13,
+            .iPadMini6_A15
+        ]
+        let candidates = realisticPool.filter { $0 != selectedDevice }
+        let chosen = candidates.randomElement() ?? .iPhone15ProMax_A17
+        self.selectedDevice = chosen
+        self.sessionSeed = Int.random(in: 100000...999999)
+        return chosen
+    }
+
     public var effectiveUserAgent: String {
         if selectedDevice == .custom && !customUserAgent.isEmpty {
             return customUserAgent
@@ -208,6 +239,7 @@ public class PrivacyProfile: ObservableObject {
     public var effectiveRenderer: String { selectedDevice.webglRenderer }
     public var effectiveScreenWidth: Int { selectedDevice.screenWidth }
     public var effectiveScreenHeight: Int { selectedDevice.screenHeight }
+    public var effectiveDevicePixelRatio: Double { selectedDevice.devicePixelRatio }
 
     public func generateJSConfig() -> String {
         return """
@@ -228,7 +260,8 @@ public class PrivacyProfile: ObservableObject {
             webglVendor: "Apple Inc.",
             webglRenderer: "\(effectiveRenderer)",
             screenWidth: \(effectiveScreenWidth),
-            screenHeight: \(effectiveScreenHeight)
+            screenHeight: \(effectiveScreenHeight),
+            devicePixelRatio: \(effectiveDevicePixelRatio)
         };
         """
     }

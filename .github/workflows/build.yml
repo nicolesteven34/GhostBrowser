@@ -56,13 +56,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.6.0
-          name: GhostBrowser v1.6.0 (WeakSet Bit-Consistency Guard)
+          tag_name: v1.7.0
+          name: GhostBrowser v1.7.0 (Realistic Device Regeneration & In-Place Purge)
           body: |
-            ## GhostBrowser v1.6.0 (WeakSet Bit-Consistency Guard)
-            - **WeakSet Single-Seed Guard**: Fixes cumulative canvas/audio re-mutation so `hash1 === hash2` is 100% bit-for-bit identical across multiple `toDataURL()` and `getImageData()` calls.
-            - **Passes GhostDetect Canvas Stability**: Completely eliminates the 'Artificial Noise Detected' flag (`✓ Deterministic & Stable`).
-            - **Unique Visitor ID Generation**: Combines seeded Canvas, AudioContext, Screen, WebGL, and User-Agent per persona with auto-purged storage.
+            ## GhostBrowser v1.7.0 (Realistic Device Regeneration & In-Place Purge)
+            - **Realistic Apple Device Rotation**: Tapping the Sparkles button now regenerates a complete, authentic Apple hardware profile (iPhone 15 Pro Max, iPad Pro 13" M4, MacBook Pro 16" M3 Max, iPad Air 11" M2, etc.).
+            - **Synchronized Hardware Matrix**: Device Pixel Ratio (DPR 3.0 vs 2.0), Screen Dimensions (Logical CSS pixels), Platform (`iPhone`, `iPad`, `MacIntel`), Touch Points (`0`, `5`, `10`), CPU Cores (`6`, `8`, `10`, `16`), RAM, and WebGL GPU Renderers rotate synchronously.
+            - **Native Code String Preservation**: Complete regex-compliant `[native code]` AST simulation for synthetic prototype getters, eliminating Tampering detection.
+            - **In-Place Deep Session Purge**: Clears cookies, cache, and IndexedDB on identity change while reloading the current active URL in-place without kicking back to the start page.
+            - **Clean HUD Toast**: Animated in-app notification confirming identity generation and active device profile.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

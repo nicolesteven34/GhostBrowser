@@ -219,7 +219,7 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
-        public func loadURL(_ urlString: String) {
+        public func loadURL(_ urlString: String, forceReload: Bool = false) {
             guard let webView = self.webView else { return }
 
             if urlString == "local://startpage" || urlString.isEmpty {
@@ -250,7 +250,8 @@ public struct BrowserView: UIViewRepresentable {
                 self.parent.currentURLString = url.absoluteString
             }
 
-            let request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30)
+            let cachePolicy: URLRequest.CachePolicy = forceReload ? .reloadIgnoringLocalAndRemoteCacheData : .useProtocolCachePolicy
+            let request = URLRequest(url: url, cachePolicy: cachePolicy, timeoutInterval: 30)
             webView.load(request)
         }
 
@@ -293,14 +294,16 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
-        public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
+            preferences.preferredContentMode = parent.privacyProfile.selectedDevice.preferredContentMode
+
             guard let url = navigationAction.request.url else {
-                decisionHandler(.allow)
+                decisionHandler(.allow, preferences)
                 return
             }
 
             if url.scheme == "ghost-search" {
-                decisionHandler(.cancel)
+                decisionHandler(.cancel, preferences)
                 let query = url.host ?? url.path.replacingOccurrences(of: "/", with: "")
                 if let decoded = query.removingPercentEncoding {
                     if let searchTarget = parent.privacyProfile.searchEngine.searchURL(for: decoded) {
@@ -317,17 +320,17 @@ public struct BrowserView: UIViewRepresentable {
             }
 
             if url.scheme == "http" || url.scheme == "https" || url.scheme == "about" || url.scheme == "file" {
-                decisionHandler(.allow)
+                decisionHandler(.allow, preferences)
                 return
             }
 
             if UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url)
-                decisionHandler(.cancel)
+                decisionHandler(.cancel, preferences)
                 return
             }
 
-            decisionHandler(.allow)
+            decisionHandler(.allow, preferences)
         }
 
         public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -364,11 +367,37 @@ public struct BrowserView: UIViewRepresentable {
             guard let webView = self.webView else { return }
             let dataStore = webView.configuration.websiteDataStore
             let types = WKWebsiteDataStore.allWebsiteDataTypes()
-            let currentURL = self.currentLoadedURL
+
+            let currentURL: String? = {
+                if let loaded = self.currentLoadedURL, !loaded.isEmpty, loaded != "local://startpage" {
+                    return loaded
+                }
+                if let webUrl = webView.url?.absoluteString, !webUrl.isEmpty, !webUrl.contains("startpage.html") && webUrl != "about:blank" {
+                    return webUrl
+                }
+                return nil
+            }()
+
+            // Purge system URLCache and HTTPCookieStorage
+            URLCache.shared.removeAllCachedResponses()
+            if let cookies = HTTPCookieStorage.shared.cookies {
+                for cookie in cookies {
+                    HTTPCookieStorage.shared.deleteCookie(cookie)
+                }
+            }
+
+            // Purge WKHTTPCookieStore
+            dataStore.httpCookieStore.getAllCookies { cookies in
+                for cookie in cookies {
+                    dataStore.httpCookieStore.delete(cookie)
+                }
+            }
+
+            // Purge WebKit website data store
             dataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) { [weak self] in
                 DispatchQueue.main.async {
-                    if reloadCurrent, let url = currentURL, url != "local://startpage", !url.isEmpty {
-                        self?.loadURL(url)
+                    if reloadCurrent, let url = currentURL {
+                        self?.loadURL(url, forceReload: true)
                     } else {
                         self?.loadLocalStartPage()
                     }
