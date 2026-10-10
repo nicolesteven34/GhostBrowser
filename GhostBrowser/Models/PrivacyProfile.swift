@@ -117,12 +117,10 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
 
     public var preferredContentMode: WKWebpagePreferences.ContentMode {
         switch self {
-        case .iPadProM4_13, .macBookProM3Max_16, .macBookAirM2_13:
+        case .macBookProM3Max_16, .macBookAirM2_13:
             return .desktop
-        case .iPhone15ProMax_A17, .iPhone14_A15, .iPadMini6_A15:
+        case .iPadProM4_13, .iPadAirM2_11, .iPadMini6_A15, .iPhone15ProMax_A17, .iPhone14_A15, .custom:
             return .mobile
-        case .iPadAirM2_11, .custom:
-            return .recommended
         }
     }
 
@@ -141,11 +139,10 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
 
     public var maxTouchPoints: Int {
         switch self {
-        case .iPadProM4_13: return 10
-        case .iPadAirM2_11, .iPadMini6_A15: return 5
-        case .iPhone15ProMax_A17, .iPhone14_A15: return 5
-        case .macBookProM3Max_16, .macBookAirM2_13: return 0
-        case .custom: return 5
+        case .iPadProM4_13, .iPadAirM2_11, .iPadMini6_A15, .iPhone15ProMax_A17, .iPhone14_A15, .custom:
+            return 5
+        case .macBookProM3Max_16, .macBookAirM2_13:
+            return 0
         }
     }
 

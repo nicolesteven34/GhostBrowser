@@ -96,6 +96,8 @@ public struct BrowserView: UIViewRepresentable {
         context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
         context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
         context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
+        context.coordinator.lastReloadTrigger = reloadTrigger
+        context.coordinator.lastWipeTrigger = wipeTrigger
 
         // Load initial content
         if currentURLString == "local://startpage" || currentURLString.isEmpty {
@@ -109,18 +111,16 @@ public struct BrowserView: UIViewRepresentable {
 
     public func updateUIView(_ webView: WKWebView, context: Context) {
         // Detect device profile, user agent, or session seed changes
-        if context.coordinator.lastProfileDevice != privacyProfile.selectedDevice ||
-           context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent ||
-           context.coordinator.lastSessionSeed != privacyProfile.sessionSeed {
+        let profileChanged = context.coordinator.lastProfileDevice != privacyProfile.selectedDevice
+        let uaChanged = context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent
+        let seedChanged = context.coordinator.lastSessionSeed != privacyProfile.sessionSeed
+
+        if profileChanged || uaChanged || seedChanged {
             context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
             context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
             context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
 
             context.coordinator.reconfigurePrivacy(for: webView)
-
-            if privacyProfile.autoPurgeOnProfileSwitch {
-                context.coordinator.nukeSession(reloadCurrent: true)
-            }
         }
 
         // Handle URL change from user navigation
@@ -229,8 +229,10 @@ public struct BrowserView: UIViewRepresentable {
                 html = html.replacingOccurrences(of: "{{SEED}}", with: "\(parent.privacyProfile.sessionSeed)")
 
                 self.currentLoadedURL = "local://startpage"
-                DispatchQueue.main.async {
-                    self.parent.currentURLString = "local://startpage"
+                if self.parent.currentURLString != "local://startpage" {
+                    DispatchQueue.main.async {
+                        self.parent.currentURLString = "local://startpage"
+                    }
                 }
                 webView.loadHTMLString(html, baseURL: nil)
             }
@@ -272,8 +274,10 @@ public struct BrowserView: UIViewRepresentable {
             guard let url = URL(string: finalString) else { return }
 
             self.currentLoadedURL = url.absoluteString
-            DispatchQueue.main.async {
-                self.parent.currentURLString = url.absoluteString
+            if self.parent.currentURLString != url.absoluteString {
+                DispatchQueue.main.async {
+                    self.parent.currentURLString = url.absoluteString
+                }
             }
 
             let cachePolicy: URLRequest.CachePolicy = forceReload ? .reloadIgnoringLocalAndRemoteCacheData : .useProtocolCachePolicy

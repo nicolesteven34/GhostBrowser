@@ -503,7 +503,13 @@
     </div>
 
     <script>
+        let isNavActionPending = false;
         function navigate(url) {
+            if (url.startsWith('ghost-action://')) {
+                if (isNavActionPending) return;
+                isNavActionPending = true;
+                setTimeout(function() { isNavActionPending = false; }, 800);
+            }
             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ghostNav) {
                 window.webkit.messageHandlers.ghostNav.postMessage(url);
             } else {
