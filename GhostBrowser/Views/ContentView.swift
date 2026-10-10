@@ -111,6 +111,19 @@ public struct ContentView: View {
                             .frame(minWidth: 480, minHeight: 620)
                     }
 
+                    // Generate New Identity (Keep Same Device)
+                    Button(action: {
+                        privacyProfile.rotateIdentitySeed()
+                        showIdentityToast("🔄 New Identity (Same Device) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
+                    }) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.blue)
+                            .padding(8)
+                            .background(Color.blue.opacity(0.12))
+                            .clipShape(Circle())
+                    }
+
                     // Regenerate Realistic Identity (Rotates realistic Apple device, seed & cleans in-place)
                     Button(action: {
                         let newDevice = privacyProfile.regenerateRealisticIdentity()

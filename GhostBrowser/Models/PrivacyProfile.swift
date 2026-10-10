@@ -313,7 +313,7 @@ public class PrivacyProfile: ObservableObject {
     public var visitorID: String {
         let entropy = "UA=\(effectiveUserAgent)|PLAT=\(effectivePlatform)|SCR=\(effectiveScreenWidth)x\(effectiveScreenHeight)@\(effectiveDevicePixelRatio)|TOUCH=\(effectiveTouchPoints)|CORES=\(effectiveCores)|RAM=\(effectiveRAM)|GPU=\(effectiveRenderer)|SEED=\(sessionSeed)"
         let hash = SHA256.hash(data: Data(entropy.utf8))
-        let alphabet = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        let alphabet = Array("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
         let hashBytes = Array(hash)
         var result = ""
         for i in 0..<20 {
