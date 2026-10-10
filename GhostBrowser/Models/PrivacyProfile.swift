@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import WebKit
 
 public enum SearchEngine: String, CaseIterable, Identifiable {
     case localStartPage = "Local Offline Start Page (Zero Network)"
@@ -61,6 +62,17 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
             return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15"
         case .custom:
             return ""
+        }
+    }
+
+    public var preferredContentMode: WKWebpagePreferences.ContentMode {
+        switch self {
+        case .iPadProM4_13, .macBookProM3Max_16, .macBookAirM2_13:
+            return .desktop
+        case .iPhone15ProMax_A17, .iPhone14_A15, .iPadMini6_A15:
+            return .mobile
+        case .iPadAirM2_11, .custom:
+            return .recommended
         }
     }
 
@@ -133,13 +145,16 @@ public class PrivacyProfile: ObservableObject {
     @Published public var searchEngine: SearchEngine = .localStartPage
 
     // Core Anti-Detection Stealth Setting
-    // When enabled, relies on WebKit C++ engine-level native spoofing & blocker rules
-    // so anti-fraud scanners (Fingerprint.com) detect ZERO tampering, ZERO bot, ZERO incognito.
     @Published public var stealthAntiDetectionMode: Bool = true
 
-    // Defense Switches (Active in Aggressive Mode)
+    // Persona Isolation & Consistency
+    @Published public var autoPurgeOnProfileSwitch: Bool = true
+    @Published public var deterministicHardwareSeeding: Bool = true
+    @Published public var sessionSeed: Int = Int.random(in: 100000...999999)
+
+    // Defense Switches
     @Published public var blockCommercialTrackers: Bool = true
-    @Published public var ephemeralRAMMode: Bool = false // False by default so Incognito is NOT detected
+    @Published public var ephemeralRAMMode: Bool = false
     @Published public var blockCanvasFingerprint: Bool = false
     @Published public var blockAudioFingerprint: Bool = false
     @Published public var maskWebGLRenderer: Bool = false
@@ -148,6 +163,10 @@ public class PrivacyProfile: ObservableObject {
     @Published public var shieldSensors: Bool = false
 
     public init() {}
+
+    public func rotateIdentitySeed() {
+        sessionSeed = Int.random(in: 100000...999999)
+    }
 
     public var effectiveUserAgent: String {
         if selectedDevice == .custom && !customUserAgent.isEmpty {
@@ -166,6 +185,8 @@ public class PrivacyProfile: ObservableObject {
         return """
         window.__GHOST_CONFIG__ = {
             stealthMode: \(stealthAntiDetectionMode),
+            deterministicHardwareSeeding: \(deterministicHardwareSeeding),
+            sessionSeed: \(sessionSeed),
             blockCanvas: \(stealthAntiDetectionMode ? false : blockCanvasFingerprint),
             blockAudio: \(stealthAntiDetectionMode ? false : blockAudioFingerprint),
             maskWebGL: \(stealthAntiDetectionMode ? false : maskWebGLRenderer),

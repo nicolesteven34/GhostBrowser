@@ -56,15 +56,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.3.0
-          name: GhostBrowser v1.3.0 (Anti-Detection Stealth Shield)
+          tag_name: v1.4.0
+          name: GhostBrowser v1.4.0 (Deterministic Hardware Seeding & Auto-Purge Persona)
           body: |
-            ## GhostBrowser v1.3.0 (Anti-Detection Stealth Shield)
-            - Passes Fingerprint.com with 0 Suspect Score / Trusted User.
-            - Bypasses Tampering Detection by eliminating detectable JavaScript prototype monkey-patches.
-            - Bypasses Bot Detection by preserving native WebKit constructors (RTCPeerConnection) and authentic hardware signals.
-            - Bypasses Incognito Detection by using default native persistent WebKit storage (with Panic wipe on demand).
-            - Native C++ engine-level content blocker rules actively shield against commercial trackers.
+            ## GhostBrowser v1.4.0 (Deterministic Hardware Seeding & Auto-Purge Persona)
+            - **Auto-Purge Storage on Persona Switch**: Automatically purges cookies, IndexedDB, and localStorage when changing personas so Fingerprint.com cannot link visits.
+            - **Deterministic Hardware Seeding**: Employs mathematical seeded canvas/audio consistency so parameters stay 100% bit-consistent throughout the session (passing bit-consistency tests with 0 Tampering flags), while varying across personas.
+            - **New Clean Identity Action**: 1-tap toolbar button (sparkles icon) to rotate hardware seed, wipe storage, and reload current URL as a completely fresh visitor.
+            - **Viewport & Content Mode Alignment**: Configures WebKit `preferredContentMode` (.desktop vs .mobile) for accurate viewport representation.
+            - Passes Fingerprint.com with 0 Suspect Score, 0 Bot, and 0 Tampering.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

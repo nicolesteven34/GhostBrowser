@@ -20,6 +20,32 @@ public struct PrivacySettingsView: View {
                             Image(systemName: "checkmark.shield.fill").foregroundColor(.green)
                         }
                     }
+
+                    Toggle(isOn: $privacyProfile.deterministicHardwareSeeding) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Deterministic Hardware Seeding")
+                                    .fontWeight(.medium)
+                                Text("Ensures Canvas & Audio hashes remain 100% bit-consistent throughout the session (passing consistency tests) while varying across personas.")
+                                    .font(.caption).foregroundColor(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "cpu").foregroundColor(.blue)
+                        }
+                    }
+
+                    Toggle(isOn: $privacyProfile.autoPurgeOnProfileSwitch) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Auto-Purge Storage on Persona Switch")
+                                    .fontWeight(.medium)
+                                Text("Automatically wipes cookies, IndexedDB, and cache when changing profiles so sites cannot link your new persona to previous visits.")
+                                    .font(.caption).foregroundColor(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "trash.circle.fill").foregroundColor(.orange)
+                        }
+                    }
                 }
 
                 Section(header: Text("Device Persona & Hardware Signature")) {
@@ -64,6 +90,14 @@ public struct PrivacySettingsView: View {
                         .font(.footnote)
                     }
                     .padding(.vertical, 4)
+
+                    Button(action: {
+                        privacyProfile.rotateIdentitySeed()
+                    }) {
+                        Label("Rotate Hardware Identity Seed", systemImage: "sparkles")
+                            .font(.footnote)
+                            .foregroundColor(.blue)
+                    }
                 }
 
                 Section(header: Text("Search Provider")) {

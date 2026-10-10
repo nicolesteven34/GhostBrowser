@@ -50,24 +50,22 @@ public struct BrowserView: UIViewRepresentable {
         // 2. Register native script message handler for local start page
         userContentController.add(context.coordinator, name: "ghostNav")
 
-        // 3. Inject configuration only if aggressive mode is active
-        if !privacyProfile.stealthAntiDetectionMode {
-            let configScript = WKUserScript(
-                source: privacyProfile.generateJSConfig(),
+        // 3. Inject configuration & anti-fingerprint script
+        let configScript = WKUserScript(
+            source: privacyProfile.generateJSConfig(),
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        userContentController.addUserScript(configScript)
+
+        if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
+           let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
+            let antiFpScript = WKUserScript(
+                source: scriptSource,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: false
             )
-            userContentController.addUserScript(configScript)
-
-            if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
-               let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
-                let antiFpScript = WKUserScript(
-                    source: scriptSource,
-                    injectionTime: .atDocumentStart,
-                    forMainFrameOnly: false
-                )
-                userContentController.addUserScript(antiFpScript)
-            }
+            userContentController.addUserScript(antiFpScript)
         }
 
         // 4. Apply Native C++ Content Blocker Rules (Invisible to JavaScript)
@@ -83,6 +81,7 @@ public struct BrowserView: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = .all
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences.preferredContentMode = privacyProfile.selectedDevice.preferredContentMode
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -94,6 +93,7 @@ public struct BrowserView: UIViewRepresentable {
         context.coordinator.webView = webView
         context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
         context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
+        context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
 
         // Load local start page initially
         context.coordinator.loadLocalStartPage()
@@ -102,12 +102,19 @@ public struct BrowserView: UIViewRepresentable {
     }
 
     public func updateUIView(_ webView: WKWebView, context: Context) {
-        // Detect device profile or user agent changes
+        // Detect device profile, user agent, or session seed changes
         if context.coordinator.lastProfileDevice != privacyProfile.selectedDevice ||
-           context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent {
+           context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent ||
+           context.coordinator.lastSessionSeed != privacyProfile.sessionSeed {
             context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
             context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
+            context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
+
             context.coordinator.reconfigurePrivacy(for: webView)
+
+            if privacyProfile.autoPurgeOnProfileSwitch {
+                context.coordinator.nukeSession(reloadCurrent: true)
+            }
         }
 
         // Handle URL change from user navigation
@@ -128,7 +135,7 @@ public struct BrowserView: UIViewRepresentable {
         // Handle panic wipe trigger
         if context.coordinator.lastWipeTrigger != wipeTrigger {
             context.coordinator.lastWipeTrigger = wipeTrigger
-            context.coordinator.nukeSession()
+            context.coordinator.nukeSession(reloadCurrent: false)
         }
     }
 
@@ -138,6 +145,7 @@ public struct BrowserView: UIViewRepresentable {
         var currentLoadedURL: String? = nil
         var lastProfileDevice: AppleDeviceProfile?
         var lastUserAgent: String?
+        var lastSessionSeed: Int = 0
         var lastReloadTrigger: Int = 0
         var lastWipeTrigger: Int = 0
 
@@ -247,29 +255,28 @@ public struct BrowserView: UIViewRepresentable {
         }
 
         public func reconfigurePrivacy(for webView: WKWebView) {
-            // Update native C++ User Agent
+            // Update native C++ User Agent & Preferred Content Mode
             webView.customUserAgent = parent.privacyProfile.effectiveUserAgent
+            webView.configuration.defaultWebpagePreferences.preferredContentMode = parent.privacyProfile.selectedDevice.preferredContentMode
 
             let ucc = webView.configuration.userContentController
             ucc.removeAllUserScripts()
 
-            if !parent.privacyProfile.stealthAntiDetectionMode {
-                let configScript = WKUserScript(
-                    source: parent.privacyProfile.generateJSConfig(),
+            let configScript = WKUserScript(
+                source: parent.privacyProfile.generateJSConfig(),
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+            ucc.addUserScript(configScript)
+
+            if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
+               let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
+                let antiFpScript = WKUserScript(
+                    source: scriptSource,
                     injectionTime: .atDocumentStart,
                     forMainFrameOnly: false
                 )
-                ucc.addUserScript(configScript)
-
-                if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
-                   let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
-                    let antiFpScript = WKUserScript(
-                        source: scriptSource,
-                        injectionTime: .atDocumentStart,
-                        forMainFrameOnly: false
-                    )
-                    ucc.addUserScript(antiFpScript)
-                }
+                ucc.addUserScript(antiFpScript)
             }
 
             if parent.privacyProfile.blockCommercialTrackers {
@@ -353,13 +360,18 @@ public struct BrowserView: UIViewRepresentable {
             print("[BrowserView] Navigation failed: \(error.localizedDescription)")
         }
 
-        public func nukeSession() {
+        public func nukeSession(reloadCurrent: Bool = false) {
             guard let webView = self.webView else { return }
             let dataStore = webView.configuration.websiteDataStore
             let types = WKWebsiteDataStore.allWebsiteDataTypes()
+            let currentURL = self.currentLoadedURL
             dataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) { [weak self] in
                 DispatchQueue.main.async {
-                    self?.loadLocalStartPage()
+                    if reloadCurrent, let url = currentURL, url != "local://startpage", !url.isEmpty {
+                        self?.loadURL(url)
+                    } else {
+                        self?.loadLocalStartPage()
+                    }
                 }
             }
         }

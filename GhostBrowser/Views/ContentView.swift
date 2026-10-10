@@ -106,6 +106,19 @@ public struct ContentView: View {
                         .frame(minWidth: 480, minHeight: 620)
                 }
 
+                // New Clean Identity Action (Rotates hardware seed & purges cookies)
+                Button(action: {
+                    privacyProfile.rotateIdentitySeed()
+                    wipeTrigger += 1
+                }) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.purple)
+                        .padding(8)
+                        .background(Color.purple.opacity(0.12))
+                        .clipShape(Circle())
+                }
+
                 // Panic Button (Purge all state)
                 Button(action: {
                     showWipeAlert = true
@@ -152,49 +165,36 @@ public struct ContentView: View {
                 reloadTrigger: $reloadTrigger,
                 wipeTrigger: $wipeTrigger
             )
-            .onChange(of: currentURLString) { newURL in
-                if newURL == "local://startpage" {
-                    inputURLText = ""
-                } else {
-                    inputURLText = newURL
-                }
-            }
+            .edgesIgnoringSafeArea(.bottom)
         }
-    }
-
-    private func shortPersonaName(_ full: String) -> String {
-        let parts = full.components(separatedBy: " ")
-        if parts.count >= 2 {
-            return "\(parts[0]) \(parts[1])"
-        }
-        return full
     }
 
     private func submitNavigation() {
-        var query = inputURLText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if query.isEmpty { return }
+        let trimmed = inputURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
 
-        var target = ""
-        if query.hasPrefix("http://") || query.hasPrefix("https://") {
-            target = query
-        } else if query.contains(".") && !query.contains(" ") {
-            target = "https://" + query
+        // If it looks like a domain name or URL
+        if trimmed.contains(".") && !trimmed.contains(" ") {
+            currentURLString = trimmed
         } else {
-            if let searchURL = privacyProfile.searchEngine.searchURL(for: query) {
-                target = searchURL.absoluteString
-            } else if let fallback = SearchEngine.startpage.searchURL(for: query) {
-                target = fallback.absoluteString
+            // It's a search term
+            if let searchURL = privacyProfile.searchEngine.searchURL(for: trimmed) {
+                currentURLString = searchURL.absoluteString
             } else {
-                target = "https://" + query
+                // Fallback to startpage.html query
+                currentURLString = "ghost-search://" + (trimmed.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) ?? trimmed)
             }
         }
+    }
 
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-
-        if currentURLString == target {
-            reloadTrigger += 1
-        } else {
-            currentURLString = target
-        }
+    private func shortPersonaName(_ raw: String) -> String {
+        if raw.contains("iPad Pro 13") { return "iPad Pro 13\"" }
+        if raw.contains("iPad Air 11") { return "iPad Air 11\"" }
+        if raw.contains("iPad Mini 6") { return "iPad Mini 6" }
+        if raw.contains("iPhone 15 Pro Max") { return "iPhone 15 PM" }
+        if raw.contains("iPhone 14") { return "iPhone 14" }
+        if raw.contains("MacBook Pro 16") { return "MacBook Pro" }
+        if raw.contains("MacBook Air 13") { return "MacBook Air" }
+        return "Custom"
     }
 }
