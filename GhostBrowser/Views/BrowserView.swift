@@ -187,7 +187,11 @@ public struct BrowserView: UIViewRepresentable {
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "ghostNav", let target = message.body as? String {
                 DispatchQueue.main.async {
-                    self.loadURL(target)
+                    if target == "ghost-action://regenerate" {
+                        self.parent.privacyProfile.regenerateRealisticIdentity()
+                    } else {
+                        self.loadURL(target)
+                    }
                 }
             }
         }
@@ -210,6 +214,11 @@ public struct BrowserView: UIViewRepresentable {
                 html = html.replacingOccurrences(of: "{{RAM_GB}}", with: "\(parent.privacyProfile.effectiveRAM) GB RAM")
                 html = html.replacingOccurrences(of: "{{TOUCH_POINTS}}", with: "\(parent.privacyProfile.effectiveTouchPoints)")
                 html = html.replacingOccurrences(of: "{{PLATFORM}}", with: parent.privacyProfile.effectivePlatform)
+                html = html.replacingOccurrences(of: "{{VISITOR_ID}}", with: parent.privacyProfile.visitorID)
+                html = html.replacingOccurrences(of: "{{FORMATTED_VISITOR_ID}}", with: parent.privacyProfile.formattedVisitorID)
+                html = html.replacingOccurrences(of: "{{SCREEN_RES}}", with: "\(parent.privacyProfile.effectiveScreenWidth)×\(parent.privacyProfile.effectiveScreenHeight)")
+                html = html.replacingOccurrences(of: "{{DPR}}", with: String(format: "%.1f", parent.privacyProfile.effectiveDevicePixelRatio))
+                html = html.replacingOccurrences(of: "{{SEED}}", with: "\(parent.privacyProfile.sessionSeed)")
 
                 self.currentLoadedURL = "local://startpage"
                 DispatchQueue.main.async {
@@ -314,6 +323,16 @@ public struct BrowserView: UIViewRepresentable {
                         DispatchQueue.main.async {
                             self.loadURL(fallback.absoluteString)
                         }
+                    }
+                }
+                return
+            }
+
+            if url.scheme == "ghost-action" {
+                decisionHandler(.cancel, preferences)
+                if url.host == "regenerate" || url.path.contains("regenerate") {
+                    DispatchQueue.main.async {
+                        self.parent.privacyProfile.regenerateRealisticIdentity()
                     }
                 }
                 return

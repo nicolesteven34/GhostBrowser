@@ -56,15 +56,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.7.0
-          name: GhostBrowser v1.7.0 (Realistic Device Regeneration & In-Place Purge)
+          tag_name: v1.8.0
+          name: GhostBrowser v1.8.0 (Live Hardware Visitor ID & Homepage Identity Hub)
           body: |
-            ## GhostBrowser v1.7.0 (Realistic Device Regeneration & In-Place Purge)
-            - **Realistic Apple Device Rotation**: Tapping the Sparkles button now regenerates a complete, authentic Apple hardware profile (iPhone 15 Pro Max, iPad Pro 13" M4, MacBook Pro 16" M3 Max, iPad Air 11" M2, etc.).
-            - **Synchronized Hardware Matrix**: Device Pixel Ratio (DPR 3.0 vs 2.0), Screen Dimensions (Logical CSS pixels), Platform (`iPhone`, `iPad`, `MacIntel`), Touch Points (`0`, `5`, `10`), CPU Cores (`6`, `8`, `10`, `16`), RAM, and WebGL GPU Renderers rotate synchronously.
-            - **Native Code String Preservation**: Complete regex-compliant `[native code]` AST simulation for synthetic prototype getters, eliminating Tampering detection.
-            - **In-Place Deep Session Purge**: Clears cookies, cache, and IndexedDB on identity change while reloading the current active URL in-place without kicking back to the start page.
-            - **Clean HUD Toast**: Animated in-app notification confirming identity generation and active device profile.
+            ## GhostBrowser v1.8.0 (Live Hardware Visitor ID & Homepage Identity Hub)
+            - **Live Hardware Visitor ID Engine**: Cryptographically generates an authentic 20-character uppercase alphanumeric Visitor ID (matching Fingerprint.com format) derived from Canvas, Audio, Screen, WebGL, Platform, and Identity Seed.
+            - **Homepage Identity Hub**: The offline start page (`local://startpage`) now features a prominent Visitor ID card with single-tap clipboard copy, live device metrics, and an interactive "Regenerate Identity (✨)" action.
+            - **Synchronized Rotation**: Tapping Sparkles or Regenerate dynamically updates the Visitor ID on the start page, triggers an in-place session wipe, and translates to a fresh Visitor ID on Fingerprint.com.
+            - **Settings Modal Integration**: Displays the active formatted Visitor ID with a one-tap copy button in the Browser Persona & Privacy sheet.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

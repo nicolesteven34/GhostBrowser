@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import WebKit
+import CryptoKit
 
 public enum SearchEngine: String, CaseIterable, Identifiable {
     case localStartPage = "Local Offline Start Page (Zero Network)"
@@ -241,9 +242,36 @@ public class PrivacyProfile: ObservableObject {
     public var effectiveScreenHeight: Int { selectedDevice.screenHeight }
     public var effectiveDevicePixelRatio: Double { selectedDevice.devicePixelRatio }
 
+    public var visitorID: String {
+        let entropy = "UA=\(effectiveUserAgent)|PLAT=\(effectivePlatform)|SCR=\(effectiveScreenWidth)x\(effectiveScreenHeight)@\(effectiveDevicePixelRatio)|TOUCH=\(effectiveTouchPoints)|CORES=\(effectiveCores)|RAM=\(effectiveRAM)|GPU=\(effectiveRenderer)|SEED=\(sessionSeed)"
+        let hash = SHA256.hash(data: Data(entropy.utf8))
+        let alphabet = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        let hashBytes = Array(hash)
+        var result = ""
+        for i in 0..<20 {
+            let byteVal = Int(hashBytes[i % hashBytes.count]) ^ Int(hashBytes[(i * 7 + 3) % hashBytes.count])
+            result.append(alphabet[byteVal % alphabet.count])
+        }
+        return result
+    }
+
+    public var formattedVisitorID: String {
+        let vid = visitorID
+        guard vid.count == 20 else { return vid }
+        var parts: [String] = []
+        for i in stride(from: 0, to: 20, by: 4) {
+            let start = vid.index(vid.startIndex, offsetBy: i)
+            let end = vid.index(start, offsetBy: 4)
+            parts.append(String(vid[start..<end]))
+        }
+        return parts.joined(separator: "-")
+    }
+
     public func generateJSConfig() -> String {
         return """
+        window.__GHOST_VISITOR_ID__ = "\(visitorID)";
         window.__GHOST_CONFIG__ = {
+            visitorId: "\(visitorID)",
             stealthMode: \(stealthAntiDetectionMode),
             deterministicHardwareSeeding: \(deterministicHardwareSeeding),
             sessionSeed: \(sessionSeed),

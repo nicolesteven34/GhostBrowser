@@ -114,7 +114,7 @@ public struct ContentView: View {
                     // Regenerate Realistic Identity (Rotates realistic Apple device, seed & cleans in-place)
                     Button(action: {
                         let newDevice = privacyProfile.regenerateRealisticIdentity()
-                        showIdentityToast("✨ Generated: \(shortPersonaName(newDevice.rawValue))")
+                        showIdentityToast("✨ \(shortPersonaName(newDevice.rawValue)) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
                     }) {
                         Image(systemName: "sparkles")
                             .font(.system(size: 15, weight: .semibold))

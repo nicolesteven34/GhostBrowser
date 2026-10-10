@@ -61,6 +61,39 @@ public struct PrivacySettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Current Visitor ID:")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("FPJS Match")
+                                .font(.system(size: 10, weight: .bold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.15))
+                                .foregroundColor(.blue)
+                                .cornerRadius(4)
+                        }
+
+                        HStack {
+                            Text(privacyProfile.formattedVisitorID)
+                                .font(.system(.footnote, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Button(action: {
+                                UIPasteboard.general.string = privacyProfile.visitorID
+                            }) {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Active Signature Specs:")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -71,6 +104,12 @@ public struct PrivacySettingsView: View {
                             Spacer()
                             Text("Touch Points:").fontWeight(.medium)
                             Text("\(privacyProfile.effectiveTouchPoints)")
+                        }
+                        .font(.footnote)
+
+                        HStack {
+                            Text("Screen & DPR:").fontWeight(.medium)
+                            Text("\(privacyProfile.effectiveScreenWidth)×\(privacyProfile.effectiveScreenHeight) (\(String(format: "%.1f", privacyProfile.effectiveDevicePixelRatio))x)")
                         }
                         .font(.footnote)
 
