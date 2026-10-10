@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Start Page</title>
+    <title>Safari Start Page</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -55,7 +55,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 28px;
+            gap: 24px;
         }
 
         .header {
@@ -116,7 +116,7 @@
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            padding: 22px;
+            padding: 20px 22px;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
         }
@@ -135,7 +135,7 @@
             align-items: center;
             gap: 10px;
             font-weight: 600;
-            font-size: 17px;
+            font-size: 16px;
         }
 
         .shield-badge {
@@ -161,15 +161,15 @@
         }
 
         .metric-label {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .metric-value {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--text-primary);
         }
@@ -201,13 +201,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            font-size: 20px;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--accent-blue);
             transition: transform 0.15s ease;
         }
 
         .fav-item:active .fav-icon {
-            transform: scale(0.94);
+            transform: scale(0.92);
         }
 
         .fav-label {
@@ -221,7 +222,7 @@
     <div class="container">
         <div class="header">
             <h1>Safari Privacy Guard</h1>
-            <p>Native WebKit Engine &bull; Zero Corporate Telemetry &bull; Isolated RAM</p>
+            <p>Isolated WebKit Engine &bull; Zero Telemetry</p>
         </div>
 
         <form class="search-box" id="searchForm" onsubmit="handleSearch(event)">
@@ -234,30 +235,30 @@
         <div class="shield-card">
             <div class="shield-card-header">
                 <div class="shield-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#0A84FF">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#0A84FF">
                         <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
                     </svg>
-                    <span>Privacy & Fingerprint Report</span>
+                    <span>Hardware Persona &amp; Protection Report</span>
                 </div>
                 <div class="shield-badge">HARDENED</div>
             </div>
 
             <div class="metrics-grid">
                 <div class="metric-item">
-                    <span class="metric-label">Device Persona</span>
-                    <span class="metric-value" id="profileName">iPad Pro (M4)</span>
+                    <span class="metric-label">Active Persona</span>
+                    <span class="metric-value" id="profileName">{{DEVICE_NAME}}</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Fingerprint Shield</span>
-                    <span class="metric-value" style="color: var(--accent-green);">Active (Anti-Hash)</span>
+                    <span class="metric-label">GPU Renderer</span>
+                    <span class="metric-value">{{GPU_MODEL}}</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">WebRTC IP Shield</span>
-                    <span class="metric-value" style="color: var(--accent-green);">No IP Leaks</span>
+                    <span class="metric-label">CPU Cores &amp; RAM</span>
+                    <span class="metric-value">{{CPU_CORES}} &bull; {{RAM_GB}}</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Storage Profile</span>
-                    <span class="metric-value">RAM-Only (Ephemeral)</span>
+                    <span class="metric-label">Platform &amp; Touch</span>
+                    <span class="metric-value">{{PLATFORM}} &bull; {{TOUCH_POINTS}} pts</span>
                 </div>
             </div>
         </div>
@@ -266,6 +267,10 @@
             <div class="fav-item" onclick="navigate('https://wikipedia.org')">
                 <div class="fav-icon">W</div>
                 <span class="fav-label">Wikipedia</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://apple.com')">
+                <div class="fav-icon">&#63743;</div>
+                <span class="fav-label">Apple</span>
             </div>
             <div class="fav-item" onclick="navigate('https://github.com')">
                 <div class="fav-icon">GH</div>
@@ -283,14 +288,12 @@
     </div>
 
     <script>
-        function updateProfileInfo(name) {
-            if (name) {
-                document.getElementById('profileName').textContent = name;
-            }
-        }
-
         function navigate(url) {
-            window.location.href = url;
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ghostNav) {
+                window.webkit.messageHandlers.ghostNav.postMessage(url);
+            } else {
+                window.location.href = url;
+            }
         }
 
         function handleSearch(e) {
@@ -299,14 +302,15 @@
             let query = input.value.trim();
             if (!query) return;
 
+            let target = '';
             if (query.includes('://')) {
-                window.location.href = query;
+                target = query;
             } else if (query.includes('.') && !query.includes(' ')) {
-                window.location.href = 'https://' + query;
+                target = 'https://' + query;
             } else {
-                // Read configured engine or notify Swift coordinator
-                window.location.href = 'ghost-search://' + encodeURIComponent(query);
+                target = 'ghost-search://' + encodeURIComponent(query);
             }
+            navigate(target);
         }
     </script>
 </body>

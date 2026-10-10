@@ -56,13 +56,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.0
-          name: GhostBrowser v1.1.0
+          tag_name: v1.2.0
+          name: GhostBrowser v1.2.0
           body: |
-            ## GhostBrowser v1.1.0 (Native Apple Profiles & Sleek App Icon)
-            - Authentic Apple device signatures (iPad Pro M4, iPad Air M2, iPad Mini 6, iPhone 15 Pro Max, MacBook Pro M3 Max).
-            - Offline local Safari start page (Zero third-party search dependencies).
-            - Configurable search provider (Local, SearXNG, Startpage, Brave, DuckDuckGo, Google).
+            ## GhostBrowser v1.2.0
+            - Fixed top address bar navigation on iPad (added explicit Go button, keyboard dismiss, direct URL loading).
+            - Fixed persona switching: Changing device persona now immediately updates the home page stats and reconfigures active WebKit user scripts dynamically.
+            - Authentic Apple device personas (iPad Pro M4, iPad Air M2, iPad Mini 6, iPhone 15 Pro Max, MacBook Pro M3 Max).
+            - Offline local Safari start page with native message bridging.
             - Custom high-res obsidian & electric-blue Safari compass app icon.
           files: GhostBrowser.ipa
         env:

@@ -15,7 +15,7 @@ public struct ContentView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Safari-style iPad Toolbar
+            // Safari iPad Toolbar
             HStack(spacing: 12) {
                 // Back & Forward
                 Button(action: {
@@ -34,11 +34,10 @@ public struct ContentView: View {
                 }
                 .disabled(!canGoForward)
 
-                // Home (Local Start Page)
+                // Home
                 Button(action: {
                     currentURLString = "local://startpage"
                     inputURLText = ""
-                    reloadTrigger += 1
                 }) {
                     Image(systemName: "house")
                         .font(.system(size: 15, weight: .medium))
@@ -73,6 +72,12 @@ public struct ContentView: View {
                                 .foregroundColor(.secondary)
                                 .font(.system(size: 13))
                         }
+
+                        Button(action: { submitNavigation() }) {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .foregroundColor(.blue)
+                                .font(.system(size: 16, weight: .semibold))
+                        }
                     }
                 }
                 .padding(.horizontal, 12)
@@ -80,14 +85,14 @@ public struct ContentView: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
 
-                // Active Profile & Privacy Shield Trigger
+                // Active Apple Persona Badge & Privacy Settings
                 Button(action: {
                     showSettingsSheet.toggle()
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "applelogo")
                             .font(.system(size: 13, weight: .semibold))
-                        Text(privacyProfile.selectedDevice.rawValue.components(separatedBy: " ").prefix(2).joined(separator: " "))
+                        Text(shortPersonaName(privacyProfile.selectedDevice.rawValue))
                             .font(.system(size: 12, weight: .semibold))
                     }
                     .padding(.horizontal, 10)
@@ -101,7 +106,7 @@ public struct ContentView: View {
                         .frame(minWidth: 480, minHeight: 620)
                 }
 
-                // Instant Panic Button (Zero Disk/RAM Trace)
+                // Panic Button (Purge all state)
                 Button(action: {
                     showWipeAlert = true
                 }) {
@@ -127,7 +132,7 @@ public struct ContentView: View {
             .padding(.vertical, 10)
             .background(Color(.systemBackground))
 
-            // Thin loading progress bar
+            // Loading Progress Bar
             if isLoading && estimatedProgress < 1.0 {
                 ProgressView(value: estimatedProgress, total: 1.0)
                     .progressViewStyle(LinearProgressViewStyle(tint: .blue))
@@ -157,26 +162,39 @@ public struct ContentView: View {
         }
     }
 
+    private func shortPersonaName(_ full: String) -> String {
+        let parts = full.components(separatedBy: " ")
+        if parts.count >= 2 {
+            return "\(parts[0]) \(parts[1])"
+        }
+        return full
+    }
+
     private func submitNavigation() {
         var query = inputURLText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.isEmpty { return }
 
-        if query.contains("://") {
-            currentURLString = query
+        var target = ""
+        if query.hasPrefix("http://") || query.hasPrefix("https://") {
+            target = query
         } else if query.contains(".") && !query.contains(" ") {
-            currentURLString = "https://" + query
+            target = "https://" + query
         } else {
-            // Route through user's chosen search provider
-            if let searchTarget = privacyProfile.searchEngine.searchURL(for: query) {
-                currentURLString = searchTarget.absoluteString
+            if let searchURL = privacyProfile.searchEngine.searchURL(for: query) {
+                target = searchURL.absoluteString
+            } else if let fallback = SearchEngine.startpage.searchURL(for: query) {
+                target = fallback.absoluteString
             } else {
-                // If local start page / direct only, fallback to SearXNG or Startpage
-                if let fallback = SearchEngine.startpage.searchURL(for: query) {
-                    currentURLString = fallback.absoluteString
-                }
+                target = "https://" + query
             }
         }
 
-        reloadTrigger += 1
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+
+        if currentURLString == target {
+            reloadTrigger += 1
+        } else {
+            currentURLString = target
+        }
     }
 }

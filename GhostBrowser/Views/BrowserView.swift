@@ -38,7 +38,7 @@ public struct BrowserView: UIViewRepresentable {
     public func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
 
-        // 1. RAM-only Ephemeral Mode (Zero disk persistence)
+        // 1. RAM-only Ephemeral Storage Mode
         if privacyProfile.ephemeralRAMMode {
             configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         } else {
@@ -47,7 +47,10 @@ public struct BrowserView: UIViewRepresentable {
 
         let userContentController = WKUserContentController()
 
-        // 2. Inject Active Privacy Profile & Apple Device Signature
+        // 2. Register native script message handler for local start page communication
+        userContentController.add(context.coordinator, name: "ghostNav")
+
+        // 3. Inject Privacy Profile & Device Signature
         let configScript = WKUserScript(
             source: privacyProfile.generateJSConfig(),
             injectionTime: .atDocumentStart,
@@ -55,7 +58,7 @@ public struct BrowserView: UIViewRepresentable {
         )
         userContentController.addUserScript(configScript)
 
-        // 3. Inject Stealth Anti-Fingerprinting Engine
+        // 4. Inject Anti-Fingerprinting Engine
         if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
            let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
             let antiFpScript = WKUserScript(
@@ -66,7 +69,7 @@ public struct BrowserView: UIViewRepresentable {
             userContentController.addUserScript(antiFpScript)
         }
 
-        // 4. Apply Native Block Rules
+        // 5. Apply Native Content Blocker Rules
         if privacyProfile.blockCommercialTrackers {
             ContentBlockerManager.shared.loadContentBlockerRules { ruleList in
                 if let ruleList = ruleList {
@@ -79,58 +82,66 @@ public struct BrowserView: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = .all
 
+        // Allow JavaScript execution
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         webView.customUserAgent = privacyProfile.effectiveUserAgent
         webView.allowsBackForwardNavigationGestures = true
 
         context.coordinator.setupObservers(for: webView)
         context.coordinator.webView = webView
+        context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
+        context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
 
-        // Load local offline Start Page by default
-        context.coordinator.loadLocalStartPage(in: webView)
+        // Load local start page initially
+        context.coordinator.loadLocalStartPage()
 
         return webView
     }
 
     public func updateUIView(_ webView: WKWebView, context: Context) {
-        // Synchronize User-Agent
-        if webView.customUserAgent != privacyProfile.effectiveUserAgent {
-            webView.customUserAgent = privacyProfile.effectiveUserAgent
+        // Detect device profile or user agent changes
+        if context.coordinator.lastProfileDevice != privacyProfile.selectedDevice ||
+           context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent {
+            context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
+            context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
+            context.coordinator.reconfigurePrivacy(for: webView)
         }
 
-        // Handle navigation to newly submitted URL
-        if currentURLString.isEmpty || currentURLString == "local://startpage" {
-            // Already on start page or empty
-        } else if let targetURL = URL(string: currentURLString),
-                  let current = webView.url?.absoluteString,
-                  current != currentURLString,
-                  !webView.isLoading {
-            webView.load(URLRequest(url: targetURL))
+        // Handle URL change from user navigation
+        if currentURLString != context.coordinator.currentLoadedURL && !currentURLString.isEmpty {
+            context.coordinator.loadURL(currentURLString)
         }
 
-        // Handle reload trigger
+        // Handle explicit reload trigger
         if context.coordinator.lastReloadTrigger != reloadTrigger {
             context.coordinator.lastReloadTrigger = reloadTrigger
-            if currentURLString == "local://startpage" {
-                context.coordinator.loadLocalStartPage(in: webView)
+            if context.coordinator.currentLoadedURL == "local://startpage" {
+                context.coordinator.loadLocalStartPage()
             } else {
                 webView.reload()
             }
         }
 
-        // Handle session wipe trigger
+        // Handle panic wipe trigger
         if context.coordinator.lastWipeTrigger != wipeTrigger {
             context.coordinator.lastWipeTrigger = wipeTrigger
-            context.coordinator.nukeSession(webView: webView)
+            context.coordinator.nukeSession()
         }
     }
 
-    public class Coordinator: NSObject, WKNavigationDelegate {
+    public class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         var parent: BrowserView
         weak var webView: WKWebView?
+        var currentLoadedURL: String? = nil
+        var lastProfileDevice: AppleDeviceProfile?
+        var lastUserAgent: String?
         var lastReloadTrigger: Int = 0
         var lastWipeTrigger: Int = 0
+
         private var progressObservation: NSKeyValueObservation?
         private var backObservation: NSKeyValueObservation?
         private var forwardObservation: NSKeyValueObservation?
@@ -166,11 +177,117 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
-        public func loadLocalStartPage(in webView: WKWebView) {
+        // Receive messages from local startpage.html
+        public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "ghostNav", let target = message.body as? String {
+                DispatchQueue.main.async {
+                    self.loadURL(target)
+                }
+            }
+        }
+
+        // Support links with target="_blank"
+        public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if navigationAction.targetFrame == nil {
+                webView.load(navigationAction.request)
+            }
+            return nil
+        }
+
+        public func loadLocalStartPage() {
+            guard let webView = self.webView else { return }
             if let startURL = Bundle.main.url(forResource: "startpage", withExtension: "html"),
-               let html = try? String(contentsOf: startURL, encoding: .utf8) {
-                webView.loadHTMLString(html, baseURL: Bundle.main.bundleURL)
-                parent.currentURLString = "local://startpage"
+               var html = try? String(contentsOf: startURL, encoding: .utf8) {
+
+                html = html.replacingOccurrences(of: "{{DEVICE_NAME}}", with: parent.privacyProfile.selectedDevice.rawValue)
+                html = html.replacingOccurrences(of: "{{GPU_MODEL}}", with: parent.privacyProfile.effectiveRenderer)
+                html = html.replacingOccurrences(of: "{{CPU_CORES}}", with: "\(parent.privacyProfile.effectiveCores) Cores")
+                html = html.replacingOccurrences(of: "{{RAM_GB}}", with: "\(parent.privacyProfile.effectiveRAM) GB RAM")
+                html = html.replacingOccurrences(of: "{{TOUCH_POINTS}}", with: "\(parent.privacyProfile.effectiveTouchPoints)")
+                html = html.replacingOccurrences(of: "{{PLATFORM}}", with: parent.privacyProfile.effectivePlatform)
+
+                self.currentLoadedURL = "local://startpage"
+                DispatchQueue.main.async {
+                    self.parent.currentURLString = "local://startpage"
+                }
+                webView.loadHTMLString(html, baseURL: nil)
+            }
+        }
+
+        public func loadURL(_ urlString: String) {
+            guard let webView = self.webView else { return }
+
+            if urlString == "local://startpage" || urlString.isEmpty {
+                loadLocalStartPage()
+                return
+            }
+
+            var finalString = urlString
+            if finalString.hasPrefix("ghost-search://") {
+                let query = finalString.replacingOccurrences(of: "ghost-search://", with: "")
+                if let decoded = query.removingPercentEncoding {
+                    if let searchURL = parent.privacyProfile.searchEngine.searchURL(for: decoded) {
+                        finalString = searchURL.absoluteString
+                    } else if let fallback = SearchEngine.startpage.searchURL(for: decoded) {
+                        finalString = fallback.absoluteString
+                    }
+                }
+            }
+
+            if !finalString.contains("://") {
+                finalString = "https://" + finalString
+            }
+
+            guard let url = URL(string: finalString) else { return }
+
+            self.currentLoadedURL = url.absoluteString
+            DispatchQueue.main.async {
+                self.parent.currentURLString = url.absoluteString
+            }
+
+            let request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30)
+            webView.load(request)
+        }
+
+        public func reconfigurePrivacy(for webView: WKWebView) {
+            // Update user agent
+            webView.customUserAgent = parent.privacyProfile.effectiveUserAgent
+
+            // Rebuild user scripts
+            let ucc = webView.configuration.userContentController
+            ucc.removeAllUserScripts()
+
+            let configScript = WKUserScript(
+                source: parent.privacyProfile.generateJSConfig(),
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+            ucc.addUserScript(configScript)
+
+            if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
+               let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
+                let antiFpScript = WKUserScript(
+                    source: scriptSource,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: false
+                )
+                ucc.addUserScript(antiFpScript)
+            }
+
+            if parent.privacyProfile.blockCommercialTrackers {
+                ContentBlockerManager.shared.loadContentBlockerRules { ruleList in
+                    if let ruleList = ruleList {
+                        ucc.add(ruleList)
+                    }
+                }
+            }
+
+            // Immediately evaluate on current page
+            webView.evaluateJavaScript(parent.privacyProfile.generateJSConfig(), completionHandler: nil)
+
+            // If on startpage, refresh with new stats
+            if currentLoadedURL == "local://startpage" {
+                loadLocalStartPage()
             }
         }
 
@@ -180,18 +297,33 @@ public struct BrowserView: UIViewRepresentable {
                 return
             }
 
-            // Intercept internal ghost-search query from start page
             if url.scheme == "ghost-search" {
+                decisionHandler(.cancel)
                 let query = url.host ?? url.path.replacingOccurrences(of: "/", with: "")
-                if let decoded = query.removingPercentEncoding,
-                   let searchURL = parent.privacyProfile.searchEngine.searchURL(for: decoded) {
-                    decisionHandler(.cancel)
-                    DispatchQueue.main.async {
-                        self.parent.currentURLString = searchURL.absoluteString
-                        webView.load(URLRequest(url: searchURL))
+                if let decoded = query.removingPercentEncoding {
+                    if let searchTarget = parent.privacyProfile.searchEngine.searchURL(for: decoded) {
+                        DispatchQueue.main.async {
+                            self.loadURL(searchTarget.absoluteString)
+                        }
+                    } else if let fallback = SearchEngine.startpage.searchURL(for: decoded) {
+                        DispatchQueue.main.async {
+                            self.loadURL(fallback.absoluteString)
+                        }
                     }
-                    return
                 }
+                return
+            }
+
+            // Allow standard web navigation
+            if url.scheme == "http" || url.scheme == "https" || url.scheme == "about" || url.scheme == "file" {
+                decisionHandler(.allow)
+                return
+            }
+
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+                decisionHandler(.cancel)
+                return
             }
 
             decisionHandler(.allow)
@@ -200,7 +332,8 @@ public struct BrowserView: UIViewRepresentable {
         public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             parent.isLoading = true
             if let url = webView.url?.absoluteString {
-                if !url.contains("startpage.html") {
+                if !url.contains("startpage.html") && url != "about:blank" {
+                    currentLoadedURL = url
                     parent.currentURLString = url
                 }
             }
@@ -209,23 +342,30 @@ public struct BrowserView: UIViewRepresentable {
         public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.isLoading = false
             if let url = webView.url?.absoluteString {
-                if !url.contains("startpage.html") {
+                if !url.contains("startpage.html") && url != "about:blank" {
+                    currentLoadedURL = url
                     parent.currentURLString = url
                 }
             }
         }
 
-        public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             parent.isLoading = false
+            print("[BrowserView] Provisional navigation failed: \(error.localizedDescription)")
         }
 
-        public func nukeSession(webView: WKWebView) {
+        public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            parent.isLoading = false
+            print("[BrowserView] Navigation failed: \(error.localizedDescription)")
+        }
+
+        public func nukeSession() {
+            guard let webView = self.webView else { return }
             let dataStore = webView.configuration.websiteDataStore
             let types = WKWebsiteDataStore.allWebsiteDataTypes()
             dataStore.removeData(ofTypes: types, modifiedSince: Date.distantPast) { [weak self] in
                 DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    self.loadLocalStartPage(in: webView)
+                    self?.loadLocalStartPage()
                 }
             }
         }
