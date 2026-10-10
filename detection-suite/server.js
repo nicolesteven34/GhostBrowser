@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dns = require('dns').promises;
 const path = require('path');
-const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,8 +26,32 @@ const PROXY_HEADERS = [
     'forwarded-for'
 ];
 
-// Helper: Extract real client IP
-function getClientIP(req) {
+function isPrivateIP(ip) {
+    return (
+        ip === '127.0.0.1' ||
+        ip === '::1' ||
+        ip.startsWith('192.168.') ||
+        ip.startsWith('10.') ||
+        ip.startsWith('172.16.') ||
+        ip.startsWith('172.17.') ||
+        ip.startsWith('172.18.') ||
+        ip.startsWith('172.19.') ||
+        ip.startsWith('172.20.') ||
+        ip.startsWith('172.21.') ||
+        ip.startsWith('172.22.') ||
+        ip.startsWith('172.23.') ||
+        ip.startsWith('172.24.') ||
+        ip.startsWith('172.25.') ||
+        ip.startsWith('172.26.') ||
+        ip.startsWith('172.27.') ||
+        ip.startsWith('172.28.') ||
+        ip.startsWith('172.29.') ||
+        ip.startsWith('172.30.') ||
+        ip.startsWith('172.31.')
+    );
+}
+
+function getRawClientIP(req) {
     const headerIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['cf-connecting-ip'];
     if (headerIP) {
         return headerIP.split(',')[0].trim();
@@ -40,32 +63,67 @@ function getClientIP(req) {
     return sock || '127.0.0.1';
 }
 
-// Helper: Reverse DNS lookup to detect hosting / VPN hostnames
+async function fetchExternalWANIP() {
+    try {
+        const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+        return data.ip || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function getIPIntelligence(ip) {
+    try {
+        const url = `http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,timezone,isp,org,as,query,hosting,proxy`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            return data;
+        }
+    } catch (e) {}
+    return null;
+}
+
 async function getReverseDNS(ip) {
-    if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-        return { ptr: 'localhost / private network', isHosting: false };
+    if (isPrivateIP(ip)) {
+        return { ptr: 'Private / Localhost Network', isHosting: false };
     }
     try {
         const hostnames = await dns.reverse(ip);
         if (hostnames && hostnames.length > 0) {
             const ptr = hostnames[0].toLowerCase();
-            const hostingKeywords = ['vpn', 'proxy', 'tor', 'host', 'vps', 'cloud', 'server', 'datacenter', 'compute', 'linode', 'digitalocean', 'ovh', 'aws', 'amazon', 'azure'];
+            const hostingKeywords = ['vpn', 'proxy', 'tor', 'host', 'vps', 'cloud', 'server', 'datacenter', 'compute', 'linode', 'digitalocean', 'ovh', 'aws', 'amazon', 'azure', 'm247'];
             const isHosting = hostingKeywords.some(keyword => ptr.includes(keyword));
             return { ptr: hostnames[0], isHosting };
         }
-    } catch (e) {
-        // Reverse DNS lookup failed or no PTR
-    }
+    } catch (e) {}
     return { ptr: 'No PTR record found', isHosting: false };
 }
 
-// Endpoint: Analyze network, headers, and client-submitted anomaly payload
 app.post('/api/analyze', async (req, res) => {
-    const clientIP = getClientIP(req);
+    let clientIP = getRawClientIP(req);
+    let isLocalTest = false;
+
+    // If client connects via localhost / private network, resolve true internet WAN IP
+    if (isPrivateIP(clientIP)) {
+        isLocalTest = true;
+        const wanIP = await fetchExternalWANIP();
+        if (wanIP) {
+            clientIP = wanIP;
+        }
+    }
+
     const userAgent = req.headers['user-agent'] || 'Unknown';
     const clientPayload = req.body || {};
 
-    // 1. Inspect HTTP Headers for Proxy Intermediaries
+    // 1. IP Intelligence (ISP, ASN, Country, City, Hosting, Proxy)
+    const ipInfo = await getIPIntelligence(clientIP);
+
+    // 2. Reverse DNS (PTR)
+    const rDNS = await getReverseDNS(clientIP);
+
+    // 3. Inspect HTTP Headers for Proxies
     const detectedProxyHeaders = [];
     for (const h of PROXY_HEADERS) {
         if (req.headers[h]) {
@@ -73,25 +131,40 @@ app.post('/api/analyze', async (req, res) => {
         }
     }
 
-    // 2. Perform Reverse DNS check
-    const rDNS = await getReverseDNS(clientIP);
-
-    // 3. Header Casing & Order check (Safari vs Chromium vs Proxies)
+    // 4. Header Casing & Order check (Safari vs Chromium vs Proxies)
     const rawHeaders = req.rawHeaders || [];
     const headerKeys = [];
     for (let i = 0; i < rawHeaders.length; i += 2) {
         headerKeys.push(rawHeaders[i]);
     }
-
     const hasSecChUa = headerKeys.some(h => h.toLowerCase().startsWith('sec-ch-ua'));
     const isSafariUA = userAgent.includes('Safari') && !userAgent.includes('Chrome');
-    const headerDiscrepancy = isSafariUA && hasSecChUa; // Safari does not send sec-ch-ua headers
+    const headerDiscrepancy = isSafariUA && hasSecChUa;
 
-    // 4. Calculate Comprehensive Risk / Anomaly Score (0 = Clean, 100 = Critical Anomaly)
+    // 5. Timezone Correlation Check
+    let timezoneMismatch = false;
+    let tzDetail = '';
+    if (ipInfo && ipInfo.timezone && clientPayload.clientTimezone) {
+        if (ipInfo.timezone !== clientPayload.clientTimezone) {
+            timezoneMismatch = true;
+            tzDetail = `Browser reports "${clientPayload.clientTimezone}" but IP is registered in "${ipInfo.timezone}"`;
+        }
+    }
+
+    // 6. WebRTC Leak Correlation
+    let webrtcBypass = false;
+    if (clientPayload.leakedIPs && clientPayload.leakedIPs.length > 0) {
+        for (const leaked of clientPayload.leakedIPs) {
+            if (!isPrivateIP(leaked) && leaked !== clientIP) {
+                webrtcBypass = true;
+            }
+        }
+    }
+
+    // 7. Calculate Comprehensive Anomaly Score
     let riskScore = 0;
     const anomalies = [];
 
-    // Proxy / Network Flags
     if (detectedProxyHeaders.length > 0) {
         riskScore += 25;
         anomalies.push({
@@ -102,13 +175,41 @@ app.post('/api/analyze', async (req, res) => {
         });
     }
 
-    if (rDNS.isHosting) {
+    if (ipInfo && ipInfo.hosting) {
         riskScore += 30;
         anomalies.push({
             category: 'Network',
-            type: 'Data Center / Hosting IP',
-            detail: `Reverse DNS (${rDNS.ptr}) matches hosting or VPN infrastructure`,
+            type: 'Datacenter / Hosting IP',
+            detail: `IP belongs to a hosting provider or VPS infrastructure (${ipInfo.isp || ipInfo.org})`,
             severity: 'High'
+        });
+    } else if (rDNS.isHosting) {
+        riskScore += 25;
+        anomalies.push({
+            category: 'Network',
+            type: 'Hosting Reverse DNS',
+            detail: `PTR hostname (${rDNS.ptr}) matches hosting or VPN infrastructure`,
+            severity: 'Medium'
+        });
+    }
+
+    if (timezoneMismatch) {
+        riskScore += 20;
+        anomalies.push({
+            category: 'Network',
+            type: 'Timezone Discrepancy (VPN / Proxy Flag)',
+            detail: tzDetail,
+            severity: 'Medium'
+        });
+    }
+
+    if (webrtcBypass) {
+        riskScore += 35;
+        anomalies.push({
+            category: 'Network',
+            type: 'WebRTC VPN Bypass Leak',
+            detail: `WebRTC exposed a different public IP (${clientPayload.leakedIPs.join(', ')}) than HTTP request (${clientIP})`,
+            severity: 'Critical'
         });
     }
 
@@ -122,7 +223,6 @@ app.post('/api/analyze', async (req, res) => {
         });
     }
 
-    // Client-side reported anomalies (Prototype Tampering, WebRTC Leaks, Canvas, Screen)
     if (clientPayload.prototypeTampered) {
         riskScore += 40;
         anomalies.push({
@@ -133,12 +233,12 @@ app.post('/api/analyze', async (req, res) => {
         });
     }
 
-    if (clientPayload.webrtcLeak) {
-        riskScore += 20;
+    if (clientPayload.canvasInconsistency) {
+        riskScore += 25;
         anomalies.push({
-            category: 'Network',
-            type: 'WebRTC IP / Interface Leak',
-            detail: `WebRTC exposed private/public candidates: ${clientPayload.leakedIPs?.join(', ')}`,
+            category: 'Hardware',
+            type: 'Canvas Hash Instability',
+            detail: 'Canvas rasterization output is unstable or artificially jittered',
             severity: 'Medium'
         });
     }
@@ -163,16 +263,6 @@ app.post('/api/analyze', async (req, res) => {
         });
     }
 
-    if (clientPayload.canvasInconsistency) {
-        riskScore += 25;
-        anomalies.push({
-            category: 'Hardware',
-            type: 'Canvas Hash Instability',
-            detail: 'Canvas rasterization output is unstable or artificially jittered',
-            severity: 'Medium'
-        });
-    }
-
     riskScore = Math.min(100, riskScore);
 
     let status = 'TRUSTED';
@@ -187,7 +277,14 @@ app.post('/api/analyze', async (req, res) => {
 
     res.json({
         ip: clientIP,
+        isLocalTest: isLocalTest,
         ptr: rDNS.ptr,
+        isp: ipInfo ? ipInfo.isp : 'Unknown',
+        org: ipInfo ? ipInfo.org : 'Unknown',
+        asn: ipInfo ? ipInfo.as : 'Unknown',
+        location: ipInfo ? `${ipInfo.city}, ${ipInfo.regionName}, ${ipInfo.country}` : 'Unknown',
+        ipTimezone: ipInfo ? ipInfo.timezone : 'Unknown',
+        timezoneMismatch: timezoneMismatch,
         userAgent: userAgent,
         proxyHeaders: detectedProxyHeaders,
         riskScore: riskScore,
@@ -198,17 +295,8 @@ app.post('/api/analyze', async (req, res) => {
     });
 });
 
-// Quick connection info endpoint
-app.get('/api/ping', (req, res) => {
-    res.json({
-        ip: getClientIP(req),
-        headers: req.headers,
-        timestamp: Date.now()
-    });
-});
-
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Ghost Detection Suite] Server active on port ${PORT}`);
-    console.log(`Access locally at: http://localhost:${PORT}`);
-    console.log(`Access from iPad on LAN / VPS at: http://<YOUR_IP>:${PORT}`);
+    console.log(`[Ghost Detection Suite] Active on port ${PORT}`);
+    console.log(`- Local interface: http://localhost:${PORT}`);
+    console.log(`- LAN / VPS interface: http://0.0.0.0:${PORT}`);
 });

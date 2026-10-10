@@ -25,7 +25,7 @@
                     <polyline points="23 4 23 10 17 10"></polyline>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
-                Run Audit
+                Re-Run Audit
             </button>
         </header>
 
@@ -50,12 +50,24 @@
             <div class="card">
                 <div class="card-header">
                     <span class="card-tag">NETWORK &amp; TRAFFIC</span>
-                    <h3>Proxy, VPN &amp; IP Signals</h3>
+                    <h3>Proxy, VPN &amp; IP Intelligence</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <span class="label">Public IP</span>
-                        <span class="value" id="netIP">--</span>
+                        <span class="value" id="netIP">Resolving...</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Location</span>
+                        <span class="value" id="netLocation">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">ISP / Organization</span>
+                        <span class="value" id="netISP">--</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">ASN</span>
+                        <span class="value" id="netASN">--</span>
                     </div>
                     <div class="row">
                         <span class="label">Reverse DNS (PTR)</span>

@@ -18,7 +18,7 @@ async function runFullAudit() {
         // Update Client-side Hardware & Device Fields
         document.getElementById('hwVendor').textContent = clientResults.webglVendor;
         document.getElementById('hwRenderer').textContent = clientResults.webglRenderer;
-        
+
         const canvasTest = clientResults.tests.canvas;
         document.getElementById('hwCanvasStability').textContent = canvasTest.passed 
             ? '✓ Stable & Deterministic' 
@@ -57,8 +57,6 @@ async function runFullAudit() {
             : '✓ Sealed (No IP Candidate Leaks)';
         document.getElementById('netWebRTC').style.color = webrtcTest.leakedIPs.length > 0 ? '#FF453A' : '#30D158';
 
-        document.getElementById('netTimezone').textContent = clientResults.clientTimezone;
-
         // 2. Post client audit to backend for network & correlation scoring
         const response = await fetch('/api/analyze', {
             method: 'POST',
@@ -69,12 +67,29 @@ async function runFullAudit() {
         const data = await response.json();
 
         // Update Network Section
-        document.getElementById('netIP').textContent = data.ip;
-        document.getElementById('netPTR').textContent = data.ptr;
+        let ipDisplay = data.ip;
+        if (data.isLocalTest) {
+            ipDisplay += ' (Public WAN Auto-Resolved)';
+        }
+        document.getElementById('netIP').textContent = ipDisplay;
+        document.getElementById('netLocation').textContent = data.location || 'Unknown';
+        document.getElementById('netISP').textContent = `${data.isp} (${data.org})`;
+        document.getElementById('netASN').textContent = data.asn || 'Unknown';
+        document.getElementById('netPTR').textContent = data.ptr || 'No PTR Record';
+
         document.getElementById('netProxyHeaders').textContent = data.proxyHeaders.length > 0 
             ? `⚠ Found: ${data.proxyHeaders.map(h => h.header).join(', ')}`
             : '✓ Clean (No proxy headers)';
         document.getElementById('netProxyHeaders').style.color = data.proxyHeaders.length > 0 ? '#FF453A' : '#30D158';
+
+        // Timezone comparison
+        if (data.timezoneMismatch) {
+            document.getElementById('netTimezone').textContent = `⚠ Mismatch: Browser (${clientResults.clientTimezone}) vs IP (${data.ipTimezone})`;
+            document.getElementById('netTimezone').style.color = '#FF9F0A';
+        } else {
+            document.getElementById('netTimezone').textContent = `✓ Coherent (${clientResults.clientTimezone})`;
+            document.getElementById('netTimezone').style.color = '#30D158';
+        }
 
         // Update Overall Score
         scoreVal.textContent = data.riskScore;
@@ -89,7 +104,7 @@ async function runFullAudit() {
             statusSummary.textContent = 'Zero prototype tampering, no proxy headers, no WebRTC leaks, and completely coherent hardware signatures.';
         } else if (data.riskScore < 40) {
             statusHeadline.textContent = 'Minor Behavioral Discrepancies';
-            statusSummary.textContent = 'Some indicators suggest private browsing or network-level modifications.';
+            statusSummary.textContent = 'Some indicators suggest network forwarding or private session storage.';
         } else {
             statusHeadline.textContent = 'High-Confidence Anomaly Detected';
             statusSummary.textContent = 'Multiple inconsistencies, proxy traces, or prototype overrides triggered fraud alerts.';
@@ -107,7 +122,7 @@ async function runFullAudit() {
                 </div>
             `).join('');
         } else {
-            anomalyList.innerHTML = '<div class="log-empty">✓ No anomalies detected. Device profile appears genuine and untampered.</div>';
+            anomalyList.innerHTML = '<div class="log-empty">✓ No anomalies detected. Device profile and network traffic appear genuine and untampered.</div>';
         }
 
     } catch (err) {
