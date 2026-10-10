@@ -261,7 +261,7 @@ public class PrivacyProfile: ObservableObject {
         buildIndex = (buildIndex + 1) % 5
         sessionDataStoreID = UUID()
         if #available(iOS 17.0, *) {
-            WKWebsiteDataStore.remove(forIdentifier: oldStore, completionHandler: nil)
+            WKWebsiteDataStore.remove(forIdentifier: oldStore) { _ in }
         }
     }
 
@@ -284,7 +284,7 @@ public class PrivacyProfile: ObservableObject {
         self.buildIndex = Int.random(in: 0...4)
         self.sessionDataStoreID = UUID()
         if #available(iOS 17.0, *) {
-            WKWebsiteDataStore.remove(forIdentifier: oldStore, completionHandler: nil)
+            WKWebsiteDataStore.remove(forIdentifier: oldStore) { _ in }
         }
         return chosen
     }
