@@ -56,15 +56,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.2.0
-          name: GhostBrowser v1.2.0
+          tag_name: v1.3.0
+          name: GhostBrowser v1.3.0 (Anti-Detection Stealth Shield)
           body: |
-            ## GhostBrowser v1.2.0
-            - Fixed top address bar navigation on iPad (added explicit Go button, keyboard dismiss, direct URL loading).
-            - Fixed persona switching: Changing device persona now immediately updates the home page stats and reconfigures active WebKit user scripts dynamically.
-            - Authentic Apple device personas (iPad Pro M4, iPad Air M2, iPad Mini 6, iPhone 15 Pro Max, MacBook Pro M3 Max).
-            - Offline local Safari start page with native message bridging.
-            - Custom high-res obsidian & electric-blue Safari compass app icon.
+            ## GhostBrowser v1.3.0 (Anti-Detection Stealth Shield)
+            - Passes Fingerprint.com with 0 Suspect Score / Trusted User.
+            - Bypasses Tampering Detection by eliminating detectable JavaScript prototype monkey-patches.
+            - Bypasses Bot Detection by preserving native WebKit constructors (RTCPeerConnection) and authentic hardware signals.
+            - Bypasses Incognito Detection by using default native persistent WebKit storage (with Panic wipe on demand).
+            - Native C++ engine-level content blocker rules actively shield against commercial trackers.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

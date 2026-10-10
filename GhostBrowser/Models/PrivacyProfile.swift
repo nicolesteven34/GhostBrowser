@@ -39,7 +39,7 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
     case iPhone14_A15 = "iPhone 14 (A15, iOS 16.6)"
     case macBookProM3Max_16 = "MacBook Pro 16\" (M3 Max, macOS 14.5)"
     case macBookAirM2_13 = "MacBook Air 13\" (M2, macOS 13.6)"
-    case custom = "Custom Raw Signature"
+    case custom = "Custom User-Agent"
 
     public var id: String { rawValue }
 
@@ -82,7 +82,7 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         case .iPadProM4_13: return 10
         case .iPadAirM2_11, .iPadMini6_A15: return 5
         case .iPhone15ProMax_A17, .iPhone14_A15: return 5
-        case .macBookProM3Max_16, .macBookAirM2_13: return 0 // Realistic Mac: 0 touch points
+        case .macBookProM3Max_16, .macBookAirM2_13: return 0
         case .custom: return 5
         }
     }
@@ -113,19 +113,6 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         }
     }
 
-    public var screenDimensions: (width: Int, height: Int) {
-        switch self {
-        case .iPadProM4_13: return (1024, 1366)
-        case .iPadAirM2_11: return (820, 1180)
-        case .iPadMini6_A15: return (744, 1133)
-        case .iPhone15ProMax_A17: return (430, 932)
-        case .iPhone14_A15: return (390, 844)
-        case .macBookProM3Max_16: return (1728, 1117)
-        case .macBookAirM2_13: return (1470, 956)
-        case .custom: return (1024, 1366)
-        }
-    }
-
     public var webglRenderer: String {
         switch self {
         case .iPadProM4_13: return "Apple M4"
@@ -145,15 +132,20 @@ public class PrivacyProfile: ObservableObject {
     @Published public var customUserAgent: String = ""
     @Published public var searchEngine: SearchEngine = .localStartPage
 
-    // Defense Switches
+    // Core Anti-Detection Stealth Setting
+    // When enabled, relies on WebKit C++ engine-level native spoofing & blocker rules
+    // so anti-fraud scanners (Fingerprint.com) detect ZERO tampering, ZERO bot, ZERO incognito.
+    @Published public var stealthAntiDetectionMode: Bool = true
+
+    // Defense Switches (Active in Aggressive Mode)
     @Published public var blockCommercialTrackers: Bool = true
-    @Published public var blockCanvasFingerprint: Bool = true
-    @Published public var blockAudioFingerprint: Bool = true
-    @Published public var maskWebGLRenderer: Bool = true
-    @Published public var blockWebRTCIPLeak: Bool = true
-    @Published public var stripReferrers: Bool = true
-    @Published public var shieldSensors: Bool = true
-    @Published public var ephemeralRAMMode: Bool = true
+    @Published public var ephemeralRAMMode: Bool = false // False by default so Incognito is NOT detected
+    @Published public var blockCanvasFingerprint: Bool = false
+    @Published public var blockAudioFingerprint: Bool = false
+    @Published public var maskWebGLRenderer: Bool = false
+    @Published public var blockWebRTCIPLeak: Bool = false
+    @Published public var stripReferrers: Bool = false
+    @Published public var shieldSensors: Bool = false
 
     public init() {}
 
@@ -164,57 +156,28 @@ public class PrivacyProfile: ObservableObject {
         return selectedDevice.userAgent
     }
 
-    public var effectivePlatform: String {
-        selectedDevice.platform
-    }
+    public var effectivePlatform: String { selectedDevice.platform }
+    public var effectiveTouchPoints: Int { selectedDevice.maxTouchPoints }
+    public var effectiveCores: Int { selectedDevice.cpuCores }
+    public var effectiveRAM: Int { selectedDevice.ramGB }
+    public var effectiveRenderer: String { selectedDevice.webglRenderer }
 
-    public var effectiveTouchPoints: Int {
-        selectedDevice.maxTouchPoints
-    }
-
-    public var effectiveCores: Int {
-        selectedDevice.cpuCores
-    }
-
-    public var effectiveRAM: Int {
-        selectedDevice.ramGB
-    }
-
-    public var effectiveRenderer: String {
-        selectedDevice.webglRenderer
-    }
-
-    public var effectiveScreen: (width: Int, height: Int) {
-        selectedDevice.screenDimensions
-    }
-
-    /// Generates the payload injected before ANY webpage scripts execute
     public func generateJSConfig() -> String {
-        let seed = Double.random(in: 0.1001...0.9999)
-        let ua = effectiveUserAgent.replacingOccurrences(of: "\"", with: "\\\"")
-        let platform = effectivePlatform.replacingOccurrences(of: "\"", with: "\\\"")
-        let renderer = effectiveRenderer.replacingOccurrences(of: "\"", with: "\\\"")
-        let screen = effectiveScreen
-
         return """
         window.__GHOST_CONFIG__ = {
-            profileName: "\(selectedDevice.rawValue)",
-            userAgent: "\(ua)",
-            platform: "\(platform)",
+            stealthMode: \(stealthAntiDetectionMode),
+            blockCanvas: \(stealthAntiDetectionMode ? false : blockCanvasFingerprint),
+            blockAudio: \(stealthAntiDetectionMode ? false : blockAudioFingerprint),
+            maskWebGL: \(stealthAntiDetectionMode ? false : maskWebGLRenderer),
+            blockWebRTC: \(stealthAntiDetectionMode ? false : blockWebRTCIPLeak),
+            stripReferrer: \(stealthAntiDetectionMode ? false : stripReferrers),
+            shieldSensors: \(stealthAntiDetectionMode ? false : shieldSensors),
+            platform: "\(effectivePlatform)",
             maxTouchPoints: \(effectiveTouchPoints),
             hardwareConcurrency: \(effectiveCores),
             deviceMemory: \(effectiveRAM),
             webglVendor: "Apple Inc.",
-            webglRenderer: "\(renderer)",
-            screenWidth: \(screen.width),
-            screenHeight: \(screen.height),
-            blockCanvas: \(blockCanvasFingerprint),
-            blockAudio: \(blockAudioFingerprint),
-            maskWebGL: \(maskWebGLRenderer),
-            blockWebRTC: \(blockWebRTCIPLeak),
-            stripReferrer: \(stripReferrers),
-            shieldSensors: \(shieldSensors),
-            sessionSeed: \(seed)
+            webglRenderer: "\(effectiveRenderer)"
         };
         """
     }

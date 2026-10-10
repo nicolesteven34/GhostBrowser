@@ -38,7 +38,7 @@ public struct BrowserView: UIViewRepresentable {
     public func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
 
-        // 1. RAM-only Ephemeral Storage Mode
+        // 1. Data Store: Default (persistent) prevents "Incognito Detected"
         if privacyProfile.ephemeralRAMMode {
             configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         } else {
@@ -47,29 +47,30 @@ public struct BrowserView: UIViewRepresentable {
 
         let userContentController = WKUserContentController()
 
-        // 2. Register native script message handler for local start page communication
+        // 2. Register native script message handler for local start page
         userContentController.add(context.coordinator, name: "ghostNav")
 
-        // 3. Inject Privacy Profile & Device Signature
-        let configScript = WKUserScript(
-            source: privacyProfile.generateJSConfig(),
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: false
-        )
-        userContentController.addUserScript(configScript)
-
-        // 4. Inject Anti-Fingerprinting Engine
-        if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
-           let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
-            let antiFpScript = WKUserScript(
-                source: scriptSource,
+        // 3. Inject configuration only if aggressive mode is active
+        if !privacyProfile.stealthAntiDetectionMode {
+            let configScript = WKUserScript(
+                source: privacyProfile.generateJSConfig(),
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: false
             )
-            userContentController.addUserScript(antiFpScript)
+            userContentController.addUserScript(configScript)
+
+            if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
+               let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
+                let antiFpScript = WKUserScript(
+                    source: scriptSource,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: false
+                )
+                userContentController.addUserScript(antiFpScript)
+            }
         }
 
-        // 5. Apply Native Content Blocker Rules
+        // 4. Apply Native C++ Content Blocker Rules (Invisible to JavaScript)
         if privacyProfile.blockCommercialTrackers {
             ContentBlockerManager.shared.loadContentBlockerRules { ruleList in
                 if let ruleList = ruleList {
@@ -81,8 +82,6 @@ public struct BrowserView: UIViewRepresentable {
         configuration.userContentController = userContentController
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = .all
-
-        // Allow JavaScript execution
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -177,7 +176,6 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
-        // Receive messages from local startpage.html
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "ghostNav", let target = message.body as? String {
                 DispatchQueue.main.async {
@@ -186,7 +184,6 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
-        // Support links with target="_blank"
         public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
             if navigationAction.targetFrame == nil {
                 webView.load(navigationAction.request)
@@ -250,28 +247,29 @@ public struct BrowserView: UIViewRepresentable {
         }
 
         public func reconfigurePrivacy(for webView: WKWebView) {
-            // Update user agent
+            // Update native C++ User Agent
             webView.customUserAgent = parent.privacyProfile.effectiveUserAgent
 
-            // Rebuild user scripts
             let ucc = webView.configuration.userContentController
             ucc.removeAllUserScripts()
 
-            let configScript = WKUserScript(
-                source: parent.privacyProfile.generateJSConfig(),
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: false
-            )
-            ucc.addUserScript(configScript)
-
-            if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
-               let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
-                let antiFpScript = WKUserScript(
-                    source: scriptSource,
+            if !parent.privacyProfile.stealthAntiDetectionMode {
+                let configScript = WKUserScript(
+                    source: parent.privacyProfile.generateJSConfig(),
                     injectionTime: .atDocumentStart,
                     forMainFrameOnly: false
                 )
-                ucc.addUserScript(antiFpScript)
+                ucc.addUserScript(configScript)
+
+                if let scriptPath = Bundle.main.path(forResource: "anti_fingerprint", ofType: "js"),
+                   let scriptSource = try? String(contentsOfFile: scriptPath, encoding: .utf8) {
+                    let antiFpScript = WKUserScript(
+                        source: scriptSource,
+                        injectionTime: .atDocumentStart,
+                        forMainFrameOnly: false
+                    )
+                    ucc.addUserScript(antiFpScript)
+                }
             }
 
             if parent.privacyProfile.blockCommercialTrackers {
@@ -282,10 +280,7 @@ public struct BrowserView: UIViewRepresentable {
                 }
             }
 
-            // Immediately evaluate on current page
-            webView.evaluateJavaScript(parent.privacyProfile.generateJSConfig(), completionHandler: nil)
-
-            // If on startpage, refresh with new stats
+            // Refresh start page with newly chosen persona
             if currentLoadedURL == "local://startpage" {
                 loadLocalStartPage()
             }
@@ -314,7 +309,6 @@ public struct BrowserView: UIViewRepresentable {
                 return
             }
 
-            // Allow standard web navigation
             if url.scheme == "http" || url.scheme == "https" || url.scheme == "about" || url.scheme == "file" {
                 decisionHandler(.allow)
                 return

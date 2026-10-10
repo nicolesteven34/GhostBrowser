@@ -7,6 +7,21 @@ public struct PrivacySettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
+                Section(header: Text("Anti-Detection & Trust Shield")) {
+                    Toggle(isOn: $privacyProfile.stealthAntiDetectionMode) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Stealth Anti-Detection Mode")
+                                    .fontWeight(.medium)
+                                Text("Passes Fingerprint.com with 0 Suspect Score. Prevents Bot, Tampering, and Incognito flags by using native WebKit C++ engine isolation.")
+                                    .font(.caption).foregroundColor(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "checkmark.shield.fill").foregroundColor(.green)
+                        }
+                    }
+                }
+
                 Section(header: Text("Device Persona & Hardware Signature")) {
                     Picker("Active Device Profile", selection: $privacyProfile.selectedDevice) {
                         ForEach(AppleDeviceProfile.allCases) { device in
@@ -59,12 +74,12 @@ public struct PrivacySettingsView: View {
                     }
                 }
 
-                Section(header: Text("Hardened Defenses")) {
+                Section(header: Text("Trackers & Network Blocking")) {
                     Toggle(isOn: $privacyProfile.blockCommercialTrackers) {
                         Label {
                             VStack(alignment: .leading) {
                                 Text("Block Commercial Trackers & Ads")
-                                Text("Native WebKit rules block Google, Meta, TikTok, Criteo")
+                                Text("Native C++ engine-level rules block Google, Meta, TikTok, Criteo")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
@@ -72,88 +87,26 @@ public struct PrivacySettingsView: View {
                         }
                     }
 
-                    Toggle(isOn: $privacyProfile.blockCanvasFingerprint) {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("Canvas Fingerprint Scrambling")
-                                Text("Perturbs canvas pixels with per-session micro-variations")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "paintpalette.fill").foregroundColor(.purple)
-                        }
-                    }
-
-                    Toggle(isOn: $privacyProfile.maskWebGLRenderer) {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("WebGL GPU Emulation")
-                                Text("Enforces selected Apple Silicon GPU signatures")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "cpu.fill").foregroundColor(.orange)
-                        }
-                    }
-
-                    Toggle(isOn: $privacyProfile.blockAudioFingerprint) {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("AudioContext Noise Jitter")
-                                Text("Scrambles oscillator & acoustic FFT tracking hashes")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "waveform").foregroundColor(.green)
-                        }
-                    }
-
-                    Toggle(isOn: $privacyProfile.blockWebRTCIPLeak) {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("WebRTC IP Leak Shield")
-                                Text("Blocks LAN & VPN-bypass IP queries")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "network.badge.shield.half.filled").foregroundColor(.red)
-                        }
-                    }
-
-                    Toggle(isOn: $privacyProfile.stripReferrers) {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("Strip HTTP Referrers")
-                                Text("Prevents sites from tracking your navigation origin")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "link.badge.plus").foregroundColor(.teal)
-                        }
-                    }
-
-                    Toggle(isOn: $privacyProfile.shieldSensors) {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text("Sensor & Gyroscope Shield")
-                                Text("Silences device motion and orientation sensors")
-                                    .font(.caption).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "gyroscope").foregroundColor(.indigo)
-                        }
-                    }
-
                     Toggle(isOn: $privacyProfile.ephemeralRAMMode) {
                         Label {
                             VStack(alignment: .leading) {
-                                Text("RAM-Only Ephemeral Mode")
-                                Text("Zero disk cache or cookies stored on iPad flash memory")
+                                Text("Incognito / Ephemeral RAM Mode")
+                                Text("Note: Enabling this flags 'Incognito Detected' on fingerprint scanners.")
                                     .font(.caption).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "memorychip.fill").foregroundColor(.yellow)
+                            Image(systemName: "eye.slash.fill").foregroundColor(.orange)
                         }
+                    }
+                }
+
+                if !privacyProfile.stealthAntiDetectionMode {
+                    Section(header: Text("Aggressive Prototype Scramblers (Triggers Tamper Flags)")) {
+                        Toggle("Scramble Canvas Pixels", isOn: $privacyProfile.blockCanvasFingerprint)
+                        Toggle("Scramble Audio FFT", isOn: $privacyProfile.blockAudioFingerprint)
+                        Toggle("Mask WebGL Renderer", isOn: $privacyProfile.maskWebGLRenderer)
+                        Toggle("Shield WebRTC", isOn: $privacyProfile.blockWebRTCIPLeak)
+                        Toggle("Strip Referrers", isOn: $privacyProfile.stripReferrers)
                     }
                 }
             }
