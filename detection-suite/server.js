@@ -230,8 +230,15 @@ app.post('/api/analyze', async (req, res) => {
 
     // 5. Inspect HTTP Headers for Proxies
     const detectedProxyHeaders = [];
+    const isCloudflareTunnel = Boolean(req.headers['cf-ray'] || req.headers['cf-connecting-ip']);
     for (const h of PROXY_HEADERS) {
         if (req.headers[h]) {
+            // When server is hosted behind Cloudflare Tunnel, cf-connecting-ip and a single-IP x-forwarded-for
+            // are added by the hosting tunnel, not by a client proxy.
+            if (isCloudflareTunnel) {
+                if (h === 'cf-connecting-ip') continue;
+                if (h === 'x-forwarded-for' && !req.headers['x-forwarded-for'].includes(',')) continue;
+            }
             detectedProxyHeaders.push({ header: h, value: req.headers[h] });
         }
     }
