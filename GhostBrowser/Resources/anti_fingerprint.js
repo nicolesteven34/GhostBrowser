@@ -3,9 +3,9 @@
  * Injected at document_start.
  *
  * Ensures:
- * 1. Bit-for-bit Canvas & Audio consistency for the lifetime of the session.
- * 2. Distinct hardware parameters (AudioContext, Canvas, Screen, GPU) across personas & identity seeds.
- * 3. 100% native [native code] AST preservation on all wrapped APIs without instance pollution.
+ * 1. 100% Bit-for-bit Canvas & Audio consistency (hash1 === hash2) across multiple calls.
+ * 2. Distinct hardware parameters across personas and identity seeds.
+ * 3. WeakMap/WeakSet-backed native function preservation (zero instance pollution).
  */
 (function() {
     'use strict';
@@ -42,7 +42,7 @@
         Function.prototype.toString = customToString;
     } catch(e) {}
 
-    // Deterministic pseudo-random integer offset generator based on seed and coordinates
+    // Deterministic pseudo-random integer offset based on seed and coordinates
     function getSeedOffset(x, y) {
         let h = (x * 374761393 + y * 668265263 + seed) >>> 0;
         h = (h ^ (h >> 13)) * 1274126177;
@@ -51,20 +51,24 @@
 
     if (cfg.deterministicHardwareSeeding) {
         // =========================================================================
-        // 2. Deterministic Canvas (toDataURL & getImageData)
+        // 2. Deterministic Canvas (toDataURL & getImageData with Single-Seed Guard)
         // =========================================================================
         if (window.HTMLCanvasElement && window.CanvasRenderingContext2D) {
             try {
                 const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
                 const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+                const origPutImageData = CanvasRenderingContext2D.prototype.putImageData;
+                const seededCanvases = new WeakSet();
 
-                function applyDeterministicSeed(ctx, width, height) {
+                function applyDeterministicCanvasSeed(canvas, ctx, width, height) {
+                    if (!canvas || seededCanvases.has(canvas)) return;
+                    seededCanvases.add(canvas); // GUARD: Seed once so hash1 === hash2 always
+
                     if (width > 1200 || height > 900 || width === 0 || height === 0) return;
                     try {
                         const imgData = origGetImageData.call(ctx, 0, 0, width, height);
                         const d = imgData.data;
-                        const len = d.length;
-                        for (let i = 0; i < len; i += 16) {
+                        for (let i = 0; i < d.length; i += 16) {
                             const px = (i / 4) | 0;
                             const x = px % width;
                             const y = (px / width) | 0;
@@ -73,48 +77,41 @@
                                 d[i] = (d[i] + offset) & 0xFF;
                             }
                         }
-                        ctx.putImageData(imgData, 0, 0);
+                        origPutImageData.call(ctx, imgData, 0, 0);
                     } catch(e) {}
                 }
 
                 HTMLCanvasElement.prototype.toDataURL = wrapNative(origToDataURL, function(...args) {
                     const ctx = this.getContext('2d');
                     if (ctx) {
-                        applyDeterministicSeed(ctx, this.width, this.height);
+                        applyDeterministicCanvasSeed(this, ctx, this.width, this.height);
                     }
                     return origToDataURL.apply(this, args);
                 }, 'toDataURL');
 
-                CanvasRenderingContext2D.prototype.getImageData = wrapNative(origGetImageData, function(...args) {
-                    const imgData = origGetImageData.apply(this, args);
-                    if (imgData && imgData.data) {
-                        const d = imgData.data;
-                        const w = imgData.width;
-                        for (let i = 0; i < d.length; i += 16) {
-                            const px = (i / 4) | 0;
-                            const x = px % w;
-                            const y = (px / w) | 0;
-                            const offset = getSeedOffset(x, y);
-                            if (d[i] > 10 && d[i] < 245) {
-                                d[i] = (d[i] + offset) & 0xFF;
-                            }
-                        }
+                CanvasRenderingContext2D.prototype.getImageData = wrapNative(origGetImageData, function(sx, sy, sw, sh) {
+                    const canvas = this.canvas;
+                    if (canvas && !seededCanvases.has(canvas)) {
+                        applyDeterministicCanvasSeed(canvas, this, canvas.width, canvas.height);
                     }
-                    return imgData;
+                    return origGetImageData.call(this, sx, sy, sw, sh);
                 }, 'getImageData');
 
             } catch(e) {}
         }
 
         // =========================================================================
-        // 3. Deterministic AudioContext (OfflineAudioContext & AudioBuffer)
+        // 3. Deterministic AudioContext (Single-Seed Guard)
         // =========================================================================
         if (window.AudioBuffer) {
             try {
                 const origGetChannelData = AudioBuffer.prototype.getChannelData;
+                const seededAudioBuffers = new WeakSet();
+
                 AudioBuffer.prototype.getChannelData = wrapNative(origGetChannelData, function(channel) {
                     const data = origGetChannelData.call(this, channel);
-                    if (data && data.length > 0) {
+                    if (data && data.length > 0 && !seededAudioBuffers.has(this)) {
+                        seededAudioBuffers.add(this); // GUARD: Seed once so audio buffer stays bit-consistent
                         const step = Math.max(1, (data.length / 32) | 0);
                         for (let i = 0; i < data.length; i += step) {
                             const offset = (((i * 7919 + seed) % 5) - 2) * 0.0000005;

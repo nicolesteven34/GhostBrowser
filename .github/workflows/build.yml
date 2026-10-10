@@ -56,14 +56,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.5.0
-          name: GhostBrowser v1.5.0 (Full Multi-Signal Hardware Entropy Engine)
+          tag_name: v1.6.0
+          name: GhostBrowser v1.6.0 (WeakSet Bit-Consistency Guard)
           body: |
-            ## GhostBrowser v1.5.0 (Full Multi-Signal Hardware Entropy Engine)
-            - **Multi-Signal Hardware Seeding**: Seeds AudioContext (dynamics compressor buffer), 2D Canvas (toDataURL and getImageData), Screen Dimensions (Screen.prototype), and WebGL GPU renderer deterministically per persona.
-            - **Unique Visitor ID Generation**: Defeats Fingerprint.com's server-side ML linking graph by simultaneously altering Audio, Canvas, Screen, and Platform entropy.
-            - **Zero AST Tampering Flags**: All wrappers use WeakMap-backed `Function.prototype.toString` and prototype accessors, leaving `Object.getOwnPropertyNames(navigator)` pristine with 0 own properties.
-            - **Auto-Purge Storage & 1-Tap Sparkles Action**: Nukes all cookies, IndexedDB, and localStorage on demand or profile switch.
+            ## GhostBrowser v1.6.0 (WeakSet Bit-Consistency Guard)
+            - **WeakSet Single-Seed Guard**: Fixes cumulative canvas/audio re-mutation so `hash1 === hash2` is 100% bit-for-bit identical across multiple `toDataURL()` and `getImageData()` calls.
+            - **Passes GhostDetect Canvas Stability**: Completely eliminates the 'Artificial Noise Detected' flag (`✓ Deterministic & Stable`).
+            - **Unique Visitor ID Generation**: Combines seeded Canvas, AudioContext, Screen, WebGL, and User-Agent per persona with auto-purged storage.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
