@@ -137,6 +137,32 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         case .custom: return "Apple GPU"
         }
     }
+
+    public var screenWidth: Int {
+        switch self {
+        case .iPadProM4_13: return 1024
+        case .iPadAirM2_11: return 820
+        case .iPadMini6_A15: return 744
+        case .iPhone15ProMax_A17: return 430
+        case .iPhone14_A15: return 390
+        case .macBookProM3Max_16: return 1728
+        case .macBookAirM2_13: return 1470
+        case .custom: return 1024
+        }
+    }
+
+    public var screenHeight: Int {
+        switch self {
+        case .iPadProM4_13: return 1366
+        case .iPadAirM2_11: return 1180
+        case .iPadMini6_A15: return 1133
+        case .iPhone15ProMax_A17: return 932
+        case .iPhone14_A15: return 844
+        case .macBookProM3Max_16: return 1117
+        case .macBookAirM2_13: return 956
+        case .custom: return 1366
+        }
+    }
 }
 
 public class PrivacyProfile: ObservableObject {
@@ -180,6 +206,8 @@ public class PrivacyProfile: ObservableObject {
     public var effectiveCores: Int { selectedDevice.cpuCores }
     public var effectiveRAM: Int { selectedDevice.ramGB }
     public var effectiveRenderer: String { selectedDevice.webglRenderer }
+    public var effectiveScreenWidth: Int { selectedDevice.screenWidth }
+    public var effectiveScreenHeight: Int { selectedDevice.screenHeight }
 
     public func generateJSConfig() -> String {
         return """
@@ -198,7 +226,9 @@ public class PrivacyProfile: ObservableObject {
             hardwareConcurrency: \(effectiveCores),
             deviceMemory: \(effectiveRAM),
             webglVendor: "Apple Inc.",
-            webglRenderer: "\(effectiveRenderer)"
+            webglRenderer: "\(effectiveRenderer)",
+            screenWidth: \(effectiveScreenWidth),
+            screenHeight: \(effectiveScreenHeight)
         };
         """
     }

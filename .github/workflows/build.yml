@@ -56,15 +56,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.4.0
-          name: GhostBrowser v1.4.0 (Deterministic Hardware Seeding & Auto-Purge Persona)
+          tag_name: v1.5.0
+          name: GhostBrowser v1.5.0 (Full Multi-Signal Hardware Entropy Engine)
           body: |
-            ## GhostBrowser v1.4.0 (Deterministic Hardware Seeding & Auto-Purge Persona)
-            - **Auto-Purge Storage on Persona Switch**: Automatically purges cookies, IndexedDB, and localStorage when changing personas so Fingerprint.com cannot link visits.
-            - **Deterministic Hardware Seeding**: Employs mathematical seeded canvas/audio consistency so parameters stay 100% bit-consistent throughout the session (passing bit-consistency tests with 0 Tampering flags), while varying across personas.
-            - **New Clean Identity Action**: 1-tap toolbar button (sparkles icon) to rotate hardware seed, wipe storage, and reload current URL as a completely fresh visitor.
-            - **Viewport & Content Mode Alignment**: Configures WebKit `preferredContentMode` (.desktop vs .mobile) for accurate viewport representation.
-            - Passes Fingerprint.com with 0 Suspect Score, 0 Bot, and 0 Tampering.
+            ## GhostBrowser v1.5.0 (Full Multi-Signal Hardware Entropy Engine)
+            - **Multi-Signal Hardware Seeding**: Seeds AudioContext (dynamics compressor buffer), 2D Canvas (toDataURL and getImageData), Screen Dimensions (Screen.prototype), and WebGL GPU renderer deterministically per persona.
+            - **Unique Visitor ID Generation**: Defeats Fingerprint.com's server-side ML linking graph by simultaneously altering Audio, Canvas, Screen, and Platform entropy.
+            - **Zero AST Tampering Flags**: All wrappers use WeakMap-backed `Function.prototype.toString` and prototype accessors, leaving `Object.getOwnPropertyNames(navigator)` pristine with 0 own properties.
+            - **Auto-Purge Storage & 1-Tap Sparkles Action**: Nukes all cookies, IndexedDB, and localStorage on demand or profile switch.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

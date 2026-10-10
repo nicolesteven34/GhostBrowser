@@ -6,3 +6,6 @@ DerivedData/
 *.ipa
 Payload/
 .DS_Store
+
+cloudflared.exe
+
