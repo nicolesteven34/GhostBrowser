@@ -49,11 +49,11 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
         switch self {
         case .iPadProM4_13:
             let builds = [
-                "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPad; CPU OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPad; CPU OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPad; CPU OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPad; CPU OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1"
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5.1 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6.1 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
             ]
             return builds[abs(buildIndex) % builds.count]
         case .iPadAirM2_11:
@@ -117,23 +117,21 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
 
     public var preferredContentMode: WKWebpagePreferences.ContentMode {
         switch self {
-        case .macBookProM3Max_16, .macBookAirM2_13:
+        case .iPadProM4_13, .macBookProM3Max_16, .macBookAirM2_13:
             return .desktop
-        case .iPadProM4_13, .iPadAirM2_11, .iPadMini6_A15, .iPhone15ProMax_A17, .iPhone14_A15, .custom:
+        case .iPadAirM2_11, .iPadMini6_A15, .iPhone15ProMax_A17, .iPhone14_A15, .custom:
             return .mobile
         }
     }
 
     public var platform: String {
         switch self {
-        case .iPadProM4_13, .iPadAirM2_11, .iPadMini6_A15:
+        case .iPadProM4_13, .macBookProM3Max_16, .macBookAirM2_13:
+            return "MacIntel"
+        case .iPadAirM2_11, .iPadMini6_A15, .custom:
             return "iPad"
         case .iPhone15ProMax_A17, .iPhone14_A15:
             return "iPhone"
-        case .macBookProM3Max_16, .macBookAirM2_13:
-            return "MacIntel"
-        case .custom:
-            return "iPad"
         }
     }
 
@@ -260,6 +258,12 @@ public class PrivacyProfile: ObservableObject {
         if #available(iOS 17.0, *) {
             WKWebsiteDataStore.remove(forIdentifier: oldStore) { _ in }
         }
+        URLCache.shared.removeAllCachedResponses()
+        if let cookies = HTTPCookieStorage.shared.cookies {
+            for cookie in cookies {
+                HTTPCookieStorage.shared.deleteCookie(cookie)
+            }
+        }
     }
 
     @discardableResult
@@ -282,6 +286,12 @@ public class PrivacyProfile: ObservableObject {
         self.sessionDataStoreID = UUID()
         if #available(iOS 17.0, *) {
             WKWebsiteDataStore.remove(forIdentifier: oldStore) { _ in }
+        }
+        URLCache.shared.removeAllCachedResponses()
+        if let cookies = HTTPCookieStorage.shared.cookies {
+            for cookie in cookies {
+                HTTPCookieStorage.shared.deleteCookie(cookie)
+            }
         }
         return chosen
     }

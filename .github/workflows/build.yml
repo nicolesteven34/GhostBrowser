@@ -56,21 +56,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v2.1.0
-          name: GhostBrowser v2.1.0 (True Zero-Tampering Native Engine & Genuine Visitor Rotation)
+          tag_name: v2.2.0
+          name: GhostBrowser v2.2.0 (Multi-Realm Synchronized Stealth Engine & Dynamic Identity Architecture)
           body: |
-            ## GhostBrowser v2.1.0 (True Zero-Tampering Native Engine & Genuine Visitor Rotation)
-            - **100% Zero Tampering Detected on Fingerprint.com & CreepJS**:
-              - Restored pristine native WebKit C++ engine prototype fidelity in Stealth Mode.
-              - Completely eliminated JavaScript monkey-patching of `Function.prototype.toString`, `Screen.prototype`, `Navigator.prototype`, `WebGLRenderingContext.prototype`, and `AudioBuffer.prototype`.
-              - Matches clean-iframe prototype descriptor checks 100%.
-              - Guarantees `suspectScore: 0`, `tampering: Not Detected`, and `confidence: High` on Fingerprint.com across all profiles.
-            - **True Same-Device Unique Fingerprint Generation**:
-              - Rotating identity under the same device model generates an authentic new Apple minor build User-Agent (`Version/17.5` vs `17.5.1` vs `17.6` vs `17.6.1` vs `17.4.1`).
-              - Recreates an isolated, unlinked `WKWebsiteDataStore(forIdentifier: UUID)` with zero cookies (`_vid_t`), clean localStorage, and isolated TLS session sockets.
-              - Produces distinct visitor IDs without triggering anti-fraud tampering heuristics.
-            - **Fixed Home Screen Glitch & Infinite Counting Loop**:
-              - Eliminated asynchronous feedback loops in `updateUIView` and `loadLocalStartPage`.
+            ## GhostBrowser v2.2.0 (Multi-Realm Synchronized Stealth Engine)
+            - **Multi-Realm Prototype Synchronization**:
+              - Automatically synchronizes all iframes (dynamic, `about:blank`, `contentWindow`, `contentDocument`) with the active persona.
+              - Eliminates cross-realm contradictions (`isIframePlatformSameAsMainJs: true`, `isIframeHardwareConcurrencySameAsMainJs: true`).
+              - Native AST preservation: `Function.prototype.toString` returns `[native code]` across all realms with `hasOwnProperty('prototype') === false`.
+            - **Authentic Desktop Safari on iPad**:
+              - iPad Pro profile configured to match real iPadOS Desktop Safari by default (`MacIntel`, Macintosh User-Agent, desktop viewport, 5 touch points).
+              - Guarantees alignment between WebKit C++ engine and client-side JavaScript.
+            - **Deterministic Bit-Consistent Canvas Farbling**:
+              - Modulates canvas once per dimension per session seed, ensuring `hash1 === hash2` (0 Artificial Noise).
+              - Changes canvas hash on identity rotation, forcing Fingerprint Pro to assign fresh visitor IDs on the same physical device.
               - Added navigation throttles to start page action buttons for silky-smooth identity transitions.
           files: GhostBrowser.ipa
         env:
