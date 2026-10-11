@@ -1,6 +1,6 @@
 import Foundation
 
-public struct BrowserTab: Identifiable, Equatable {
+public struct BrowserTab: Identifiable, Equatable, Codable {
     public let id: UUID
     public var urlString: String
     public var title: String

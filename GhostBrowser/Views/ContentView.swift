@@ -2,12 +2,15 @@ import SwiftUI
 
 public struct ContentView: View {
     @StateObject private var privacyProfile = PrivacyProfile()
+    @StateObject private var profileManager = ProfileManager.shared
+
     @State private var tabs: [BrowserTab]
     @State private var activeTabID: UUID
     @State private var inputURLText: String = ""
     @State private var reloadTrigger: Int = 0
     @State private var wipeTrigger: Int = 0
     @State private var showSettingsSheet: Bool = false
+    @State private var showProfileSheet: Bool = false
     @State private var showWipeAlert: Bool = false
 
     // Real Identity Rotation Toast Notification
@@ -15,9 +18,12 @@ public struct ContentView: View {
     @State private var toastWorkItem: DispatchWorkItem? = nil
 
     public init() {
-        let initialTab = BrowserTab()
-        self._tabs = State(initialValue: [initialTab])
-        self._activeTabID = State(initialValue: initialTab.id)
+        let active = ProfileManager.shared.activeProfile
+        let initialTabs = active.tabs.isEmpty ? [BrowserTab()] : active.tabs
+        let initialTabID = initialTabs.contains(where: { $0.id == active.activeTabID }) ? active.activeTabID : initialTabs[0].id
+
+        self._tabs = State(initialValue: initialTabs)
+        self._activeTabID = State(initialValue: initialTabID)
     }
 
     private var activeTab: BrowserTab? {
@@ -27,24 +33,24 @@ public struct ContentView: View {
     public var body: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
-                // 1. Top Safari iPad Toolbar
+                // 1. Top Safari iPad Toolbar with Profile Pill
                 topToolbar
 
                 // 2. Loading Progress Bar
                 if let active = activeTab, active.isLoading && active.estimatedProgress < 1.0 {
                     ProgressView(value: active.estimatedProgress, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color(hex: profileManager.activeProfile.themeColorHex)))
                         .frame(height: 2)
                 } else {
                     Divider()
                 }
 
-                // 3. Safari Multi-Tab Bar
+                // 3. Safari Multi-Tab Bar with Live Favicons
                 safariTabBar
 
                 Divider()
 
-                // 4. Multi-Tab WebKit Canvas (Zero-reload state preservation)
+                // 4. Multi-Tab WebKit Canvas (Zero-reload state preservation per profile)
                 ZStack {
                     ForEach(tabs) { tab in
                         BrowserView(
@@ -67,12 +73,20 @@ public struct ContentView: View {
                 .edgesIgnoringSafeArea(.bottom)
             }
 
-            // In-App Toast Banner on Identity Rotation
+            // In-App Toast Banner on Identity / Profile Changes
             if let toast = toastMessage {
                 identityToastView(toast: toast)
             }
         }
         .onAppear {
+            let active = profileManager.activeProfile
+            privacyProfile.selectedDevice = active.deviceProfile
+            privacyProfile.sessionSeed = active.sessionSeed
+            privacyProfile.buildIndex = active.buildIndex
+            privacyProfile.sessionDataStoreID = active.id
+            privacyProfile.searchEngine = active.searchEngine
+            privacyProfile.customUserAgent = active.customUserAgent
+
             if tabs.isEmpty {
                 let initial = BrowserTab()
                 tabs = [initial]
@@ -90,7 +104,7 @@ public struct ContentView: View {
 
     // MARK: - Top Safari iPad Toolbar
     private var topToolbar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             // Back & Forward
             Button(action: {
                 NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewGoBack_\(activeTabID)"), object: nil)
@@ -114,6 +128,7 @@ public struct ContentView: View {
                     tabs[index].urlString = "local://startpage"
                     tabs[index].title = "Start Page"
                     inputURLText = ""
+                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                 }
             }) {
                 Image(systemName: "house")
@@ -131,7 +146,7 @@ public struct ContentView: View {
             // Safari Search & Address Bar
             HStack(spacing: 8) {
                 Image(systemName: "lock.shield.fill")
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
                     .font(.system(size: 14))
 
                 TextField("Search or enter website name...", text: $inputURLText)
@@ -152,7 +167,7 @@ public struct ContentView: View {
 
                     Button(action: { submitNavigation() }) {
                         Image(systemName: "arrow.right.circle.fill")
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
                             .font(.system(size: 16, weight: .semibold))
                     }
                 }
@@ -162,43 +177,78 @@ public struct ContentView: View {
             .background(Color(.systemGray6))
             .cornerRadius(10)
 
-            // Active Apple Persona Badge & Privacy Settings
+            // Profile Switcher Pill
             Button(action: {
-                showSettingsSheet.toggle()
+                showProfileSheet = true
             }) {
                 HStack(spacing: 6) {
-                    Image(systemName: "applelogo")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(shortPersonaName(privacyProfile.selectedDevice.rawValue))
+                    Image(systemName: profileManager.activeProfile.icon)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
+
+                    Text(profileManager.activeProfile.name)
                         .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Text("•")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 9))
+
+                    Text(shortPersonaName(privacyProfile.selectedDevice.rawValue))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.12))
-                .foregroundColor(.blue)
+                .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
                 .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.35), lineWidth: 1)
+                )
+            }
+            .sheet(isPresented: $showProfileSheet) {
+                ProfileManagerSheet(
+                    profileManager: profileManager,
+                    privacyProfile: privacyProfile,
+                    onProfileSwitched: { newProfile in
+                        switchActiveProfile(newProfile)
+                    }
+                )
+            }
+
+            // Privacy & Signature Settings
+            Button(action: {
+                showSettingsSheet.toggle()
+            }) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .padding(8)
+                    .background(Color(.systemGray6))
+                    .clipShape(Circle())
             }
             .popover(isPresented: $showSettingsSheet) {
                 PrivacySettingsView(privacyProfile: privacyProfile)
                     .frame(minWidth: 480, minHeight: 620)
             }
 
-            // Generate New Identity (Keep Same Device)
+            // Quick New Identity (Rotate Seed for Active Profile)
             Button(action: {
-                privacyProfile.rotateIdentitySeed()
+                profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
                 showIdentityToast("🔄 New Identity (Same Device) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
             }) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
                     .padding(8)
-                    .background(Color.blue.opacity(0.12))
+                    .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
                     .clipShape(Circle())
             }
 
-            // Regenerate Realistic Persona (Rotates realistic Apple device & seed)
+            // Regenerate Realistic Device for Active Profile
             Button(action: {
-                let newDevice = privacyProfile.regenerateRealisticIdentity()
+                let newDevice = profileManager.regenerateProfileDevice(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
                 showIdentityToast("✨ \(shortPersonaName(newDevice.rawValue)) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
             }) {
                 Image(systemName: "sparkles")
@@ -234,16 +284,18 @@ public struct ContentView: View {
             }
             .alert("Panic Wipe Session?", isPresented: $showWipeAlert) {
                 Button("Wipe & Return Home", role: .destructive) {
-                    privacyProfile.rotateIdentitySeed()
+                    profileManager.clearProfileData(id: profileManager.activeProfileID)
+                    profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
                     let freshTab = BrowserTab()
                     tabs = [freshTab]
                     activeTabID = freshTab.id
                     inputURLText = ""
+                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                     wipeTrigger += 1
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Immediately purges all cookies, in-memory caches, closes all tabs, and resets to a clean start page.")
+                Text("Immediately purges all cookies, in-memory caches, closes all tabs, and resets '\(profileManager.activeProfile.name)' to a clean start page.")
             }
         }
         .padding(.horizontal, 14)
@@ -284,6 +336,7 @@ public struct ContentView: View {
     @ViewBuilder
     private func tabItemView(for tab: BrowserTab) -> some View {
         let isActive = (tab.id == activeTabID)
+        let themeColor = Color(hex: profileManager.activeProfile.themeColorHex)
 
         HStack(spacing: 8) {
             // Tab Status Icon / Loading Spinner / Favicon
@@ -294,7 +347,7 @@ public struct ContentView: View {
             } else if tab.urlString == "local://startpage" {
                 Image(systemName: "shield.lefthalf.filled")
                     .font(.system(size: 12))
-                    .foregroundColor(isActive ? .blue : .secondary)
+                    .foregroundColor(isActive ? themeColor : .secondary)
             } else if let favURL = tab.faviconURL {
                 AsyncImage(url: favURL) { phase in
                     switch phase {
@@ -307,14 +360,14 @@ public struct ContentView: View {
                     default:
                         Image(systemName: "globe")
                             .font(.system(size: 12))
-                            .foregroundColor(isActive ? .blue : .secondary)
+                            .foregroundColor(isActive ? themeColor : .secondary)
                     }
                 }
                 .frame(width: 14, height: 14)
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: 12))
-                    .foregroundColor(isActive ? .blue : .secondary)
+                    .foregroundColor(isActive ? themeColor : .secondary)
             }
 
             // Truncated Tab Title
@@ -348,7 +401,7 @@ public struct ContentView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isActive ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(isActive ? themeColor.opacity(0.35) : Color.clear, lineWidth: 1)
         )
         .shadow(color: isActive ? Color.black.opacity(0.06) : Color.clear, radius: 2, x: 0, y: 1)
         .contentShape(Rectangle())
@@ -361,7 +414,7 @@ public struct ContentView: View {
     private func identityToastView(toast: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
-                .foregroundColor(.purple)
+                .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
                 .font(.system(size: 14, weight: .bold))
 
             Text(toast)
@@ -370,7 +423,7 @@ public struct ContentView: View {
 
             Spacer()
 
-            Text("Clean Identity")
+            Text("Isolated")
                 .font(.system(size: 11, weight: .bold))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
@@ -384,13 +437,32 @@ public struct ContentView: View {
         .cornerRadius(14)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+                .stroke(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.35), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
         .padding(.horizontal, 24)
         .padding(.top, 60)
         .transition(.move(edge: .top).combined(with: .opacity))
         .zIndex(999)
+    }
+
+    // MARK: - Profile Switching
+    private func switchActiveProfile(_ newProfile: BrowserProfile) {
+        // 1. Save current tabs to old profile
+        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+
+        // 2. Switch profile in manager and update privacyProfile
+        profileManager.switchProfile(to: newProfile.id, privacyProfile: privacyProfile)
+
+        // 3. Load new profile's tabs
+        let loadedTabs = newProfile.tabs.isEmpty ? [BrowserTab()] : newProfile.tabs
+        tabs = loadedTabs
+        activeTabID = loadedTabs.contains(where: { $0.id == newProfile.activeTabID }) ? newProfile.activeTabID : loadedTabs[0].id
+
+        let active = tabs.first(where: { $0.id == activeTabID })
+        inputURLText = active?.urlString == "local://startpage" ? "" : (active?.urlString ?? "")
+
+        showIdentityToast("Switched to '\(newProfile.name)' • \(shortPersonaName(newProfile.deviceProfile.rawValue))")
     }
 
     // MARK: - Tab Management Methods
@@ -415,6 +487,7 @@ public struct ContentView: View {
         } else {
             inputURLText = selected.urlString
         }
+        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
     }
 
     private func addNewTab(urlString: String = "local://startpage") {
@@ -433,6 +506,7 @@ public struct ContentView: View {
                 inputURLText = urlString
             }
         }
+        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
     }
 
     private func closeTab(id: UUID) {
@@ -443,6 +517,7 @@ public struct ContentView: View {
             tabs = [freshTab]
             activeTabID = freshTab.id
             inputURLText = ""
+            profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
             return
         }
 
@@ -455,6 +530,7 @@ public struct ContentView: View {
             activeTabID = nextTab.id
             inputURLText = nextTab.urlString == "local://startpage" ? "" : nextTab.urlString
         }
+        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
     }
 
     // MARK: - Dynamic Tab Bindings
@@ -473,6 +549,7 @@ public struct ContentView: View {
                             inputURLText = newValue
                         }
                     }
+                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                 }
             }
         )
@@ -486,6 +563,7 @@ public struct ContentView: View {
             set: { newValue in
                 if let index = tabs.firstIndex(where: { $0.id == id }) {
                     tabs[index].title = newValue
+                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                 }
             }
         )
@@ -574,6 +652,7 @@ public struct ContentView: View {
 
         if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
             tabs[index].urlString = target
+            profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
         }
     }
 

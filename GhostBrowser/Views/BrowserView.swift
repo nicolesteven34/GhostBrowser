@@ -299,6 +299,7 @@ public struct BrowserView: UIViewRepresentable {
                 html = html.replacingOccurrences(of: "{{SCREEN_RES}}", with: "\(parent.privacyProfile.effectiveScreenWidth)×\(parent.privacyProfile.effectiveScreenHeight)")
                 html = html.replacingOccurrences(of: "{{DPR}}", with: String(format: "%.1f", parent.privacyProfile.effectiveDevicePixelRatio))
                 html = html.replacingOccurrences(of: "{{SEED}}", with: "\(parent.privacyProfile.sessionSeed)")
+                html = html.replacingOccurrences(of: "{{PROFILE_NAME}}", with: ProfileManager.shared.activeProfile.name.uppercased())
 
                 self.currentLoadedURL = "local://startpage"
                 self.parent.pageTitle = "Start Page"

@@ -56,29 +56,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v2.5.1
-          name: GhostBrowser v2.5.1 (Blank Page Elimination, Real Favicon Engine & Test Targets)
+          tag_name: v2.6.0
+          name: GhostBrowser v2.6.0 (Enterprise Multi-Profile Architecture & Container Partitioning)
           body: |
-            ## GhostBrowser v2.5.1 (Blank Page Elimination, Real Favicon Engine & Test Targets)
-            - **Blank Screen Bug Elimination on Fingerprint.com**:
-              - Fixed `createWebViewWith` popup handler: background scripts probing `window.open('about:blank')` no longer hijack or overwrite the active webView.
-              - Added main-frame safeguard in `decidePolicyFor`: script-initiated `about:blank` navigations are blocked while active web sessions are loaded.
-              - Added content blocker rule exemptions for test domains (`fingerprint.com`, `fingerprintjs.com`, `fingerprint-scan.com`) so first-party CDNs load seamlessly.
-            - **Real Website Favicon (.ico) Engine**:
-              - Tab bar capsules dynamically stream and display real website `.ico` / favicons using `AsyncImage` with smooth fallback to globe icons.
-              - Home page test targets & favorites display their live genuine brand favicons with graceful offline monogram fallbacks.
-            - **Integrated Test Target Suite**:
-              - Added all 7 new requested bot and anti-detection test targets to the Start Page:
-                - `https://fingerprint-scan.com/` (Hardware hash & Castle.io checks)
-                - `https://browserinsight.net/bot-detection` (Bot & fraud detection)
-                - `https://pixelscan.net/bot-check` (PixelScan bot checker)
-                - `https://ipfighter.com/bot-detection` (Headless & focus detector)
-                - `https://scrapfly.io/web-scraping-tools/automation-detector` (Scrapfly automation detection)
-                - `https://pixelscan.dev/bot` (PixelScan dev bot tests)
-                - `https://proxydetect.live/` (Proxy & network tests)
-                - `https://fingerprint.com/demo/` (Fingerprint Pro demo)
-                - `https://browserleaks.com/canvas` (BrowserLeaks canvas/WebGL)
-                - `https://label-nutritional-chess-analysis.trycloudflare.com` (GhostDetect verification)
+            ## GhostBrowser v2.6.0 (Enterprise Multi-Profile Architecture & Container Partitioning)
+            - **Native Multi-Profile Management Engine**:
+              - Complete container isolation via persistent `WKWebsiteDataStore(forIdentifier:)` on iOS 17+.
+              - Saved persistent profiles: each profile retains its own name, SF Symbol icon, color tint, independent cookie jar, cache, and open tabs across app launches.
+              - Zero data leakage: switching between profiles instantly swaps storage containers without cross-contamination.
+            - **Deterministic Hardware Personas Per Profile**:
+              - Each profile binds to its own dedicated Apple Device Persona (iPad Pro M4, MacBook Pro M3, iPhone 15 Pro Max, etc.), hardware seed, and build index.
+              - Hardware identities remain 100% bit-consistent on every visit to that profile.
+            - **Safari-Style Profile Switcher UI**:
+              - Top navigation bar profile pill (`[Icon] Name • Device`) with live theme color styling.
+              - Native profile management sheet to switch profiles, create new profiles with custom icons/colors, roll seeds, or clear individual profile partitions.
             - **Preserved Stealth Integrity**:
               - 0 tampering detection on `fingerprint.com` (Suspect Score: 0).
               - 0/100 Bot Score on `fingerprint-scan.com`.

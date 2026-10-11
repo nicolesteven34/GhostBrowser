@@ -3,7 +3,7 @@ import SwiftUI
 import WebKit
 import CryptoKit
 
-public enum SearchEngine: String, CaseIterable, Identifiable {
+public enum SearchEngine: String, CaseIterable, Identifiable, Codable {
     case localStartPage = "Local Offline Start Page (Zero Network)"
     case searxng = "SearXNG (Decentralized Privacy Search)"
     case startpage = "Startpage (Google results without tracking)"
@@ -33,7 +33,7 @@ public enum SearchEngine: String, CaseIterable, Identifiable {
     }
 }
 
-public enum AppleDeviceProfile: String, CaseIterable, Identifiable {
+public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
     case iPadProM4_13 = "iPad Pro 13\" (M4, iPadOS 17.5)"
     case iPadAirM2_11 = "iPad Air 11\" (M2, iPadOS 17.4)"
     case iPadMini6_A15 = "iPad Mini 6 (A15, iPadOS 17.2)"
