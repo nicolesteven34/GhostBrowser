@@ -101,7 +101,30 @@ public class ProfileManager: ObservableObject {
             privacyProfile.sessionDataStoreID = target.id
             privacyProfile.searchEngine = target.searchEngine
             privacyProfile.customUserAgent = target.customUserAgent
+            privacyProfile.mockLocationEnabled = target.mockLocationEnabled
+            privacyProfile.mockLatitude = target.mockLatitude
+            privacyProfile.mockLongitude = target.mockLongitude
+            privacyProfile.mockLocationName = target.mockLocationName
+            privacyProfile.virtualCameraEnabled = target.virtualCameraEnabled
+            privacyProfile.virtualCameraImageBase64 = target.virtualCameraImageBase64
+            privacyProfile.virtualCameraPanX = target.virtualCameraPanX
+            privacyProfile.virtualCameraPanY = target.virtualCameraPanY
+            privacyProfile.virtualCameraZoom = target.virtualCameraZoom
         }
+    }
+
+    public func saveProfileSensors(from privacyProfile: PrivacyProfile) {
+        guard let index = profiles.firstIndex(where: { $0.id == activeProfileID }) else { return }
+        profiles[index].mockLocationEnabled = privacyProfile.mockLocationEnabled
+        profiles[index].mockLatitude = privacyProfile.mockLatitude
+        profiles[index].mockLongitude = privacyProfile.mockLongitude
+        profiles[index].mockLocationName = privacyProfile.mockLocationName
+        profiles[index].virtualCameraEnabled = privacyProfile.virtualCameraEnabled
+        profiles[index].virtualCameraImageBase64 = privacyProfile.virtualCameraImageBase64
+        profiles[index].virtualCameraPanX = privacyProfile.virtualCameraPanX
+        profiles[index].virtualCameraPanY = privacyProfile.virtualCameraPanY
+        profiles[index].virtualCameraZoom = privacyProfile.virtualCameraZoom
+        saveProfiles()
     }
 
     public func saveCurrentTabs(tabs: [BrowserTab], activeTabID: UUID) {

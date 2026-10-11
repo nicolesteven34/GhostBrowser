@@ -11,6 +11,7 @@ public struct ContentView: View {
     @State private var wipeTrigger: Int = 0
     @State private var showSettingsSheet: Bool = false
     @State private var showProfileSheet: Bool = false
+    @State private var showSessionToolsSheet: Bool = false
     @State private var showWipeAlert: Bool = false
 
     // Real Identity Rotation Toast Notification
@@ -215,6 +216,28 @@ public struct ContentView: View {
                         switchActiveProfile(newProfile)
                     }
                 )
+            }
+
+            // Media & Sensors HUD (Virtual Camera & Mock GPS)
+            Button(action: {
+                showSessionToolsSheet = true
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: (privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled) ? "camera.viewfinder" : "location.viewfinder")
+                        .font(.system(size: 14, weight: .semibold))
+                    if privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .foregroundColor((privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled) ? Color(hex: profileManager.activeProfile.themeColorHex) : .secondary)
+                .padding(8)
+                .background((privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled) ? Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.15) : Color(.systemGray6))
+                .clipShape(Circle())
+            }
+            .sheet(isPresented: $showSessionToolsSheet) {
+                SessionToolsSheet(privacyProfile: privacyProfile, profileManager: profileManager)
             }
 
             // Privacy & Signature Settings

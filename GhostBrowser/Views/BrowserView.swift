@@ -131,6 +131,43 @@ public struct BrowserView: UIViewRepresentable {
             context.coordinator.reconfigurePrivacy(for: webView)
         }
 
+        // Dynamic mock location update (real-time, zero reload)
+        let locationChanged = context.coordinator.lastMockLocationEnabled != privacyProfile.mockLocationEnabled
+            || context.coordinator.lastMockLatitude != privacyProfile.mockLatitude
+            || context.coordinator.lastMockLongitude != privacyProfile.mockLongitude
+
+        if locationChanged {
+            context.coordinator.lastMockLocationEnabled = privacyProfile.mockLocationEnabled
+            context.coordinator.lastMockLatitude = privacyProfile.mockLatitude
+            context.coordinator.lastMockLongitude = privacyProfile.mockLongitude
+
+            let js = "if (window.__GHOST_SET_LOCATION__) window.__GHOST_SET_LOCATION__(\(privacyProfile.mockLatitude), \(privacyProfile.mockLongitude), \(privacyProfile.mockLocationEnabled));"
+            webView.evaluateJavaScript(js) { _, _ in }
+        }
+
+        // Dynamic virtual camera stream update (real-time pan/zoom/image, zero reload)
+        let virtualCamChanged = context.coordinator.lastVirtualCameraEnabled != privacyProfile.virtualCameraEnabled
+            || context.coordinator.lastVirtualCameraImage != privacyProfile.virtualCameraImageBase64
+            || context.coordinator.lastVirtualCameraPanX != privacyProfile.virtualCameraPanX
+            || context.coordinator.lastVirtualCameraPanY != privacyProfile.virtualCameraPanY
+            || context.coordinator.lastVirtualCameraZoom != privacyProfile.virtualCameraZoom
+
+        if virtualCamChanged {
+            context.coordinator.lastVirtualCameraEnabled = privacyProfile.virtualCameraEnabled
+            context.coordinator.lastVirtualCameraImage = privacyProfile.virtualCameraImageBase64
+            context.coordinator.lastVirtualCameraPanX = privacyProfile.virtualCameraPanX
+            context.coordinator.lastVirtualCameraPanY = privacyProfile.virtualCameraPanY
+            context.coordinator.lastVirtualCameraZoom = privacyProfile.virtualCameraZoom
+
+            let escaped = privacyProfile.virtualCameraImageBase64
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+                .replacingOccurrences(of: "\n", with: "")
+
+            let js = "if (window.__GHOST_SET_VIRTUAL_FEED__) window.__GHOST_SET_VIRTUAL_FEED__('\(escaped)', \(privacyProfile.virtualCameraPanX), \(privacyProfile.virtualCameraPanY), \(privacyProfile.virtualCameraZoom), \(privacyProfile.virtualCameraEnabled));"
+            webView.evaluateJavaScript(js) { _, _ in }
+        }
+
         // Handle URL change from user navigation
         if currentURLString != context.coordinator.currentLoadedURL && !currentURLString.isEmpty {
             context.coordinator.loadURL(currentURLString)
@@ -162,6 +199,15 @@ public struct BrowserView: UIViewRepresentable {
         var lastSessionSeed: Int = 0
         var lastReloadTrigger: Int = 0
         var lastWipeTrigger: Int = 0
+
+        var lastMockLocationEnabled: Bool?
+        var lastMockLatitude: Double?
+        var lastMockLongitude: Double?
+        var lastVirtualCameraEnabled: Bool?
+        var lastVirtualCameraImage: String?
+        var lastVirtualCameraPanX: Double?
+        var lastVirtualCameraPanY: Double?
+        var lastVirtualCameraZoom: Double?
 
         private var progressObservation: NSKeyValueObservation?
         private var backObservation: NSKeyValueObservation?

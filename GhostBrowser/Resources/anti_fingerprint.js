@@ -330,4 +330,276 @@
             }
         }
     } catch(e) {}
+    // =========================================================================
+    // 6. DYNAMIC GEOLOCATION (GPS) SIMULATION & JITTER ENGINE
+    // =========================================================================
+    try {
+        let _mockLoc = {
+            enabled: !!cfg.mockLocationEnabled,
+            lat: Number(cfg.mockLatitude) || 37.7749,
+            lng: Number(cfg.mockLongitude) || -122.4194,
+            altitude: Number(cfg.mockAltitude) || 28.5,
+            accuracy: 14.5
+        };
+
+        const _watchers = new Map();
+        let _watchIdCounter = 1;
+
+        function _generatePosition(lat, lng) {
+            // Realistic micro-drift jitter (simulating natural GPS/Wi-Fi positioning fluctuation)
+            const jitterLat = (Math.random() - 0.5) * 0.000015;
+            const jitterLng = (Math.random() - 0.5) * 0.000015;
+            const finalLat = lat + jitterLat;
+            const finalLng = lng + jitterLng;
+            const accuracy = 12.0 + (Math.random() * 6.0); // 12m-18m natural accuracy
+
+            const coords = {
+                latitude: finalLat,
+                longitude: finalLng,
+                altitude: _mockLoc.altitude + (Math.random() - 0.5) * 0.8,
+                accuracy: accuracy,
+                altitudeAccuracy: 3.5,
+                heading: null,
+                speed: null
+            };
+
+            const pos = {
+                coords: coords,
+                timestamp: Date.now()
+            };
+
+            if (typeof GeolocationPosition !== 'undefined' && GeolocationPosition.prototype) {
+                Object.setPrototypeOf(pos, GeolocationPosition.prototype);
+            }
+            if (typeof GeolocationCoordinates !== 'undefined' && GeolocationCoordinates.prototype) {
+                Object.setPrototypeOf(coords, GeolocationCoordinates.prototype);
+            }
+            return pos;
+        }
+
+        function _notifyWatchers() {
+            if (!_mockLoc.enabled) return;
+            for (const [id, watcher] of _watchers.entries()) {
+                if (typeof watcher.success === 'function') {
+                    try {
+                        watcher.success(_generatePosition(_mockLoc.lat, _mockLoc.lng));
+                    } catch(e) {}
+                }
+            }
+        }
+
+        window.__GHOST_SET_LOCATION__ = function(lat, lng, enabled) {
+            _mockLoc.lat = Number(lat) || _mockLoc.lat;
+            _mockLoc.lng = Number(lng) || _mockLoc.lng;
+            _mockLoc.enabled = !!enabled;
+            _notifyWatchers();
+        };
+
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+            const nativeGetPos = navigator.geolocation.getCurrentPosition;
+            const nativeWatchPos = navigator.geolocation.watchPosition;
+            const nativeClearWatch = navigator.geolocation.clearWatch;
+
+            navigator.geolocation.getCurrentPosition = new Proxy(nativeGetPos, {
+                apply(target, thisArg, argArray) {
+                    const success = argArray[0];
+                    const error = argArray[1];
+                    const options = argArray[2];
+
+                    if (_mockLoc.enabled) {
+                        setTimeout(() => {
+                            if (typeof success === 'function') {
+                                success(_generatePosition(_mockLoc.lat, _mockLoc.lng));
+                            }
+                        }, 50 + Math.random() * 80); // Realistic 50-130ms sensor response latency
+                        return;
+                    }
+                    return Reflect.apply(target, thisArg, argArray);
+                }
+            });
+
+            navigator.geolocation.watchPosition = new Proxy(nativeWatchPos, {
+                apply(target, thisArg, argArray) {
+                    const success = argArray[0];
+                    const error = argArray[1];
+                    const options = argArray[2];
+
+                    if (_mockLoc.enabled) {
+                        const wid = _watchIdCounter++;
+                        const intervalId = setInterval(() => {
+                            if (typeof success === 'function') {
+                                success(_generatePosition(_mockLoc.lat, _mockLoc.lng));
+                            }
+                        }, 3000 + Math.random() * 1000);
+
+                        _watchers.set(wid, { success, error, intervalId });
+
+                        setTimeout(() => {
+                            if (typeof success === 'function') {
+                                success(_generatePosition(_mockLoc.lat, _mockLoc.lng));
+                            }
+                        }, 60);
+
+                        return wid;
+                    }
+                    return Reflect.apply(target, thisArg, argArray);
+                }
+            });
+
+            navigator.geolocation.clearWatch = new Proxy(nativeClearWatch, {
+                apply(target, thisArg, argArray) {
+                    const wid = argArray[0];
+                    if (_watchers.has(wid)) {
+                        const w = _watchers.get(wid);
+                        if (w.intervalId) clearInterval(w.intervalId);
+                        _watchers.delete(wid);
+                        return;
+                    }
+                    return Reflect.apply(target, thisArg, argArray);
+                }
+            });
+        }
+    } catch(e) {}
+
+    // =========================================================================
+    // 7. VIRTUAL CAMERA & MEDIA STREAM INJECTION (Gallery Image / Real-Time Pan-Zoom)
+    // =========================================================================
+    try {
+        let _virtualCam = {
+            enabled: !!cfg.virtualCameraEnabled,
+            imageSrc: cfg.virtualCameraImage || "",
+            panX: Number(cfg.virtualCameraPanX) || 0,
+            panY: Number(cfg.virtualCameraPanY) || 0,
+            zoom: Number(cfg.virtualCameraZoom) || 1.0,
+            imgElement: null,
+            canvas: null,
+            ctx: null,
+            animId: null
+        };
+
+        function _setupVirtualCanvas() {
+            if (!_virtualCam.canvas) {
+                const c = document.createElement('canvas');
+                c.width = 1280;
+                c.height = 720;
+                _virtualCam.canvas = c;
+                _virtualCam.ctx = c.getContext('2d');
+            }
+            if (_virtualCam.imageSrc && !_virtualCam.imgElement) {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    _virtualCam.imgElement = img;
+                    _renderVirtualFrame();
+                };
+                img.src = _virtualCam.imageSrc;
+            }
+        }
+
+        function _renderVirtualFrame() {
+            if (!_virtualCam.ctx || !_virtualCam.canvas) return;
+            const ctx = _virtualCam.ctx;
+            const w = _virtualCam.canvas.width;
+            const h = _virtualCam.canvas.height;
+
+            ctx.fillStyle = "#111115";
+            ctx.fillRect(0, 0, w, h);
+
+            if (_virtualCam.imgElement && _virtualCam.imgElement.complete && _virtualCam.imgElement.naturalWidth > 0) {
+                const img = _virtualCam.imgElement;
+                const zoom = Math.max(0.5, Math.min(5.0, _virtualCam.zoom));
+
+                const imgAspect = img.naturalWidth / img.naturalHeight;
+                const canvasAspect = w / h;
+                let drawW, drawH;
+                if (imgAspect > canvasAspect) {
+                    drawH = h * zoom;
+                    drawW = drawH * imgAspect;
+                } else {
+                    drawW = w * zoom;
+                    drawH = drawW / imgAspect;
+                }
+
+                const offsetX = (w - drawW) / 2 + (_virtualCam.panX * (w / 100));
+                const offsetY = (h - drawH) / 2 + (_virtualCam.panY * (h / 100));
+
+                ctx.save();
+                ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+                ctx.restore();
+            } else {
+                // Sleek Apple FaceTime camera placeholder
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, "#1c1c1e");
+                grad.addColorStop(1, "#2c2c2e");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                ctx.fillStyle = "#8e8e93";
+                ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("📷 Ghost Virtual Camera", w / 2, h / 2 - 20);
+
+                ctx.font = "20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+                ctx.fillStyle = "#636366";
+                ctx.fillText("Select media in the HUD to stream live to this page", w / 2, h / 2 + 28);
+            }
+        }
+
+        window.__GHOST_SET_VIRTUAL_FEED__ = function(dataUrl, panX, panY, zoom, enabled) {
+            _virtualCam.enabled = enabled !== undefined ? !!enabled : _virtualCam.enabled;
+            _virtualCam.panX = Number(panX) || 0;
+            _virtualCam.panY = Number(panY) || 0;
+            _virtualCam.zoom = Number(zoom) || 1.0;
+
+            if (dataUrl && dataUrl !== _virtualCam.imageSrc) {
+                _virtualCam.imageSrc = dataUrl;
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    _virtualCam.imgElement = img;
+                    _renderVirtualFrame();
+                };
+                img.src = dataUrl;
+            } else {
+                _renderVirtualFrame();
+            }
+        };
+
+        if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+            const nativeGetUserMedia = navigator.mediaDevices.getUserMedia;
+
+            navigator.mediaDevices.getUserMedia = new Proxy(nativeGetUserMedia, {
+                apply(target, thisArg, argArray) {
+                    const constraints = argArray[0] || {};
+                    if (_virtualCam.enabled && constraints.video) {
+                        _setupVirtualCanvas();
+                        _renderVirtualFrame();
+
+                        if (!_virtualCam.animId) {
+                            _virtualCam.animId = setInterval(_renderVirtualFrame, 100);
+                        }
+
+                        if (typeof _virtualCam.canvas.captureStream === 'function') {
+                            const stream = _virtualCam.canvas.captureStream(30);
+
+                            if (constraints.audio) {
+                                try {
+                                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                                    const dest = audioCtx.createMediaStreamDestination();
+                                    const audioTrack = dest.stream.getAudioTracks()[0];
+                                    if (audioTrack) {
+                                        stream.addTrack(audioTrack);
+                                    }
+                                } catch(err) {}
+                            }
+
+                            return Promise.resolve(stream);
+                        }
+                    }
+                    return Reflect.apply(target, thisArg, argArray);
+                }
+            });
+        }
+    } catch(e) {}
 })();

@@ -316,6 +316,19 @@ public class PrivacyProfile: ObservableObject {
     @Published public var stripReferrers: Bool = false
     @Published public var shieldSensors: Bool = false
 
+    // Mock Location (GPS)
+    @Published public var mockLocationEnabled: Bool = false
+    @Published public var mockLatitude: Double = 37.7749
+    @Published public var mockLongitude: Double = -122.4194
+    @Published public var mockLocationName: String = "San Francisco, CA"
+
+    // Virtual Camera Stream
+    @Published public var virtualCameraEnabled: Bool = false
+    @Published public var virtualCameraImageBase64: String = ""
+    @Published public var virtualCameraPanX: Double = 0.0
+    @Published public var virtualCameraPanY: Double = 0.0
+    @Published public var virtualCameraZoom: Double = 1.0
+
     public init() {}
 
     public func rotateIdentitySeed() {
@@ -412,6 +425,11 @@ public class PrivacyProfile: ObservableObject {
     }
 
     public func generateJSConfig() -> String {
+        let escapedVirtualImg = virtualCameraImageBase64
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "")
+
         return """
         window.__GHOST_VISITOR_ID__ = "\(visitorID)";
         window.__GHOST_CONFIG__ = {
@@ -433,7 +451,15 @@ public class PrivacyProfile: ObservableObject {
             webglRenderer: "\(effectiveRenderer)",
             screenWidth: \(effectiveScreenWidth),
             screenHeight: \(effectiveScreenHeight),
-            devicePixelRatio: \(effectiveDevicePixelRatio)
+            devicePixelRatio: \(effectiveDevicePixelRatio),
+            mockLocationEnabled: \(mockLocationEnabled),
+            mockLatitude: \(mockLatitude),
+            mockLongitude: \(mockLongitude),
+            virtualCameraEnabled: \(virtualCameraEnabled),
+            virtualCameraImage: "\(escapedVirtualImg)",
+            virtualCameraPanX: \(virtualCameraPanX),
+            virtualCameraPanY: \(virtualCameraPanY),
+            virtualCameraZoom: \(virtualCameraZoom)
         };
         """
     }

@@ -17,15 +17,19 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.8.0</string>
+    <string>2.9.0</string>
     <key>CFBundleVersion</key>
-    <string>20</string>
+    <string>21</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSCameraUsageDescription</key>
     <string>GhostBrowser requires camera access for WebRTC and media capture.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>GhostBrowser requires microphone access for WebRTC and audio capture.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>GhostBrowser allows selecting photos and videos for the virtual camera stream.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>GhostBrowser uses location services if enabled.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>

@@ -16,6 +16,19 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
     public var createdAt: Date
     public var lastUsedAt: Date
 
+    // Mock Location (GPS)
+    public var mockLocationEnabled: Bool
+    public var mockLatitude: Double
+    public var mockLongitude: Double
+    public var mockLocationName: String
+
+    // Virtual Camera Stream
+    public var virtualCameraEnabled: Bool
+    public var virtualCameraImageBase64: String
+    public var virtualCameraPanX: Double
+    public var virtualCameraPanY: Double
+    public var virtualCameraZoom: Double
+
     public init(
         id: UUID = UUID(),
         name: String = "Default Profile",
@@ -29,7 +42,16 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         tabs: [BrowserTab] = [BrowserTab()],
         activeTabID: UUID? = nil,
         createdAt: Date = Date(),
-        lastUsedAt: Date = Date()
+        lastUsedAt: Date = Date(),
+        mockLocationEnabled: Bool = false,
+        mockLatitude: Double = 37.7749,
+        mockLongitude: Double = -122.4194,
+        mockLocationName: String = "San Francisco, CA",
+        virtualCameraEnabled: Bool = false,
+        virtualCameraImageBase64: String = "",
+        virtualCameraPanX: Double = 0.0,
+        virtualCameraPanY: Double = 0.0,
+        virtualCameraZoom: Double = 1.0
     ) {
         self.id = id
         self.name = name
@@ -44,6 +66,41 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         self.activeTabID = activeTabID ?? self.tabs[0].id
         self.createdAt = createdAt
         self.lastUsedAt = lastUsedAt
+        self.mockLocationEnabled = mockLocationEnabled
+        self.mockLatitude = mockLatitude
+        self.mockLongitude = mockLongitude
+        self.mockLocationName = mockLocationName
+        self.virtualCameraEnabled = virtualCameraEnabled
+        self.virtualCameraImageBase64 = virtualCameraImageBase64
+        self.virtualCameraPanX = virtualCameraPanX
+        self.virtualCameraPanY = virtualCameraPanY
+        self.virtualCameraZoom = virtualCameraZoom
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        icon = try container.decode(String.self, forKey: .icon)
+        themeColorHex = try container.decode(String.self, forKey: .themeColorHex)
+        deviceProfile = try container.decode(AppleDeviceProfile.self, forKey: .deviceProfile)
+        sessionSeed = try container.decode(Int.self, forKey: .sessionSeed)
+        buildIndex = try container.decode(Int.self, forKey: .buildIndex)
+        customUserAgent = try container.decodeIfPresent(String.self, forKey: .customUserAgent) ?? ""
+        searchEngine = try container.decodeIfPresent(SearchEngine.self, forKey: .searchEngine) ?? .localStartPage
+        tabs = try container.decodeIfPresent([BrowserTab].self, forKey: .tabs) ?? [BrowserTab()]
+        activeTabID = try container.decodeIfPresent(UUID.self, forKey: .activeTabID) ?? (tabs.first?.id ?? UUID())
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        lastUsedAt = try container.decodeIfPresent(Date.self, forKey: .lastUsedAt) ?? Date()
+        mockLocationEnabled = try container.decodeIfPresent(Bool.self, forKey: .mockLocationEnabled) ?? false
+        mockLatitude = try container.decodeIfPresent(Double.self, forKey: .mockLatitude) ?? 37.7749
+        mockLongitude = try container.decodeIfPresent(Double.self, forKey: .mockLongitude) ?? -122.4194
+        mockLocationName = try container.decodeIfPresent(String.self, forKey: .mockLocationName) ?? "San Francisco, CA"
+        virtualCameraEnabled = try container.decodeIfPresent(Bool.self, forKey: .virtualCameraEnabled) ?? false
+        virtualCameraImageBase64 = try container.decodeIfPresent(String.self, forKey: .virtualCameraImageBase64) ?? ""
+        virtualCameraPanX = try container.decodeIfPresent(Double.self, forKey: .virtualCameraPanX) ?? 0.0
+        virtualCameraPanY = try container.decodeIfPresent(Double.self, forKey: .virtualCameraPanY) ?? 0.0
+        virtualCameraZoom = try container.decodeIfPresent(Double.self, forKey: .virtualCameraZoom) ?? 1.0
     }
 
     public static let availableIcons = [
