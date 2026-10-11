@@ -57,11 +57,13 @@ public class ProfileManager: ObservableObject {
         deviceProfile: AppleDeviceProfile? = nil
     ) -> BrowserProfile {
         let realisticPool: [AppleDeviceProfile] = [
+            .iPhone18ProMax_A20,
+            .iPhone17ProMax_A19,
+            .iPhone16ProMax_A18,
+            .iPhone16_A18,
             .iPadProM4_13,
             .iPadAirM2_11,
             .macBookProM4Max_16,
-            .iPhone16ProMax_A18,
-            .iPhone16_A18,
             .macBookAirM3_13,
             .iPhone15ProMax_A17,
             .iPadMini6_A15
@@ -126,16 +128,18 @@ public class ProfileManager: ObservableObject {
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return .iPadProM4_13 }
         let current = profiles[index].deviceProfile
         let pool: [AppleDeviceProfile] = [
+            .iPhone18ProMax_A20,
+            .iPhone17ProMax_A19,
+            .iPhone16ProMax_A18,
+            .iPhone16_A18,
             .iPadProM4_13,
             .iPadAirM2_11,
             .macBookProM4Max_16,
-            .iPhone16ProMax_A18,
-            .iPhone16_A18,
             .macBookAirM3_13,
             .iPhone15ProMax_A17,
             .iPadMini6_A15
         ]
-        let candidate = pool.filter { $0 != current }.randomElement() ?? .iPhone16ProMax_A18
+        let candidate = pool.filter { $0 != current }.randomElement() ?? .iPhone18ProMax_A20
         profiles[index].deviceProfile = candidate
         profiles[index].sessionSeed = Int.random(in: 100000...999999)
         profiles[index].buildIndex = Int.random(in: 0...4)

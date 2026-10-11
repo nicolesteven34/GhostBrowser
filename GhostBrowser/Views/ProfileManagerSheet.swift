@@ -268,6 +268,8 @@ public struct ProfileManagerSheet: View {
 
     private func shortDevice(_ raw: String) -> String {
         if raw.contains("Native Host") { return "Native Host" }
+        if raw.contains("iPhone 18 Pro Max") { return "iPhone 18 PM" }
+        if raw.contains("iPhone 17 Pro Max") { return "iPhone 17 PM" }
         if raw.contains("iPad Pro 13") { return "iPad Pro 13\"" }
         if raw.contains("iPad Air 11") { return "iPad Air 11\"" }
         if raw.contains("iPad Mini 6") { return "iPad Mini 6" }

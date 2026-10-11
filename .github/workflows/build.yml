@@ -56,26 +56,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v2.7.0
-          name: GhostBrowser v2.7.0 (Expanded Apple Persona Catalog, iPhone 16 / iOS 18, Dynamic Viewport Harmonization)
+          tag_name: v2.8.0
+          name: GhostBrowser v2.8.0 (2026 Flagship Catalog - iPhone 18 Pro Max A20, iPhone 17 Pro Max A19)
           body: |
-            ## GhostBrowser v2.7.0
-            - **Expanded Apple Persona Catalog (Latest Flagship Hardware & iOS 18)**:
-              - **Native Host Device (100% Physical Match)**: Extracts and binds 1:1 to the host device's authentic screen geometry, DPR, core count, memory, and native WebKit User-Agent.
+            ## GhostBrowser v2.8.0
+            - **2026 Flagship Hardware Catalog Expansion**:
+              - **iPhone 18 Pro Max (A20 Pro, iOS 27)**: Screen 440x956 @ 3.0x DPR, Apple A20 Pro GPU, 12GB RAM, 6 Cores.
+              - **iPhone 17 Pro Max (A19 Pro, iOS 26)**: Screen 440x956 @ 3.0x DPR, Apple A19 Pro GPU, 12GB RAM, 6 Cores.
               - **iPhone 16 Pro Max (A18 Pro, iOS 18.1)**: Screen 440x956 @ 3.0x DPR, Apple A18 Pro GPU, 8GB RAM, 6 Cores.
               - **iPhone 16 (A18, iOS 18.0)**: Screen 393x852 @ 3.0x DPR, Apple A18 GPU, 8GB RAM, 6 Cores.
               - **MacBook Pro 16\" (M4 Max, macOS 15.1)**: Screen 1728x1117 @ 2.0x DPR, Apple M4 Max GPU, 36GB RAM, 16 Cores.
               - **MacBook Air 13\" (M3, macOS 15.0)**: Screen 1470x956 @ 2.0x DPR, Apple M3 GPU, 16GB RAM, 8 Cores.
               - **iPad Pro 13\" (M4, iPadOS 18.1)**: Screen 1024x1366 @ 2.0x DPR, Apple M4 GPU, 16GB RAM, 10 Cores.
-              - Resilient backwards-compatible profile decoding for seamless profile migration.
+              - **Native Host Device (100% Physical Match)**: Extracts and binds 1:1 to host hardware.
             - **Dynamic Viewport Harmonization Safeguard**:
-              - Automatically clamps `s.screen.width` and `s.screen.height` to at least `window.innerWidth` and `window.innerHeight`, mathematically preventing `window.innerWidth > screen.width` viewport leakage anomalies when running iPhone personas on iPad screens.
+              - Clamps `s.screen.width` and `s.screen.height` to `window.innerWidth` and `window.innerHeight`, preventing mobile persona emulation leaks on tablet displays.
             - **Enterprise Multi-Profile Architecture**:
-              - Container isolation via persistent `WKWebsiteDataStore(forIdentifier:)` on iOS 17+.
-              - Per-profile tab isolation, cookie isolation, and deterministic hardware personas.
-            - **Preserved Stealth Integrity**:
-              - Suspect Score: 0 on `fingerprint.com`.
-              - 0/100 Bot Score on `fingerprint-scan.com`.
+              - Persistent container partitioning (`WKWebsiteDataStore`), deterministic hardware seeds, and tab state isolation.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
