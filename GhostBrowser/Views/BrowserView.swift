@@ -94,7 +94,7 @@ public struct BrowserView: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
-        webView.customUserAgent = privacyProfile.effectiveUserAgent
+        webView.customUserAgent = privacyProfile.effectiveUserAgent.isEmpty ? nil : privacyProfile.effectiveUserAgent
         webView.allowsBackForwardNavigationGestures = true
 
         context.coordinator.setupObservers(for: webView)
@@ -361,7 +361,7 @@ public struct BrowserView: UIViewRepresentable {
 
         public func reconfigurePrivacy(for webView: WKWebView) {
             // Update native C++ User Agent & Preferred Content Mode
-            webView.customUserAgent = parent.privacyProfile.effectiveUserAgent
+            webView.customUserAgent = parent.privacyProfile.effectiveUserAgent.isEmpty ? nil : parent.privacyProfile.effectiveUserAgent
             webView.configuration.defaultWebpagePreferences.preferredContentMode = parent.privacyProfile.selectedDevice.preferredContentMode
 
             let ucc = webView.configuration.userContentController

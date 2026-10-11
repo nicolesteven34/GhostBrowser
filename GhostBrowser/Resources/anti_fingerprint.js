@@ -62,22 +62,27 @@
                                     const s = result.signals;
                                     const seedNum = Number(cfg.sessionSeed) || 123456;
                                     const toolbarOffset = (seedNum % 3) * 24;
-                                    const availH = cfg.screenHeight - toolbarOffset;
 
-                                    // Display metrics
+                                    // Display metrics with dynamic viewport harmonization
+                                    const winW = typeof window !== 'undefined' ? (window.innerWidth || 0) : 0;
+                                    const winH = typeof window !== 'undefined' ? (window.innerHeight || 0) : 0;
+                                    const effW = Math.max(cfg.screenWidth, winW);
+                                    const effH = Math.max(cfg.screenHeight, winH);
+                                    const availH = Math.max(winH, effH - toolbarOffset);
+
                                     s.screen = {
-                                        width: cfg.screenWidth,
-                                        height: cfg.screenHeight,
-                                        availWidth: cfg.screenWidth,
+                                        width: effW,
+                                        height: effH,
+                                        availWidth: effW,
                                         availHeight: availH,
                                         colorDepth: 24,
                                         pixelDepth: 24,
                                         devicePixelRatio: cfg.devicePixelRatio,
                                         multiScreen: false,
-                                        orientationType: "landscape-primary",
+                                        orientationType: effW > effH ? "landscape-primary" : "portrait-primary",
                                         orientationAngle: 0
                                     };
-                                    s.screenResolution = `${cfg.screenWidth}x${cfg.screenHeight}`;
+                                    s.screenResolution = `${effW}x${effH}`;
                                     s.pixelRatio = cfg.devicePixelRatio;
                                     s.colorDepth = 24;
 

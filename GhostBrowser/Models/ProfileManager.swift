@@ -59,9 +59,11 @@ public class ProfileManager: ObservableObject {
         let realisticPool: [AppleDeviceProfile] = [
             .iPadProM4_13,
             .iPadAirM2_11,
-            .macBookProM3Max_16,
+            .macBookProM4Max_16,
+            .iPhone16ProMax_A18,
+            .iPhone16_A18,
+            .macBookAirM3_13,
             .iPhone15ProMax_A17,
-            .macBookAirM2_13,
             .iPadMini6_A15
         ]
         let chosenDevice = deviceProfile ?? (realisticPool.randomElement() ?? .iPadProM4_13)
@@ -126,13 +128,14 @@ public class ProfileManager: ObservableObject {
         let pool: [AppleDeviceProfile] = [
             .iPadProM4_13,
             .iPadAirM2_11,
-            .macBookProM3Max_16,
+            .macBookProM4Max_16,
+            .iPhone16ProMax_A18,
+            .iPhone16_A18,
+            .macBookAirM3_13,
             .iPhone15ProMax_A17,
-            .macBookAirM2_13,
-            .iPhone14_A15,
             .iPadMini6_A15
         ]
-        let candidate = pool.filter { $0 != current }.randomElement() ?? .iPhone15ProMax_A17
+        let candidate = pool.filter { $0 != current }.randomElement() ?? .iPhone16ProMax_A18
         profiles[index].deviceProfile = candidate
         profiles[index].sessionSeed = Int.random(in: 100000...999999)
         profiles[index].buildIndex = Int.random(in: 0...4)
