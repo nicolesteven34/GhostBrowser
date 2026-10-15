@@ -29,6 +29,19 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
     public var virtualCameraPanY: Double
     public var virtualCameraZoom: Double
 
+    // SOCKS5 / HTTP Network Proxy Configuration
+    public var proxyEnabled: Bool
+    public var proxyType: String
+    public var proxyHost: String
+    public var proxyPort: Int
+    public var proxyUsername: String
+    public var proxyPassword: String
+    public var proxyDetectedIP: String
+    public var proxyDetectedCity: String
+    public var proxyDetectedCountry: String
+    public var proxyDetectedISP: String
+    public var proxyDetectedTimezone: String
+
     public init(
         id: UUID = UUID(),
         name: String = "Default Profile",
@@ -51,7 +64,18 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         virtualCameraImageBase64: String = "",
         virtualCameraPanX: Double = 0.0,
         virtualCameraPanY: Double = 0.0,
-        virtualCameraZoom: Double = 1.0
+        virtualCameraZoom: Double = 1.0,
+        proxyEnabled: Bool = false,
+        proxyType: String = "SOCKS5",
+        proxyHost: String = "",
+        proxyPort: Int = 1080,
+        proxyUsername: String = "",
+        proxyPassword: String = "",
+        proxyDetectedIP: String = "",
+        proxyDetectedCity: String = "",
+        proxyDetectedCountry: String = "",
+        proxyDetectedISP: String = "",
+        proxyDetectedTimezone: String = ""
     ) {
         self.id = id
         self.name = name
@@ -75,6 +99,17 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         self.virtualCameraPanX = virtualCameraPanX
         self.virtualCameraPanY = virtualCameraPanY
         self.virtualCameraZoom = virtualCameraZoom
+        self.proxyEnabled = proxyEnabled
+        self.proxyType = proxyType
+        self.proxyHost = proxyHost
+        self.proxyPort = proxyPort
+        self.proxyUsername = proxyUsername
+        self.proxyPassword = proxyPassword
+        self.proxyDetectedIP = proxyDetectedIP
+        self.proxyDetectedCity = proxyDetectedCity
+        self.proxyDetectedCountry = proxyDetectedCountry
+        self.proxyDetectedISP = proxyDetectedISP
+        self.proxyDetectedTimezone = proxyDetectedTimezone
     }
 
     public init(from decoder: Decoder) throws {
@@ -85,7 +120,7 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         themeColorHex = try container.decode(String.self, forKey: .themeColorHex)
         deviceProfile = try container.decode(AppleDeviceProfile.self, forKey: .deviceProfile)
         sessionSeed = try container.decode(Int.self, forKey: .sessionSeed)
-        buildIndex = try container.decode(Int.self, forKey: .buildIndex)
+        buildIndex = try container.decodeIfPresent(Int.self, forKey: .buildIndex) ?? 0
         customUserAgent = try container.decodeIfPresent(String.self, forKey: .customUserAgent) ?? ""
         searchEngine = try container.decodeIfPresent(SearchEngine.self, forKey: .searchEngine) ?? .localStartPage
         tabs = try container.decodeIfPresent([BrowserTab].self, forKey: .tabs) ?? [BrowserTab()]
@@ -101,6 +136,17 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         virtualCameraPanX = try container.decodeIfPresent(Double.self, forKey: .virtualCameraPanX) ?? 0.0
         virtualCameraPanY = try container.decodeIfPresent(Double.self, forKey: .virtualCameraPanY) ?? 0.0
         virtualCameraZoom = try container.decodeIfPresent(Double.self, forKey: .virtualCameraZoom) ?? 1.0
+        proxyEnabled = try container.decodeIfPresent(Bool.self, forKey: .proxyEnabled) ?? false
+        proxyType = try container.decodeIfPresent(String.self, forKey: .proxyType) ?? "SOCKS5"
+        proxyHost = try container.decodeIfPresent(String.self, forKey: .proxyHost) ?? ""
+        proxyPort = try container.decodeIfPresent(Int.self, forKey: .proxyPort) ?? 1080
+        proxyUsername = try container.decodeIfPresent(String.self, forKey: .proxyUsername) ?? ""
+        proxyPassword = try container.decodeIfPresent(String.self, forKey: .proxyPassword) ?? ""
+        proxyDetectedIP = try container.decodeIfPresent(String.self, forKey: .proxyDetectedIP) ?? ""
+        proxyDetectedCity = try container.decodeIfPresent(String.self, forKey: .proxyDetectedCity) ?? ""
+        proxyDetectedCountry = try container.decodeIfPresent(String.self, forKey: .proxyDetectedCountry) ?? ""
+        proxyDetectedISP = try container.decodeIfPresent(String.self, forKey: .proxyDetectedISP) ?? ""
+        proxyDetectedTimezone = try container.decodeIfPresent(String.self, forKey: .proxyDetectedTimezone) ?? ""
     }
 
     public static let availableIcons = [

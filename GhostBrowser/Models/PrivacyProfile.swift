@@ -329,7 +329,48 @@ public class PrivacyProfile: ObservableObject {
     @Published public var virtualCameraPanY: Double = 0.0
     @Published public var virtualCameraZoom: Double = 1.0
 
-    public init() {}
+    // SOCKS5 / HTTP Network Proxy Configuration
+    @Published public var proxyEnabled: Bool = false
+    @Published public var proxyType: String = "SOCKS5"
+    @Published public var proxyHost: String = ""
+    @Published public var proxyPort: Int = 1080
+    @Published public var proxyUsername: String = ""
+    @Published public var proxyPassword: String = ""
+    @Published public var proxyDetectedIP: String = ""
+    @Published public var proxyDetectedCity: String = ""
+    @Published public var proxyDetectedCountry: String = ""
+    @Published public var proxyDetectedISP: String = ""
+    @Published public var proxyDetectedTimezone: String = ""
+
+    public init() {
+        let active = ProfileManager.shared.activeProfile
+        self.selectedDevice = active.deviceProfile
+        self.customUserAgent = active.customUserAgent
+        self.searchEngine = active.searchEngine
+        self.sessionSeed = active.sessionSeed
+        self.buildIndex = active.buildIndex
+        self.sessionDataStoreID = active.id
+        self.mockLocationEnabled = active.mockLocationEnabled
+        self.mockLatitude = active.mockLatitude
+        self.mockLongitude = active.mockLongitude
+        self.mockLocationName = active.mockLocationName
+        self.virtualCameraEnabled = active.virtualCameraEnabled
+        self.virtualCameraImageBase64 = active.virtualCameraImageBase64
+        self.virtualCameraPanX = active.virtualCameraPanX
+        self.virtualCameraPanY = active.virtualCameraPanY
+        self.virtualCameraZoom = active.virtualCameraZoom
+        self.proxyEnabled = active.proxyEnabled
+        self.proxyType = active.proxyType
+        self.proxyHost = active.proxyHost
+        self.proxyPort = active.proxyPort
+        self.proxyUsername = active.proxyUsername
+        self.proxyPassword = active.proxyPassword
+        self.proxyDetectedIP = active.proxyDetectedIP
+        self.proxyDetectedCity = active.proxyDetectedCity
+        self.proxyDetectedCountry = active.proxyDetectedCountry
+        self.proxyDetectedISP = active.proxyDetectedISP
+        self.proxyDetectedTimezone = active.proxyDetectedTimezone
+    }
 
     public func rotateIdentitySeed() {
         let oldStore = sessionDataStoreID
@@ -430,6 +471,12 @@ public class PrivacyProfile: ObservableObject {
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "\n", with: "")
 
+        let escapedProxyIp = proxyEnabled ? proxyDetectedIP.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedProxyCity = proxyEnabled ? proxyDetectedCity.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedProxyCountry = proxyEnabled ? proxyDetectedCountry.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedProxyIsp = proxyEnabled ? proxyDetectedISP.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedTimezone = proxyEnabled ? proxyDetectedTimezone.replacingOccurrences(of: "\"", with: "") : ""
+
         return """
         window.__GHOST_VISITOR_ID__ = "\(visitorID)";
         window.__GHOST_CONFIG__ = {
@@ -452,14 +499,21 @@ public class PrivacyProfile: ObservableObject {
             screenWidth: \(effectiveScreenWidth),
             screenHeight: \(effectiveScreenHeight),
             devicePixelRatio: \(effectiveDevicePixelRatio),
-            mockLocationEnabled: \(mockLocationEnabled),
+            mockLocationEnabled: \(mockLocationEnabled || (proxyEnabled && !escapedProxyIp.isEmpty)),
             mockLatitude: \(mockLatitude),
             mockLongitude: \(mockLongitude),
             virtualCameraEnabled: \(virtualCameraEnabled),
             virtualCameraImage: "\(escapedVirtualImg)",
             virtualCameraPanX: \(virtualCameraPanX),
             virtualCameraPanY: \(virtualCameraPanY),
-            virtualCameraZoom: \(virtualCameraZoom)
+            virtualCameraZoom: \(virtualCameraZoom),
+            proxyEnabled: \(proxyEnabled),
+            proxyType: "\(proxyType)",
+            proxyIp: "\(escapedProxyIp)",
+            proxyCity: "\(escapedProxyCity)",
+            proxyCountry: "\(escapedProxyCountry)",
+            proxyIsp: "\(escapedProxyIsp)",
+            timezone: "\(escapedTimezone)"
         };
         """
     }

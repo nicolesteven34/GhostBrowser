@@ -3,6 +3,7 @@ import SwiftUI
 public struct ContentView: View {
     @StateObject private var privacyProfile = PrivacyProfile()
     @StateObject private var profileManager = ProfileManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var tabs: [BrowserTab]
     @State private var activeTabID: UUID
@@ -87,6 +88,26 @@ public struct ContentView: View {
             privacyProfile.sessionDataStoreID = active.id
             privacyProfile.searchEngine = active.searchEngine
             privacyProfile.customUserAgent = active.customUserAgent
+            privacyProfile.mockLocationEnabled = active.mockLocationEnabled
+            privacyProfile.mockLatitude = active.mockLatitude
+            privacyProfile.mockLongitude = active.mockLongitude
+            privacyProfile.mockLocationName = active.mockLocationName
+            privacyProfile.virtualCameraEnabled = active.virtualCameraEnabled
+            privacyProfile.virtualCameraImageBase64 = active.virtualCameraImageBase64
+            privacyProfile.virtualCameraPanX = active.virtualCameraPanX
+            privacyProfile.virtualCameraPanY = active.virtualCameraPanY
+            privacyProfile.virtualCameraZoom = active.virtualCameraZoom
+            privacyProfile.proxyEnabled = active.proxyEnabled
+            privacyProfile.proxyType = active.proxyType
+            privacyProfile.proxyHost = active.proxyHost
+            privacyProfile.proxyPort = active.proxyPort
+            privacyProfile.proxyUsername = active.proxyUsername
+            privacyProfile.proxyPassword = active.proxyPassword
+            privacyProfile.proxyDetectedIP = active.proxyDetectedIP
+            privacyProfile.proxyDetectedCity = active.proxyDetectedCity
+            privacyProfile.proxyDetectedCountry = active.proxyDetectedCountry
+            privacyProfile.proxyDetectedISP = active.proxyDetectedISP
+            privacyProfile.proxyDetectedTimezone = active.proxyDetectedTimezone
 
             if tabs.isEmpty {
                 let initial = BrowserTab()
@@ -94,6 +115,11 @@ public struct ContentView: View {
                 activeTabID = initial.id
             } else if !tabs.contains(where: { $0.id == activeTabID }) {
                 activeTabID = tabs[0].id
+            }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .background || newPhase == .inactive {
+                profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("GhostOpenNewTab"))) { notif in
@@ -218,22 +244,23 @@ public struct ContentView: View {
                 )
             }
 
-            // Media & Sensors HUD (Virtual Camera & Mock GPS)
+            // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera & Mock GPS)
             Button(action: {
                 showSessionToolsSheet = true
             }) {
+                let isHudActive = privacyProfile.proxyEnabled || privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled
                 HStack(spacing: 4) {
-                    Image(systemName: (privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled) ? "camera.viewfinder" : "location.viewfinder")
+                    Image(systemName: privacyProfile.proxyEnabled ? "network.badge.shield.half.filled" : (privacyProfile.virtualCameraEnabled ? "camera.viewfinder" : "location.viewfinder"))
                         .font(.system(size: 14, weight: .semibold))
-                    if privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled {
+                    if isHudActive {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 6, height: 6)
                     }
                 }
-                .foregroundColor((privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled) ? Color(hex: profileManager.activeProfile.themeColorHex) : .secondary)
+                .foregroundColor(isHudActive ? Color(hex: profileManager.activeProfile.themeColorHex) : .secondary)
                 .padding(8)
-                .background((privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled) ? Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.15) : Color(.systemGray6))
+                .background(isHudActive ? Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.15) : Color(.systemGray6))
                 .clipShape(Circle())
             }
             .sheet(isPresented: $showSessionToolsSheet) {

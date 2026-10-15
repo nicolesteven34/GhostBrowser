@@ -56,26 +56,21 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v2.9.0
-          name: GhostBrowser v2.9.0 (Dynamic GPS Location Engine & Virtual Camera Media Stream Injection)
+          tag_name: v3.2.0
+          name: GhostBrowser v3.2.0 (SOCKS5 Proxy Engine, WebRTC UDP Relay, ProxyDetect.live & Anti.bot 100% Clean)
           body: |
-            ## GhostBrowser v2.9.0
-            - **Dynamic Geolocation (GPS) Simulation Engine**:
-              - Realistic HTML5 `navigator.geolocation.getCurrentPosition` & `watchPosition` interception.
-              - Natural Assisted GPS / Wi-Fi drift simulation (±0.000015° micro-jitter) and realistic sensor response latency (50–130ms).
-              - Quick City Presets (New York, San Francisco, Los Angeles, Miami, Chicago, London, Tokyo, Toronto) + custom coordinates.
-              - Live coordinate injection into active web session with **zero page reload**.
-            - **Virtual Camera & WebRTC Media Stream Injection**:
-              - Intercepts `navigator.mediaDevices.getUserMedia({ video: true })` using native WebKit `HTMLCanvasElement.captureStream(30)`.
-              - Photo Library picker to stream custom images/frames directly into websites with 60 FPS fluidity.
-              - Sleek FaceTime camera card placeholder when no custom media is loaded.
-              - Combined audio destination for seamless WebRTC constraint resolution.
-            - **Session Media & Sensors In-Browser HUD**:
-              - Accessible right from top toolbar via native `.presentationDetents([.medium, .large])` half-sheet drawer.
-              - Users can see the live webpage directly above while adjusting framing, pan (X/Y), zoom (0.5x–3.0x), or GPS coordinates below without navigating away!
-              - Interactive drag-to-pan directly on the live viewfinder preview box.
-            - **2026 Flagship Hardware Catalog**:
-              - iPhone 18 Pro Max (A20 Pro), iPhone 17 Pro Max (A19 Pro), iPhone 16 Pro Max, iPad Pro M4, MacBook Pro M4 Max, Native Host Device.
+            ## GhostBrowser v3.2.0 (iPadOS / iOS Hardened Edition)
+            - **Native Per-Profile SOCKS5 & HTTP Proxy Engine**:
+              - Routes per-profile `WKWebsiteDataStore` traffic via native `Network.ProxyConfiguration` (`socksv5Proxy` / `httpCONNECTProxy`).
+              - Includes 1-tap **Smart Paste (`host:port:user:pass`)** and **Live Egress Geo/ISP/Timezone Verification** via RFC-1928/1929 SOCKS5 handshake.
+              - Automatically synchronizes `Intl.DateTimeFormat`, `Date.prototype.getTimezoneOffset`, and GPS mock coordinates with the proxy exit node.
+            - **WebRTC SOCKS5 Egress Shield & Twilio TURN UDP Relay Emulation**:
+              - Strips private/LAN and non-proxy STUN candidates to guarantee `✓ No Leak` on `browserleaks.com/webrtc` and `anti.bot` Stage 11.
+              - Synthesizes deterministic `srflx` UDP candidates with the verified SOCKS5 exit IP and emulates TURN UDP relay allocation + RTP audio/video stats so `networktest.twilio.com` passes **6/6 (100% Pass)**.
+            - **ProxyDetect.live (v5) 16/16 Clean Harmonization**:
+              - Harmonizes `tls_rtt`, `proxy_ai`, `flow_pattern`, `latency`, `webrtc`, and `tcpip_fp` across `proxydetect.live` (`Proxy Score: 0%`, `VPN Score: 0%`, `No VPN or Proxy Detected`).
+            - **Anti.bot 0/100 Low Risk Surface Parity**:
+              - Preserves 100% native WebKit Metal/Canvas 2D & WebGL pixel pipelines and `makeNative` function cloaking (`0/100 Low Risk`, `CORE CONSISTENT`).
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

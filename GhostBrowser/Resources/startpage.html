@@ -499,6 +499,12 @@
         <!-- Quick Test Targets from more.txt -->
         <div class="favorites-section-title">Bot &amp; Fingerprint Test Targets</div>
         <div class="favorites-grid">
+            <div class="fav-item" onclick="navigate('ghost://detect')">
+                <div class="fav-icon" style="border-color: rgba(0, 242, 254, 0.5); background: rgba(0, 242, 254, 0.08);">
+                    <span class="fav-fallback" style="display: flex; font-size: 18px;">🧪</span>
+                </div>
+                <span class="fav-label">TestCheck</span>
+            </div>
             <div class="fav-item" onclick="navigate('https://fingerprint.com/demo/')">
                 <div class="fav-icon" style="border-color: rgba(255, 93, 34, 0.35);">
                     <img class="fav-img" src="https://icons.duckduckgo.com/ip3/fingerprint.com.ico" alt="FP" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -555,14 +561,26 @@
                 </div>
                 <span class="fav-label">ProxyDetect</span>
             </div>
-            <div class="fav-item" onclick="navigate('https://browserleaks.com/canvas')">
+            <div class="fav-item" onclick="navigate('https://anti.bot/')">
+                <div class="fav-icon" style="border-color: rgba(48, 209, 88, 0.45);">
+                    <span class="fav-fallback" style="display: flex; color: #30D158;">AB</span>
+                </div>
+                <span class="fav-label">Anti.bot</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://networktest.twilio.com/')">
+                <div class="fav-icon" style="border-color: rgba(242, 47, 70, 0.45);">
+                    <span class="fav-fallback" style="display: flex; color: #F22F46;">TW</span>
+                </div>
+                <span class="fav-label">Twilio UDP</span>
+            </div>
+            <div class="fav-item" onclick="navigate('https://browserleaks.com/webrtc')">
                 <div class="fav-icon" style="border-color: rgba(191, 90, 242, 0.35);">
                     <img class="fav-img" src="https://icons.duckduckgo.com/ip3/browserleaks.com.ico" alt="BL" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <span class="fav-fallback" style="display: none; color: #BF5AF2;">BL</span>
                 </div>
                 <span class="fav-label">BrowserLeaks</span>
             </div>
-            <div class="fav-item" onclick="navigate('https://label-nutritional-chess-analysis.trycloudflare.com')">
+            <div class="fav-item" onclick="navigate('ghost://detect')">
                 <div class="fav-icon" style="border-color: rgba(48, 209, 88, 0.35);">
                     <span class="fav-fallback" style="color: #30D158;">GD</span>
                 </div>

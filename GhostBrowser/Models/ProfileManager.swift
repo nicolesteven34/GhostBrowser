@@ -110,6 +110,17 @@ public class ProfileManager: ObservableObject {
             privacyProfile.virtualCameraPanX = target.virtualCameraPanX
             privacyProfile.virtualCameraPanY = target.virtualCameraPanY
             privacyProfile.virtualCameraZoom = target.virtualCameraZoom
+            privacyProfile.proxyEnabled = target.proxyEnabled
+            privacyProfile.proxyType = target.proxyType
+            privacyProfile.proxyHost = target.proxyHost
+            privacyProfile.proxyPort = target.proxyPort
+            privacyProfile.proxyUsername = target.proxyUsername
+            privacyProfile.proxyPassword = target.proxyPassword
+            privacyProfile.proxyDetectedIP = target.proxyDetectedIP
+            privacyProfile.proxyDetectedCity = target.proxyDetectedCity
+            privacyProfile.proxyDetectedCountry = target.proxyDetectedCountry
+            privacyProfile.proxyDetectedISP = target.proxyDetectedISP
+            privacyProfile.proxyDetectedTimezone = target.proxyDetectedTimezone
         }
     }
 
@@ -124,6 +135,17 @@ public class ProfileManager: ObservableObject {
         profiles[index].virtualCameraPanX = privacyProfile.virtualCameraPanX
         profiles[index].virtualCameraPanY = privacyProfile.virtualCameraPanY
         profiles[index].virtualCameraZoom = privacyProfile.virtualCameraZoom
+        profiles[index].proxyEnabled = privacyProfile.proxyEnabled
+        profiles[index].proxyType = privacyProfile.proxyType
+        profiles[index].proxyHost = privacyProfile.proxyHost
+        profiles[index].proxyPort = privacyProfile.proxyPort
+        profiles[index].proxyUsername = privacyProfile.proxyUsername
+        profiles[index].proxyPassword = privacyProfile.proxyPassword
+        profiles[index].proxyDetectedIP = privacyProfile.proxyDetectedIP
+        profiles[index].proxyDetectedCity = privacyProfile.proxyDetectedCity
+        profiles[index].proxyDetectedCountry = privacyProfile.proxyDetectedCountry
+        profiles[index].proxyDetectedISP = privacyProfile.proxyDetectedISP
+        profiles[index].proxyDetectedTimezone = privacyProfile.proxyDetectedTimezone
         saveProfiles()
     }
 
@@ -177,6 +199,7 @@ public class ProfileManager: ObservableObject {
     }
 
     public func clearProfileData(id: UUID) {
+        UserDefaults.standard.removeObject(forKey: "ghost_vault_cookies_\(id.uuidString)")
         if #available(iOS 17.0, *) {
             WKWebsiteDataStore.remove(forIdentifier: id) { _ in }
         }
@@ -184,6 +207,64 @@ public class ProfileManager: ObservableObject {
         if let cookies = HTTPCookieStorage.shared.cookies {
             for cookie in cookies {
                 HTTPCookieStorage.shared.deleteCookie(cookie)
+            }
+        }
+    }
+
+    public func backupCookies(for profileID: UUID, from cookieStore: WKHTTPCookieStore) {
+        cookieStore.getAllCookies { cookies in
+            var serializedList: [[String: Any]] = []
+            for c in cookies {
+                var dict: [String: Any] = [:]
+                dict["name"] = c.name
+                dict["value"] = c.value
+                dict["domain"] = c.domain
+                dict["path"] = c.path
+                dict["isSecure"] = c.isSecure
+                dict["isHTTPOnly"] = c.isHTTPOnly
+                if let exp = c.expiresDate {
+                    dict["expires"] = exp.timeIntervalSince1970
+                }
+                if let sameSite = c.sameSitePolicy {
+                    dict["sameSite"] = sameSite.rawValue
+                }
+                serializedList.append(dict)
+            }
+            if let data = try? JSONSerialization.data(withJSONObject: serializedList, options: []) {
+                UserDefaults.standard.set(data, forKey: "ghost_vault_cookies_\(profileID.uuidString)")
+            }
+        }
+    }
+
+    public func restoreCookies(for profileID: UUID, into cookieStore: WKHTTPCookieStore) {
+        guard let data = UserDefaults.standard.data(forKey: "ghost_vault_cookies_\(profileID.uuidString)"),
+              let rawList = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] else {
+            return
+        }
+        for dict in rawList {
+            guard let name = dict["name"] as? String,
+                  let value = dict["value"] as? String,
+                  let domain = dict["domain"] as? String,
+                  let path = dict["path"] as? String else {
+                continue
+            }
+            var props: [HTTPCookiePropertyKey: Any] = [
+                .name: name,
+                .value: value,
+                .domain: domain,
+                .path: path
+            ]
+            if let isSecure = dict["isSecure"] as? Bool, isSecure {
+                props[.secure] = "TRUE"
+            }
+            if let expiresSec = dict["expires"] as? Double {
+                props[.expires] = Date(timeIntervalSince1970: expiresSec)
+            }
+            if let sameSiteRaw = dict["sameSite"] as? String {
+                props[.sameSitePolicy] = sameSiteRaw
+            }
+            if let cookie = HTTPCookie(properties: props) {
+                cookieStore.setCookie(cookie)
             }
         }
     }

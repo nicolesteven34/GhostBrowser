@@ -1,17 +1,24 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 public struct SessionToolsSheet: View {
     @ObservedObject var privacyProfile: PrivacyProfile
     @ObservedObject var profileManager: ProfileManager
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedTab: ToolTab = .gps
+    @State private var selectedTab: ToolTab = .proxy
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var previewImage: UIImage? = nil
     @State private var isProcessingImage: Bool = false
 
+    // Proxy Testing State
+    @State private var isTestingProxy: Bool = false
+    @State private var proxyStatusMessage: String = ""
+    @State private var proxyStatusError: Bool = false
+
     public enum ToolTab: String, CaseIterable, Identifiable {
+        case proxy = "SOCKS5 Proxy"
         case gps = "GPS Location"
         case camera = "Virtual Camera"
 
@@ -47,6 +54,7 @@ public struct SessionToolsSheet: View {
             VStack(spacing: 0) {
                 // Segmented Tab Control
                 Picker("Tool Mode", selection: $selectedTab) {
+                    Label("SOCKS5 Proxy", systemImage: "network.badge.shield.half.filled").tag(ToolTab.proxy)
                     Label("GPS Location", systemImage: "location.fill.viewfinder").tag(ToolTab.gps)
                     Label("Virtual Camera", systemImage: "camera.viewfinder").tag(ToolTab.camera)
                 }
@@ -57,7 +65,9 @@ public struct SessionToolsSheet: View {
 
                 ScrollView {
                     VStack(spacing: 18) {
-                        if selectedTab == .gps {
+                        if selectedTab == .proxy {
+                            proxySection
+                        } else if selectedTab == .gps {
                             gpsSection
                         } else {
                             cameraSection
@@ -66,7 +76,7 @@ public struct SessionToolsSheet: View {
                     .padding(16)
                 }
             }
-            .navigationTitle("Session Media & Sensors")
+            .navigationTitle("Proxy, GPS & Camera HUD")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -82,6 +92,251 @@ public struct SessionToolsSheet: View {
         .presentationDragIndicator(.visible)
         .onAppear {
             loadExistingPreview()
+        }
+    }
+
+    // MARK: - SOCKS5 / HTTP Proxy Section
+    private var proxySection: some View {
+        VStack(spacing: 16) {
+            // Master Toggle Card
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Route Profile via SOCKS5 / HTTP Proxy")
+                        .font(.headline)
+                    Text("Native WebKit proxy routing + WebRTC UDP srflx & TURN relay harmonization")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Toggle("", isOn: $privacyProfile.proxyEnabled)
+                    .labelsHidden()
+                    .onChange(of: privacyProfile.proxyEnabled) { _ in
+                        profileManager.saveProfileSensors(from: privacyProfile)
+                    }
+            }
+            .padding(14)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+
+            // Smart Paste Button
+            Button(action: {
+                if let clip = UIPasteboard.general.string,
+                   let parsed = ProxyService.shared.parseSmartProxy(clip) {
+                    privacyProfile.proxyType = parsed.proxyType
+                    privacyProfile.proxyHost = parsed.host
+                    privacyProfile.proxyPort = parsed.port
+                    privacyProfile.proxyUsername = parsed.username
+                    privacyProfile.proxyPassword = parsed.password
+                    privacyProfile.proxyEnabled = true
+                    profileManager.saveProfileSensors(from: privacyProfile)
+                    verifyAndSyncProxy()
+                } else {
+                    proxyStatusError = true
+                    proxyStatusMessage = "Clipboard does not match host:port:user:pass or user:pass@host:port"
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.on.clipboard.fill")
+                    Text("Smart Paste Proxy (host:port:user:pass)")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.blue.opacity(0.14))
+                .foregroundColor(.blue)
+                .cornerRadius(10)
+            }
+
+            // Proxy Connection Fields
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Protocol:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 85, alignment: .leading)
+                    Picker("Protocol", selection: $privacyProfile.proxyType) {
+                        Text("SOCKS5").tag("SOCKS5")
+                        Text("HTTP").tag("HTTP")
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: privacyProfile.proxyType) { _ in
+                        profileManager.saveProfileSensors(from: privacyProfile)
+                    }
+                }
+
+                HStack {
+                    Text("Host / IP:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 85, alignment: .leading)
+                    TextField("resident.lightningproxies.net", text: $privacyProfile.proxyHost)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .onChange(of: privacyProfile.proxyHost) { _ in
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }
+                }
+
+                HStack {
+                    Text("Port:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 85, alignment: .leading)
+                    TextField("1080", value: $privacyProfile.proxyPort, format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .keyboardType(.numberPad)
+                        .onChange(of: privacyProfile.proxyPort) { _ in
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }
+                }
+
+                HStack {
+                    Text("Username:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 85, alignment: .leading)
+                    TextField("Optional username", text: $privacyProfile.proxyUsername)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .onChange(of: privacyProfile.proxyUsername) { _ in
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }
+                }
+
+                HStack {
+                    Text("Password:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 85, alignment: .leading)
+                    SecureField("Optional password", text: $privacyProfile.proxyPassword)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .onChange(of: privacyProfile.proxyPassword) { _ in
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }
+                }
+            }
+            .padding(14)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+
+            // Verify & Auto-Sync Button
+            Button(action: {
+                verifyAndSyncProxy()
+            }) {
+                HStack(spacing: 8) {
+                    if isTestingProxy {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    Text(isTestingProxy ? "Testing SOCKS5 Egress & Resolving Geo..." : "Verify Proxy & Auto-Sync Geo / Timezone")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .disabled(isTestingProxy || privacyProfile.proxyHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if !proxyStatusMessage.isEmpty {
+                Text(proxyStatusMessage)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(proxyStatusError ? .red : .green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Verified Egress Telemetry Card
+            if !privacyProfile.proxyDetectedIP.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(.green)
+                        Text("Verified Egress: \(privacyProfile.proxyDetectedIP)")
+                            .font(.system(.subheadline, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                        Spacer()
+                        Text(privacyProfile.proxyType)
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.15))
+                            .foregroundColor(.green)
+                            .cornerRadius(4)
+                    }
+
+                    Text("Location: \(privacyProfile.proxyDetectedCity), \(privacyProfile.proxyDetectedCountry) • TZ: \(privacyProfile.proxyDetectedTimezone)")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+
+                    if !privacyProfile.proxyDetectedISP.isEmpty {
+                        Text("ISP / ASN: \(privacyProfile.proxyDetectedISP)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(12)
+                .background(Color.green.opacity(0.08))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                )
+            }
+        }
+    }
+
+    private func verifyAndSyncProxy() {
+        isTestingProxy = true
+        proxyStatusMessage = ""
+        proxyStatusError = false
+
+        let pType = privacyProfile.proxyType
+        let pHost = privacyProfile.proxyHost
+        let pPort = privacyProfile.proxyPort
+        let pUser = privacyProfile.proxyUsername
+        let pPass = privacyProfile.proxyPassword
+
+        Task {
+            let res = await ProxyService.shared.testProxyAsync(
+                type: pType,
+                host: pHost,
+                port: pPort,
+                username: pUser,
+                password: pPass
+            )
+            await MainActor.run {
+                isTestingProxy = false
+                if res.success {
+                    privacyProfile.proxyEnabled = true
+                    privacyProfile.proxyDetectedIP = res.ip
+                    privacyProfile.proxyDetectedCity = res.city
+                    privacyProfile.proxyDetectedCountry = res.country
+                    privacyProfile.proxyDetectedISP = res.isp
+                    privacyProfile.proxyDetectedTimezone = res.timezoneId
+                    privacyProfile.mockLocationEnabled = true
+                    privacyProfile.mockLatitude = res.latitude
+                    privacyProfile.mockLongitude = res.longitude
+                    privacyProfile.mockLocationName = "\(res.city), \(res.country)"
+                    profileManager.saveProfileSensors(from: privacyProfile)
+                    proxyStatusError = false
+                    proxyStatusMessage = "✓ Verified \(res.ip) (\(res.city), \(res.country)) — Timezone & WebRTC Egress synced!"
+                } else {
+                    proxyStatusError = true
+                    proxyStatusMessage = "✗ \(res.errorMessage)"
+                }
+            }
         }
     }
 

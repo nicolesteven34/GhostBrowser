@@ -45,12 +45,21 @@ public struct BrowserView: UIViewRepresentable {
         let configuration = WKWebViewConfiguration()
 
         // 1. Data Store: Independent persistent profile data store on iOS 17+
+        let dataStore: WKWebsiteDataStore
         if privacyProfile.ephemeralRAMMode {
-            configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
+            dataStore = WKWebsiteDataStore.nonPersistent()
         } else if #available(iOS 17.0, *) {
-            configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: privacyProfile.sessionDataStoreID)
+            dataStore = WKWebsiteDataStore(forIdentifier: privacyProfile.sessionDataStoreID)
         } else {
-            configuration.websiteDataStore = WKWebsiteDataStore.default()
+            dataStore = WKWebsiteDataStore.default()
+        }
+        configuration.websiteDataStore = dataStore
+
+        // Apply Native C++ Network Proxy (SOCKS5 / HTTP) to WKWebsiteDataStore
+        ProxyService.shared.applyProxy(to: dataStore, profile: privacyProfile)
+
+        if !privacyProfile.ephemeralRAMMode {
+            ProfileManager.shared.restoreCookies(for: privacyProfile.sessionDataStoreID, into: dataStore.httpCookieStore)
         }
 
         let userContentController = WKUserContentController()
@@ -104,6 +113,37 @@ public struct BrowserView: UIViewRepresentable {
         context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
         context.coordinator.lastReloadTrigger = reloadTrigger
         context.coordinator.lastWipeTrigger = wipeTrigger
+        context.coordinator.lastProxyEnabled = privacyProfile.proxyEnabled
+        context.coordinator.lastProxyHost = privacyProfile.proxyHost
+        context.coordinator.lastProxyPort = privacyProfile.proxyPort
+        context.coordinator.lastProxyDetectedIP = privacyProfile.proxyDetectedIP
+        context.coordinator.lastProxyTimezone = privacyProfile.proxyDetectedTimezone
+
+        // Auto-resolve proxy exit IP & timezone if enabled and not yet resolved
+        if privacyProfile.proxyEnabled && privacyProfile.proxyDetectedIP.isEmpty && !privacyProfile.proxyHost.isEmpty {
+            let pType = privacyProfile.proxyType
+            let pHost = privacyProfile.proxyHost
+            let pPort = privacyProfile.proxyPort
+            let pUser = privacyProfile.proxyUsername
+            let pPass = privacyProfile.proxyPassword
+            Task {
+                let res = await ProxyService.shared.testProxyAsync(type: pType, host: pHost, port: pPort, username: pUser, password: pPass)
+                if res.success {
+                    await MainActor.run {
+                        privacyProfile.proxyDetectedIP = res.ip
+                        privacyProfile.proxyDetectedCity = res.city
+                        privacyProfile.proxyDetectedCountry = res.country
+                        privacyProfile.proxyDetectedISP = res.isp
+                        privacyProfile.proxyDetectedTimezone = res.timezoneId
+                        privacyProfile.mockLocationEnabled = true
+                        privacyProfile.mockLatitude = res.latitude
+                        privacyProfile.mockLongitude = res.longitude
+                        privacyProfile.mockLocationName = "\(res.city), \(res.country)"
+                        ProfileManager.shared.saveProfileSensors(from: privacyProfile)
+                    }
+                }
+            }
+        }
 
         // Load initial content
         if currentURLString == "local://startpage" || currentURLString.isEmpty {
@@ -118,17 +158,33 @@ public struct BrowserView: UIViewRepresentable {
     public func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.parent = self
 
-        // Detect device profile, user agent, or session seed changes
+        // Detect device profile, user agent, session seed, or proxy changes
         let profileChanged = context.coordinator.lastProfileDevice != privacyProfile.selectedDevice
         let uaChanged = context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent
         let seedChanged = context.coordinator.lastSessionSeed != privacyProfile.sessionSeed
+        let proxyChanged = context.coordinator.lastProxyEnabled != privacyProfile.proxyEnabled
+            || context.coordinator.lastProxyHost != privacyProfile.proxyHost
+            || context.coordinator.lastProxyPort != privacyProfile.proxyPort
+            || context.coordinator.lastProxyDetectedIP != privacyProfile.proxyDetectedIP
+            || context.coordinator.lastProxyTimezone != privacyProfile.proxyDetectedTimezone
 
-        if profileChanged || uaChanged || seedChanged {
+        if profileChanged || uaChanged || seedChanged || proxyChanged {
             context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
             context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
             context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
+            context.coordinator.lastProxyEnabled = privacyProfile.proxyEnabled
+            context.coordinator.lastProxyHost = privacyProfile.proxyHost
+            context.coordinator.lastProxyPort = privacyProfile.proxyPort
+            context.coordinator.lastProxyDetectedIP = privacyProfile.proxyDetectedIP
+            context.coordinator.lastProxyTimezone = privacyProfile.proxyDetectedTimezone
 
+            ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: privacyProfile)
             context.coordinator.reconfigurePrivacy(for: webView)
+
+            let ipEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedIP.replacingOccurrences(of: "'", with: "") : ""
+            let tzEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedTimezone.replacingOccurrences(of: "'", with: "") : ""
+            let jsProxy = "if (window.__GHOST_SET_PROXY__) window.__GHOST_SET_PROXY__('\(ipEsc)', '\(tzEsc)', \(privacyProfile.mockLatitude), \(privacyProfile.mockLongitude), \(privacyProfile.proxyEnabled));"
+            webView.evaluateJavaScript(jsProxy) { _, _ in }
         }
 
         // Dynamic mock location update (real-time, zero reload)
@@ -199,6 +255,12 @@ public struct BrowserView: UIViewRepresentable {
         var lastSessionSeed: Int = 0
         var lastReloadTrigger: Int = 0
         var lastWipeTrigger: Int = 0
+
+        var lastProxyEnabled: Bool?
+        var lastProxyHost: String?
+        var lastProxyPort: Int?
+        var lastProxyDetectedIP: String?
+        var lastProxyTimezone: String?
 
         var lastMockLocationEnabled: Bool?
         var lastMockLatitude: Double?
@@ -289,6 +351,18 @@ public struct BrowserView: UIViewRepresentable {
                 }
             }
             notificationTokens.append(reloadToken)
+            
+            let bgToken = NotificationCenter.default.addObserver(
+                forName: UIApplication.didEnterBackgroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self = self, let wv = self.webView else { return }
+                if !self.parent.privacyProfile.ephemeralRAMMode {
+                    ProfileManager.shared.backupCookies(for: self.parent.privacyProfile.sessionDataStoreID, from: wv.configuration.websiteDataStore.httpCookieStore)
+                }
+            }
+            notificationTokens.append(bgToken)
         }
 
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -298,6 +372,8 @@ public struct BrowserView: UIViewRepresentable {
                         self.parent.privacyProfile.regenerateRealisticIdentity()
                     } else if target == "ghost-action://rotateseed" {
                         self.parent.privacyProfile.rotateIdentitySeed()
+                    } else if target == "ghost://detect" || target == "local://detect" || target == "ghost://integrity" {
+                        self.loadLocalDetectPage()
                     } else {
                         self.loadURL(target)
                     }
@@ -358,11 +434,32 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
+        public func loadLocalDetectPage() {
+            guard let webView = self.webView else { return }
+            if let detectURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "DetectionSuite") ??
+                               Bundle.main.url(forResource: "index", withExtension: "html") {
+                self.currentLoadedURL = "ghost://detect"
+                self.parent.pageTitle = "GhostDetect Lab"
+                if self.parent.currentURLString != "ghost://detect" {
+                    DispatchQueue.main.async {
+                        self.parent.currentURLString = "ghost://detect"
+                    }
+                }
+                let dirURL = detectURL.deletingLastPathComponent()
+                webView.loadFileURL(detectURL, allowingReadAccessTo: dirURL)
+            }
+        }
+
         public func loadURL(_ urlString: String, forceReload: Bool = false) {
             guard let webView = self.webView else { return }
 
             if urlString == "local://startpage" || urlString.isEmpty {
                 loadLocalStartPage()
+                return
+            }
+
+            if urlString == "ghost://detect" || urlString == "local://detect" || urlString == "ghost://integrity" {
+                loadLocalDetectPage()
                 return
             }
 
@@ -525,6 +622,9 @@ public struct BrowserView: UIViewRepresentable {
             }
             if let title = webView.title, !title.isEmpty {
                 parent.pageTitle = title
+            }
+            if !parent.privacyProfile.ephemeralRAMMode {
+                ProfileManager.shared.backupCookies(for: parent.privacyProfile.sessionDataStoreID, from: webView.configuration.websiteDataStore.httpCookieStore)
             }
             DispatchQueue.main.async {
                 webView.becomeFirstResponder()
