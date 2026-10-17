@@ -56,10 +56,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v3.6.0
-          name: GhostBrowser v3.6.0 (Desktop-Parity Profile & Proxy Manager, ISP Indicator, QUIC/HTTP3, DNSSEC 12/12 & Full Stealth Parity)
+          tag_name: v3.6.1
+          name: GhostBrowser v3.6.1 (Fixed SOCKS5 Auth Sanitization, Port Comma Removal, Edit/Create Profile Sheet & Mobile Proxy Tunnel)
           body: |
-            ## GhostBrowser v3.6.0 (iPadOS / iOS Hardened Edition)
+            ## GhostBrowser v3.6.1 (iPadOS / iOS Hardened Edition)
             - **Desktop-Parity Profile & Proxy Management Flow**:
               - Configure HTTP / SOCKS5 proxy (`host:port:user:pass` Smart Paste + Live Egress Test) directly when creating or editing a profile in `ProfileManagerSheet` as well as in the active session's `SessionToolsSheet`.
               - Displays the **ISP next to the IP** in both Profile Manager cards and the Browser Session Monitor Indicator pill (`🔒 <IP> • <ISP> • <UsageType> (<ConnType>) • <City>, <Region>`).

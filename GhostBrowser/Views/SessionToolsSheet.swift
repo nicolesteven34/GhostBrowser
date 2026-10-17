@@ -18,6 +18,8 @@ public struct SessionToolsSheet: View {
     @State private var isTestingProxy: Bool = false
     @State private var proxyStatusMessage: String = ""
     @State private var proxyStatusError: Bool = false
+    @State private var showPlainPassword: Bool = false
+    @State private var isApplyingSmartPaste: Bool = false
 
     public enum ToolTab: String, CaseIterable, Identifiable {
         case proxy = "SOCKS5 Proxy"
@@ -171,12 +173,14 @@ public struct SessionToolsSheet: View {
             Button(action: {
                 if let clip = UIPasteboard.general.string,
                    let parsed = ProxyService.shared.parseSmartProxy(clip) {
+                    isApplyingSmartPaste = true
                     privacyProfile.proxyType = parsed.proxyType
                     privacyProfile.proxyHost = parsed.host
                     privacyProfile.proxyPort = parsed.port
                     privacyProfile.proxyUsername = parsed.username
                     privacyProfile.proxyPassword = parsed.password
                     privacyProfile.proxyEnabled = true
+                    isApplyingSmartPaste = false
                     profileManager.saveProfileSensors(from: privacyProfile)
                     verifyAndSyncProxy()
                 } else {
@@ -218,14 +222,34 @@ public struct SessionToolsSheet: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(width: 85, alignment: .leading)
-                    TextField("resident.lightningproxies.net", text: $privacyProfile.proxyHost)
+                    TextField("mobile.lightningproxies.net", text: $privacyProfile.proxyHost)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .onChange(of: privacyProfile.proxyHost) { _ in
+                        .onChange(of: privacyProfile.proxyHost) { newVal in
+                            guard !isApplyingSmartPaste else { return }
+                            if newVal.contains(":"), let parsed = ProxyService.shared.parseSmartProxy(newVal) {
+                                isApplyingSmartPaste = true
+                                privacyProfile.proxyType = parsed.proxyType
+                                privacyProfile.proxyHost = parsed.host
+                                privacyProfile.proxyPort = parsed.port
+                                if !parsed.username.isEmpty { privacyProfile.proxyUsername = parsed.username }
+                                if !parsed.password.isEmpty { privacyProfile.proxyPassword = parsed.password }
+                                privacyProfile.proxyEnabled = true
+                                isApplyingSmartPaste = false
+                            }
                             profileManager.saveProfileSensors(from: privacyProfile)
                         }
+                    if !privacyProfile.proxyHost.isEmpty {
+                        Button(action: {
+                            privacyProfile.proxyHost = ""
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
 
                 HStack {
@@ -233,13 +257,34 @@ public struct SessionToolsSheet: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(width: 85, alignment: .leading)
-                    TextField("1080", value: $privacyProfile.proxyPort, format: .number)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-                        .keyboardType(.numberPad)
-                        .onChange(of: privacyProfile.proxyPort) { _ in
-                            profileManager.saveProfileSensors(from: privacyProfile)
-                        }
+                    TextField(
+                        "1080",
+                        text: Binding(
+                            get: { String(privacyProfile.proxyPort) },
+                            set: { newVal in
+                                if newVal.contains(":"), let parsed = ProxyService.shared.parseSmartProxy(newVal) {
+                                    isApplyingSmartPaste = true
+                                    privacyProfile.proxyType = parsed.proxyType
+                                    privacyProfile.proxyHost = parsed.host
+                                    privacyProfile.proxyPort = parsed.port
+                                    if !parsed.username.isEmpty { privacyProfile.proxyUsername = parsed.username }
+                                    if !parsed.password.isEmpty { privacyProfile.proxyPassword = parsed.password }
+                                    privacyProfile.proxyEnabled = true
+                                    isApplyingSmartPaste = false
+                                    profileManager.saveProfileSensors(from: privacyProfile)
+                                    return
+                                }
+                                let digits = newVal.filter { $0.isNumber }
+                                if let p = Int(digits), p > 0 && p <= 65535 {
+                                    privacyProfile.proxyPort = p
+                                    profileManager.saveProfileSensors(from: privacyProfile)
+                                }
+                            }
+                        )
+                    )
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .keyboardType(.numbersAndPunctuation)
                 }
 
                 HStack {
@@ -252,9 +297,39 @@ public struct SessionToolsSheet: View {
                         .font(.system(.body, design: .monospaced))
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .onChange(of: privacyProfile.proxyUsername) { _ in
+                        .onChange(of: privacyProfile.proxyUsername) { newVal in
+                            guard !isApplyingSmartPaste else { return }
+                            if newVal.contains(":") {
+                                let sanitized = ProxyService.shared.sanitizeCredentials(
+                                    type: privacyProfile.proxyType,
+                                    host: privacyProfile.proxyHost,
+                                    port: privacyProfile.proxyPort,
+                                    username: newVal,
+                                    password: privacyProfile.proxyPassword
+                                )
+                                if sanitized.username != newVal {
+                                    isApplyingSmartPaste = true
+                                    privacyProfile.proxyHost = sanitized.host
+                                    privacyProfile.proxyPort = sanitized.port
+                                    privacyProfile.proxyUsername = sanitized.username
+                                    if !sanitized.password.isEmpty {
+                                        privacyProfile.proxyPassword = sanitized.password
+                                    }
+                                    privacyProfile.proxyEnabled = true
+                                    isApplyingSmartPaste = false
+                                }
+                            }
                             profileManager.saveProfileSensors(from: privacyProfile)
                         }
+                    if !privacyProfile.proxyUsername.isEmpty {
+                        Button(action: {
+                            privacyProfile.proxyUsername = ""
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
 
                 HStack {
@@ -262,12 +337,47 @@ public struct SessionToolsSheet: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(width: 85, alignment: .leading)
-                    SecureField("Optional password", text: $privacyProfile.proxyPassword)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-                        .onChange(of: privacyProfile.proxyPassword) { _ in
-                            profileManager.saveProfileSensors(from: privacyProfile)
+                    Group {
+                        if showPlainPassword {
+                            TextField("Optional password", text: $privacyProfile.proxyPassword)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                        } else {
+                            SecureField("Optional password", text: $privacyProfile.proxyPassword)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
                         }
+                    }
+                    .onChange(of: privacyProfile.proxyPassword) { newVal in
+                        guard !isApplyingSmartPaste else { return }
+                        if newVal.contains(":"), let parsed = ProxyService.shared.parseSmartProxy(newVal), !parsed.password.isEmpty {
+                            isApplyingSmartPaste = true
+                            if privacyProfile.proxyHost.isEmpty { privacyProfile.proxyHost = parsed.host }
+                            privacyProfile.proxyPort = parsed.port
+                            if privacyProfile.proxyUsername.isEmpty { privacyProfile.proxyUsername = parsed.username }
+                            privacyProfile.proxyPassword = parsed.password
+                            privacyProfile.proxyEnabled = true
+                            isApplyingSmartPaste = false
+                        }
+                        profileManager.saveProfileSensors(from: privacyProfile)
+                    }
+                    if !privacyProfile.proxyPassword.isEmpty {
+                        Button(action: {
+                            privacyProfile.proxyPassword = ""
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    Button(action: { showPlainPassword.toggle() }) {
+                        Image(systemName: showPlainPassword ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             .padding(14)
@@ -347,27 +457,45 @@ public struct SessionToolsSheet: View {
     }
 
     private func verifyAndSyncProxy() {
+        let sanitized = ProxyService.shared.sanitizeCredentials(
+            type: privacyProfile.proxyType,
+            host: privacyProfile.proxyHost,
+            port: privacyProfile.proxyPort,
+            username: privacyProfile.proxyUsername,
+            password: privacyProfile.proxyPassword
+        )
+        isApplyingSmartPaste = true
+        privacyProfile.proxyType = sanitized.type
+        privacyProfile.proxyHost = sanitized.host
+        privacyProfile.proxyPort = sanitized.port
+        privacyProfile.proxyUsername = sanitized.username
+        privacyProfile.proxyPassword = sanitized.password
+        isApplyingSmartPaste = false
+        profileManager.saveProfileSensors(from: privacyProfile)
+
         isTestingProxy = true
         proxyStatusMessage = ""
         proxyStatusError = false
 
-        let pType = privacyProfile.proxyType
-        let pHost = privacyProfile.proxyHost
-        let pPort = privacyProfile.proxyPort
-        let pUser = privacyProfile.proxyUsername
-        let pPass = privacyProfile.proxyPassword
-
         Task {
             let res = await ProxyService.shared.testProxyAsync(
-                type: pType,
-                host: pHost,
-                port: pPort,
-                username: pUser,
-                password: pPass
+                type: sanitized.type,
+                host: sanitized.host,
+                port: sanitized.port,
+                username: sanitized.username,
+                password: sanitized.password
             )
             await MainActor.run {
                 isTestingProxy = false
                 if res.success {
+                    isApplyingSmartPaste = true
+                    if !res.resolvedType.isEmpty { privacyProfile.proxyType = res.resolvedType }
+                    if !res.resolvedHost.isEmpty { privacyProfile.proxyHost = res.resolvedHost }
+                    if res.resolvedPort > 0 { privacyProfile.proxyPort = res.resolvedPort }
+                    privacyProfile.proxyUsername = res.resolvedUsername
+                    privacyProfile.proxyPassword = res.resolvedPassword
+                    isApplyingSmartPaste = false
+
                     privacyProfile.proxyEnabled = true
                     privacyProfile.proxyDetectedIP = res.ip
                     privacyProfile.proxyDetectedCity = res.city
@@ -384,7 +512,7 @@ public struct SessionToolsSheet: View {
                     privacyProfile.mockLocationName = "\(res.city), \(res.country)"
                     profileManager.saveProfileSensors(from: privacyProfile)
                     proxyStatusError = false
-                    proxyStatusMessage = "✓ Verified \(res.ip) • \(res.compactTypeBadge) — Timezone, DNS & WebRTC synced!"
+                    proxyStatusMessage = "✓ Verified \(res.ip) • \(res.isp) • \(res.compactTypeBadge) — Timezone, DNS & WebRTC synced!"
                 } else {
                     proxyStatusError = true
                     proxyStatusMessage = "✗ \(res.errorMessage)"

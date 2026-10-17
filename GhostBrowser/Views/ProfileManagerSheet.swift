@@ -1,6 +1,20 @@
 import SwiftUI
 import UIKit
 
+private enum ProfileEditorTarget: Identifiable {
+    case createNew
+    case edit(BrowserProfile)
+
+    var id: String {
+        switch self {
+        case .createNew:
+            return "create_new_profile"
+        case .edit(let profile):
+            return "edit_profile_\(profile.id.uuidString)"
+        }
+    }
+}
+
 public struct ProfileManagerSheet: View {
     @ObservedObject var profileManager: ProfileManager
     @ObservedObject var privacyProfile: PrivacyProfile
@@ -9,8 +23,7 @@ public struct ProfileManagerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchQuery: String = ""
-    @State private var showEditorSheet: Bool = false
-    @State private var editingProfile: BrowserProfile? = nil
+    @State private var editorTarget: ProfileEditorTarget? = nil
     @State private var profileToClear: BrowserProfile? = nil
     @State private var showClearAlert: Bool = false
 
@@ -45,8 +58,7 @@ public struct ProfileManagerSheet: View {
                 // MARK: - Top Create Profile Banner
                 Section {
                     Button(action: {
-                        editingProfile = nil
-                        showEditorSheet = true
+                        editorTarget = .createNew
                     }) {
                         HStack(spacing: 12) {
                             Image(systemName: "plus.circle.fill")
@@ -76,7 +88,9 @@ public struct ProfileManagerSheet: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding(.vertical, 4)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.borderless)
                 }
 
                 // MARK: - Active Session Monitor Card
@@ -134,9 +148,9 @@ public struct ProfileManagerSheet: View {
                         .background(active.proxyEnabled ? Color.green.opacity(0.10) : Color(.systemGray6))
                         .cornerRadius(8)
 
-                        // WebRTC mDNS & Seed Telemetry
+                        // WebRTC mDNS & Seed Telemetry (No comma in seed)
                         HStack(spacing: 8) {
-                            Text("Seed #\(active.sessionSeed)")
+                            Text("Seed #\(String(active.sessionSeed))")
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundColor(.secondary)
                             Text("•")
@@ -151,51 +165,78 @@ public struct ProfileManagerSheet: View {
                                 .foregroundColor(.blue)
                         }
 
-                        // Quick Actions for Active Profile
+                        // Quick Actions for Active Profile (All .buttonStyle(.borderless) to prevent List tap collision)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 Button(action: {
-                                    editingProfile = active
-                                    showEditorSheet = true
+                                    editorTarget = .edit(active)
                                 }) {
-                                    Label(active.proxyEnabled ? "Edit Proxy / Profile" : "Add SOCKS5 / HTTP Proxy", systemImage: "network.badge.shield.half.filled")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "network.badge.shield.half.filled")
+                                            .font(.system(size: 12, weight: .bold))
+                                        Text(active.proxyEnabled ? "Edit Proxy / Profile" : "Add SOCKS5 / HTTP Proxy")
+                                            .font(.system(size: 12, weight: .bold))
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(active.proxyEnabled ? Color.green : Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(8)
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(active.proxyEnabled ? .green : .blue)
+                                .buttonStyle(.borderless)
 
                                 Button(action: {
                                     profileManager.rotateProfileSeed(id: active.id, privacyProfile: privacyProfile)
                                 }) {
-                                    Label("New Seed", systemImage: "arrow.triangle.2.circlepath")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "arrow.triangle.2.circlepath")
+                                            .font(.system(size: 12, weight: .semibold))
+                                        Text("New Seed")
+                                            .font(.system(size: 12, weight: .semibold))
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 7)
+                                    .background(Color(hex: active.themeColorHex).opacity(0.16))
+                                    .foregroundColor(Color(hex: active.themeColorHex))
+                                    .cornerRadius(8)
                                 }
-                                .buttonStyle(.bordered)
-                                .tint(Color(hex: active.themeColorHex))
+                                .buttonStyle(.borderless)
 
                                 Button(action: {
                                     profileManager.regenerateProfileDevice(id: active.id, privacyProfile: privacyProfile)
                                 }) {
-                                    Label("Switch Device", systemImage: "sparkles")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "sparkles")
+                                            .font(.system(size: 12, weight: .semibold))
+                                        Text("Switch Device")
+                                            .font(.system(size: 12, weight: .semibold))
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 7)
+                                    .background(Color.purple.opacity(0.16))
+                                    .foregroundColor(.purple)
+                                    .cornerRadius(8)
                                 }
-                                .buttonStyle(.bordered)
-                                .tint(.purple)
+                                .buttonStyle(.borderless)
 
                                 if let onLaunchGhostDetect = onLaunchGhostDetect {
                                     Button(action: {
                                         dismiss()
                                         onLaunchGhostDetect()
                                     }) {
-                                        Label("GhostDetect Lab", systemImage: "checkmark.shield.fill")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "checkmark.shield.fill")
+                                                .font(.system(size: 12, weight: .semibold))
+                                            Text("GhostDetect Lab")
+                                                .font(.system(size: 12, weight: .semibold))
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 7)
+                                        .background(Color.teal.opacity(0.16))
+                                        .foregroundColor(.teal)
+                                        .cornerRadius(8)
                                     }
-                                    .buttonStyle(.bordered)
-                                    .tint(.teal)
+                                    .buttonStyle(.borderless)
                                 }
                             }
                         }
@@ -260,7 +301,7 @@ public struct ProfileManagerSheet: View {
                                     .foregroundColor(isActive ? .green : .white)
                                     .cornerRadius(8)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.borderless)
                             }
 
                             // Egress IP + ISP + Type + State Indicator Pill on Every Profile Card
@@ -277,8 +318,7 @@ public struct ProfileManagerSheet: View {
                                 Spacer()
 
                                 Button(action: {
-                                    editingProfile = profile
-                                    showEditorSheet = true
+                                    editorTarget = .edit(profile)
                                 }) {
                                     HStack(spacing: 4) {
                                         Image(systemName: "slider.horizontal.3")
@@ -286,13 +326,13 @@ public struct ProfileManagerSheet: View {
                                         Text(profile.proxyEnabled ? "Proxy / Edit" : "Add Proxy")
                                             .font(.system(size: 11, weight: .semibold))
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
                                     .background(Color(.systemGray5))
                                     .foregroundColor(.primary)
                                     .cornerRadius(6)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.borderless)
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
@@ -325,8 +365,7 @@ public struct ProfileManagerSheet: View {
                             .tint(.purple)
 
                             Button {
-                                editingProfile = profile
-                                showEditorSheet = true
+                                editorTarget = .edit(profile)
                             } label: {
                                 Label("Edit & Proxy", systemImage: "pencil")
                             }
@@ -341,8 +380,7 @@ public struct ProfileManagerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
-                        editingProfile = nil
-                        showEditorSheet = true
+                        editorTarget = .createNew
                     }) {
                         Label("New Profile", systemImage: "plus.circle.fill")
                             .fontWeight(.semibold)
@@ -355,19 +393,35 @@ public struct ProfileManagerSheet: View {
                     .fontWeight(.semibold)
                 }
             }
-            .sheet(isPresented: $showEditorSheet) {
-                ProfileEditorSheet(
-                    profileManager: profileManager,
-                    privacyProfile: privacyProfile,
-                    existingProfile: editingProfile,
-                    onSaved: { savedProfile, wasCreated in
-                        showEditorSheet = false
-                        if wasCreated {
-                            onProfileSwitched?(savedProfile)
-                            dismiss()
+            .sheet(item: $editorTarget) { target in
+                switch target {
+                case .createNew:
+                    ProfileEditorSheet(
+                        profileManager: profileManager,
+                        privacyProfile: privacyProfile,
+                        existingProfile: nil,
+                        onSaved: { savedProfile, wasCreated in
+                            editorTarget = nil
+                            if wasCreated {
+                                onProfileSwitched?(savedProfile)
+                                dismiss()
+                            }
                         }
-                    }
-                )
+                    )
+                    .id(target.id)
+                case .edit(let existing):
+                    // Always pull latest version of profile from profileManager
+                    let latest = profileManager.profiles.first(where: { $0.id == existing.id }) ?? existing
+                    ProfileEditorSheet(
+                        profileManager: profileManager,
+                        privacyProfile: privacyProfile,
+                        existingProfile: latest,
+                        onSaved: { _, _ in
+                            editorTarget = nil
+                        }
+                    )
+                    .id(target.id)
+                }
             }
             .alert("Clear Profile Data?", isPresented: $showClearAlert, presenting: profileToClear) { profile in
                 Button("Clear Cookies & Cache", role: .destructive) {
@@ -401,50 +455,131 @@ public struct ProfileManagerSheet: View {
 public struct ProfileEditorSheet: View {
     @ObservedObject var profileManager: ProfileManager
     @ObservedObject var privacyProfile: PrivacyProfile
-    var existingProfile: BrowserProfile?
+    let existingProfile: BrowserProfile?
     var onSaved: (BrowserProfile, Bool) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     // Identity Fields
-    @State private var name: String = ""
-    @State private var icon: String = "briefcase.fill"
-    @State private var themeColorHex: String = "#0A84FF"
-    @State private var deviceProfile: AppleDeviceProfile = .iPadProM4_13
-    @State private var sessionSeed: Int = Int.random(in: 100000...999999)
+    @State private var name: String
+    @State private var icon: String
+    @State private var themeColorHex: String
+    @State private var deviceProfile: AppleDeviceProfile
+    @State private var sessionSeed: Int
 
-    // Proxy Fields
-    @State private var proxyEnabled: Bool = false
-    @State private var proxyType: String = "SOCKS5"
-    @State private var proxyHost: String = ""
-    @State private var proxyPort: Int = 1080
-    @State private var proxyUsername: String = ""
-    @State private var proxyPassword: String = ""
-    @State private var proxyDetectedIP: String = ""
-    @State private var proxyDetectedCity: String = ""
-    @State private var proxyDetectedRegion: String = ""
-    @State private var proxyDetectedCountry: String = ""
-    @State private var proxyDetectedISP: String = ""
-    @State private var proxyDetectedASN: String = ""
-    @State private var proxyDetectedTimezone: String = ""
-    @State private var proxyUsageType: String = "Residential"
-    @State private var proxyConnectionType: String = "Cable/Fiber"
-    @State private var enableDnsProxyMatching: Bool = true
-    @State private var enableIpChangeKillSwitch: Bool = true
+    // Proxy Fields (Port stored as both plain String without comma and Int)
+    @State private var proxyEnabled: Bool
+    @State private var proxyType: String
+    @State private var proxyHost: String
+    @State private var proxyPort: Int
+    @State private var proxyPortText: String
+    @State private var proxyUsername: String
+    @State private var proxyPassword: String
+    @State private var showPlainPassword: Bool = false
+    @State private var proxyDetectedIP: String
+    @State private var proxyDetectedCity: String
+    @State private var proxyDetectedRegion: String
+    @State private var proxyDetectedCountry: String
+    @State private var proxyDetectedISP: String
+    @State private var proxyDetectedASN: String
+    @State private var proxyDetectedTimezone: String
+    @State private var proxyUsageType: String
+    @State private var proxyConnectionType: String
+    @State private var enableDnsProxyMatching: Bool
+    @State private var enableIpChangeKillSwitch: Bool
 
     // Mock Location Synced with Proxy
-    @State private var mockLocationEnabled: Bool = false
-    @State private var mockLatitude: Double = 37.7749
-    @State private var mockLongitude: Double = -122.4194
-    @State private var mockLocationName: String = "San Francisco, CA"
+    @State private var mockLocationEnabled: Bool
+    @State private var mockLatitude: Double
+    @State private var mockLongitude: Double
+    @State private var mockLocationName: String
 
     // Live Proxy Verification State
     @State private var isTestingProxy: Bool = false
     @State private var proxyTestStatus: String = ""
     @State private var proxyTestError: Bool = false
+    @State private var isApplyingSmartPaste: Bool = false
 
     private var isCreatingNew: Bool {
         existingProfile == nil
+    }
+
+    public init(
+        profileManager: ProfileManager,
+        privacyProfile: PrivacyProfile,
+        existingProfile: BrowserProfile?,
+        onSaved: @escaping (BrowserProfile, Bool) -> Void
+    ) {
+        self.profileManager = profileManager
+        self.privacyProfile = privacyProfile
+        self.existingProfile = existingProfile
+        self.onSaved = onSaved
+
+        if let existing = existingProfile {
+            // Auto-sanitize credentials in case a full proxy string was previously pasted into Username/Host/Password
+            let sanitized = ProxyService.shared.sanitizeCredentials(
+                type: existing.proxyType,
+                host: existing.proxyHost,
+                port: existing.proxyPort,
+                username: existing.proxyUsername,
+                password: existing.proxyPassword
+            )
+            _name = State(initialValue: existing.name)
+            _icon = State(initialValue: existing.icon)
+            _themeColorHex = State(initialValue: existing.themeColorHex)
+            _deviceProfile = State(initialValue: existing.deviceProfile)
+            _sessionSeed = State(initialValue: existing.sessionSeed)
+            _proxyEnabled = State(initialValue: existing.proxyEnabled)
+            _proxyType = State(initialValue: sanitized.type)
+            _proxyHost = State(initialValue: sanitized.host)
+            _proxyPort = State(initialValue: sanitized.port)
+            _proxyPortText = State(initialValue: String(sanitized.port))
+            _proxyUsername = State(initialValue: sanitized.username)
+            _proxyPassword = State(initialValue: sanitized.password)
+            _proxyDetectedIP = State(initialValue: existing.proxyDetectedIP)
+            _proxyDetectedCity = State(initialValue: existing.proxyDetectedCity)
+            _proxyDetectedRegion = State(initialValue: existing.proxyDetectedRegion)
+            _proxyDetectedCountry = State(initialValue: existing.proxyDetectedCountry)
+            _proxyDetectedISP = State(initialValue: existing.proxyDetectedISP)
+            _proxyDetectedASN = State(initialValue: existing.proxyDetectedASN)
+            _proxyDetectedTimezone = State(initialValue: existing.proxyDetectedTimezone)
+            _proxyUsageType = State(initialValue: existing.proxyUsageType)
+            _proxyConnectionType = State(initialValue: existing.proxyConnectionType)
+            _enableDnsProxyMatching = State(initialValue: existing.enableDnsProxyMatching)
+            _enableIpChangeKillSwitch = State(initialValue: existing.enableIpChangeKillSwitch)
+            _mockLocationEnabled = State(initialValue: existing.mockLocationEnabled)
+            _mockLatitude = State(initialValue: existing.mockLatitude)
+            _mockLongitude = State(initialValue: existing.mockLongitude)
+            _mockLocationName = State(initialValue: existing.mockLocationName)
+        } else {
+            _name = State(initialValue: "Profile \(profileManager.profiles.count + 1)")
+            _icon = State(initialValue: BrowserProfile.availableIcons.randomElement() ?? "briefcase.fill")
+            _themeColorHex = State(initialValue: BrowserProfile.availableColors.randomElement() ?? "#0A84FF")
+            _deviceProfile = State(initialValue: profileManager.nextRecommendedDeviceProfile())
+            _sessionSeed = State(initialValue: Int.random(in: 100000...999999))
+            _proxyEnabled = State(initialValue: false)
+            _proxyType = State(initialValue: "SOCKS5")
+            _proxyHost = State(initialValue: "")
+            _proxyPort = State(initialValue: 1080)
+            _proxyPortText = State(initialValue: "1080")
+            _proxyUsername = State(initialValue: "")
+            _proxyPassword = State(initialValue: "")
+            _proxyDetectedIP = State(initialValue: "")
+            _proxyDetectedCity = State(initialValue: "")
+            _proxyDetectedRegion = State(initialValue: "")
+            _proxyDetectedCountry = State(initialValue: "")
+            _proxyDetectedISP = State(initialValue: "")
+            _proxyDetectedASN = State(initialValue: "")
+            _proxyDetectedTimezone = State(initialValue: "")
+            _proxyUsageType = State(initialValue: "Residential")
+            _proxyConnectionType = State(initialValue: "Cable/Fiber")
+            _enableDnsProxyMatching = State(initialValue: true)
+            _enableIpChangeKillSwitch = State(initialValue: true)
+            _mockLocationEnabled = State(initialValue: false)
+            _mockLatitude = State(initialValue: 37.7749)
+            _mockLongitude = State(initialValue: -122.4194)
+            _mockLocationName = State(initialValue: "San Francisco, CA")
+        }
     }
 
     public var body: some View {
@@ -472,10 +607,10 @@ public struct ProfileEditorSheet: View {
                             Text("Hardware Signature Preview")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            Text("\(deviceProfile.cpuCores) Cores • \(deviceProfile.ramGB) GB RAM • \(deviceProfile.webglRendererVariant(seed: sessionSeed)) • \(deviceProfile.screenWidth)×\(deviceProfile.screenHeight)")
+                            Text("\(deviceProfile.cpuCores) Cores • \(deviceProfile.ramGB) GB RAM • \(deviceProfile.webglRendererVariant(seed: sessionSeed)) • \(String(deviceProfile.screenWidth))×\(String(deviceProfile.screenHeight))")
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundColor(.secondary)
-                            Text("Storage Quota: 10.00 GB • APIs: PaymentRequest + WebShare • Seed #\(sessionSeed)")
+                            Text("Storage Quota: 10.00 GB • APIs: PaymentRequest + WebShare • Seed #\(String(sessionSeed))")
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundColor(.blue)
                         }
@@ -506,14 +641,8 @@ public struct ProfileEditorSheet: View {
                     // One-Tap Smart Paste Button
                     Button(action: {
                         if let clip = UIPasteboard.general.string,
-                           let parsed = ProxyService.shared.parseSmartProxy(clip) {
-                            proxyType = parsed.proxyType
-                            proxyHost = parsed.host
-                            proxyPort = parsed.port
-                            proxyUsername = parsed.username
-                            proxyPassword = parsed.password
-                            proxyEnabled = true
-                            verifyProxyConnection()
+                           applyParsedProxyString(clip, autoVerify: true) {
+                            // Handled by applyParsedProxyString
                         } else {
                             proxyTestError = true
                             proxyTestStatus = "Clipboard doesn't match host:port:user:pass or user:pass@host:port"
@@ -527,6 +656,7 @@ public struct ProfileEditorSheet: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 4)
                     }
+                    .buttonStyle(.borderless)
                     .tint(.blue)
 
                     Picker("Proxy Protocol", selection: $proxyType) {
@@ -535,30 +665,59 @@ public struct ProfileEditorSheet: View {
                     }
                     .pickerStyle(.segmented)
 
+                    // Host / IP Row (auto-splits if user pastes full proxy string here)
                     HStack {
                         Text("Host / IP")
                             .frame(width: 85, alignment: .leading)
                             .foregroundColor(.secondary)
-                        TextField("resident.proxy-gateway.net", text: $proxyHost)
+                        TextField("mobile.lightningproxies.net", text: $proxyHost)
                             .font(.system(.body, design: .monospaced))
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                             .onChange(of: proxyHost) { newVal in
+                                guard !isApplyingSmartPaste else { return }
+                                if newVal.contains(":"), applyParsedProxyString(newVal, autoVerify: false) {
+                                    return
+                                }
                                 if !newVal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                     proxyEnabled = true
                                 }
                             }
+                        if !proxyHost.isEmpty {
+                            Button(action: { proxyHost = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
 
+                    // Port Row (Plain String binding — NEVER inserts a comma like 1,080!)
                     HStack {
                         Text("Port")
                             .frame(width: 85, alignment: .leading)
                             .foregroundColor(.secondary)
-                        TextField("1080", value: $proxyPort, format: .number)
+                        TextField("1080", text: $proxyPortText)
                             .font(.system(.body, design: .monospaced))
-                            .keyboardType(.numberPad)
+                            .keyboardType(.numbersAndPunctuation)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .onChange(of: proxyPortText) { newVal in
+                                guard !isApplyingSmartPaste else { return }
+                                if newVal.contains(":"), applyParsedProxyString(newVal, autoVerify: false) {
+                                    return
+                                }
+                                let digits = newVal.filter { $0.isNumber }
+                                if digits != newVal {
+                                    proxyPortText = digits
+                                }
+                                if let p = Int(digits), p > 0 && p <= 65535 {
+                                    proxyPort = p
+                                }
+                            }
                     }
 
+                    // Username Row (auto-splits if user pastes host:port:user:pass or host:port:user here)
                     HStack {
                         Text("Username")
                             .frame(width: 85, alignment: .leading)
@@ -567,14 +726,86 @@ public struct ProfileEditorSheet: View {
                             .font(.system(.body, design: .monospaced))
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
+                            .onChange(of: proxyUsername) { newVal in
+                                guard !isApplyingSmartPaste else { return }
+                                if newVal.contains(":") {
+                                    if applyParsedProxyString(newVal, autoVerify: false) {
+                                        return
+                                    }
+                                    // Also check 3-part `host:port:user` or 2-part `user:pass`
+                                    let sanitized = ProxyService.shared.sanitizeCredentials(
+                                        type: proxyType,
+                                        host: proxyHost,
+                                        port: proxyPort,
+                                        username: newVal,
+                                        password: proxyPassword
+                                    )
+                                    if sanitized.username != newVal {
+                                        isApplyingSmartPaste = true
+                                        proxyHost = sanitized.host
+                                        proxyPort = sanitized.port
+                                        proxyPortText = String(sanitized.port)
+                                        proxyUsername = sanitized.username
+                                        if !sanitized.password.isEmpty {
+                                            proxyPassword = sanitized.password
+                                        }
+                                        proxyEnabled = true
+                                        isApplyingSmartPaste = false
+                                    }
+                                }
+                            }
+                        if !proxyUsername.isEmpty {
+                            Button(action: { proxyUsername = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
 
+                    // Password Row with Show/Hide Eye Toggle + Auto-Split if full string pasted
                     HStack {
                         Text("Password")
                             .frame(width: 85, alignment: .leading)
                             .foregroundColor(.secondary)
-                        SecureField("Optional password", text: $proxyPassword)
-                            .font(.system(.body, design: .monospaced))
+                        Group {
+                            if showPlainPassword {
+                                TextField("Optional password", text: $proxyPassword)
+                                    .font(.system(.body, design: .monospaced))
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
+                            } else {
+                                SecureField("Optional password", text: $proxyPassword)
+                                    .font(.system(.body, design: .monospaced))
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
+                            }
+                        }
+                        .onChange(of: proxyPassword) { newVal in
+                            guard !isApplyingSmartPaste else { return }
+                            if newVal.contains(":"), let parsed = ProxyService.shared.parseSmartProxy(newVal), !parsed.password.isEmpty {
+                                isApplyingSmartPaste = true
+                                if proxyHost.isEmpty { proxyHost = parsed.host }
+                                proxyPort = parsed.port
+                                proxyPortText = String(parsed.port)
+                                if proxyUsername.isEmpty { proxyUsername = parsed.username }
+                                proxyPassword = parsed.password
+                                proxyEnabled = true
+                                isApplyingSmartPaste = false
+                            }
+                        }
+                        if !proxyPassword.isEmpty {
+                            Button(action: { proxyPassword = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        Button(action: { showPlainPassword.toggle() }) {
+                            Image(systemName: showPlainPassword ? "eye.slash.fill" : "eye.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.borderless)
                     }
 
                     Toggle("DNS Proxy Matching & DNSSEC Chain", isOn: $enableDnsProxyMatching)
@@ -599,6 +830,7 @@ public struct ProfileEditorSheet: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 4)
                     }
+                    .buttonStyle(.borderless)
                     .disabled(isTestingProxy || proxyHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                     if !proxyTestStatus.isEmpty {
@@ -687,68 +919,78 @@ public struct ProfileEditorSheet: View {
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .onAppear {
-                if let existing = existingProfile {
-                    name = existing.name
-                    icon = existing.icon
-                    themeColorHex = existing.themeColorHex
-                    deviceProfile = existing.deviceProfile
-                    sessionSeed = existing.sessionSeed
-                    proxyEnabled = existing.proxyEnabled
-                    proxyType = existing.proxyType
-                    proxyHost = existing.proxyHost
-                    proxyPort = existing.proxyPort
-                    proxyUsername = existing.proxyUsername
-                    proxyPassword = existing.proxyPassword
-                    proxyDetectedIP = existing.proxyDetectedIP
-                    proxyDetectedCity = existing.proxyDetectedCity
-                    proxyDetectedRegion = existing.proxyDetectedRegion
-                    proxyDetectedCountry = existing.proxyDetectedCountry
-                    proxyDetectedISP = existing.proxyDetectedISP
-                    proxyDetectedASN = existing.proxyDetectedASN
-                    proxyDetectedTimezone = existing.proxyDetectedTimezone
-                    proxyUsageType = existing.proxyUsageType
-                    proxyConnectionType = existing.proxyConnectionType
-                    enableDnsProxyMatching = existing.enableDnsProxyMatching
-                    enableIpChangeKillSwitch = existing.enableIpChangeKillSwitch
-                    mockLocationEnabled = existing.mockLocationEnabled
-                    mockLatitude = existing.mockLatitude
-                    mockLongitude = existing.mockLongitude
-                    mockLocationName = existing.mockLocationName
-                } else {
-                    name = "Profile \(profileManager.profiles.count + 1)"
-                    icon = BrowserProfile.availableIcons.randomElement() ?? "briefcase.fill"
-                    themeColorHex = BrowserProfile.availableColors.randomElement() ?? "#0A84FF"
-                    deviceProfile = profileManager.nextRecommendedDeviceProfile()
-                    sessionSeed = Int.random(in: 100000...999999)
-                }
-            }
         }
     }
 
+    @discardableResult
+    private func applyParsedProxyString(_ raw: String, autoVerify: Bool) -> Bool {
+        guard let parsed = ProxyService.shared.parseSmartProxy(raw) else { return false }
+        isApplyingSmartPaste = true
+        proxyType = parsed.proxyType
+        proxyHost = parsed.host
+        proxyPort = parsed.port
+        proxyPortText = String(parsed.port)
+        if !parsed.username.isEmpty {
+            proxyUsername = parsed.username
+        }
+        if !parsed.password.isEmpty {
+            proxyPassword = parsed.password
+        }
+        proxyEnabled = true
+        proxyTestError = false
+        proxyTestStatus = "✓ Parsed \(parsed.host):\(String(parsed.port))\(parsed.username.isEmpty ? "" : " (Auth ready)")"
+        isApplyingSmartPaste = false
+        if autoVerify {
+            verifyProxyConnection()
+        }
+        return true
+    }
+
     private func verifyProxyConnection() {
-        let cleanHost = proxyHost.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanHost.isEmpty else { return }
+        let sanitized = ProxyService.shared.sanitizeCredentials(
+            type: proxyType,
+            host: proxyHost,
+            port: Int(proxyPortText.filter { $0.isNumber }) ?? proxyPort,
+            username: proxyUsername,
+            password: proxyPassword
+        )
+        guard !sanitized.host.isEmpty else { return }
+
+        isApplyingSmartPaste = true
+        proxyType = sanitized.type
+        proxyHost = sanitized.host
+        proxyPort = sanitized.port
+        proxyPortText = String(sanitized.port)
+        proxyUsername = sanitized.username
+        proxyPassword = sanitized.password
+        isApplyingSmartPaste = false
+
         isTestingProxy = true
         proxyTestStatus = ""
         proxyTestError = false
 
-        let pType = proxyType
-        let pPort = proxyPort
-        let pUser = proxyUsername
-        let pPass = proxyPassword
-
         Task {
             let res = await ProxyService.shared.testProxyAsync(
-                type: pType,
-                host: cleanHost,
-                port: pPort,
-                username: pUser,
-                password: pPass
+                type: sanitized.type,
+                host: sanitized.host,
+                port: sanitized.port,
+                username: sanitized.username,
+                password: sanitized.password
             )
             await MainActor.run {
                 isTestingProxy = false
                 if res.success {
+                    isApplyingSmartPaste = true
+                    if !res.resolvedType.isEmpty { proxyType = res.resolvedType }
+                    if !res.resolvedHost.isEmpty { proxyHost = res.resolvedHost }
+                    if res.resolvedPort > 0 {
+                        proxyPort = res.resolvedPort
+                        proxyPortText = String(res.resolvedPort)
+                    }
+                    proxyUsername = res.resolvedUsername
+                    proxyPassword = res.resolvedPassword
+                    isApplyingSmartPaste = false
+
                     proxyEnabled = true
                     proxyDetectedIP = res.ip
                     proxyDetectedCity = res.city
@@ -774,8 +1016,34 @@ public struct ProfileEditorSheet: View {
     }
 
     private func saveProfileAction() {
-        let hasHost = !proxyHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let sanitized = ProxyService.shared.sanitizeCredentials(
+            type: proxyType,
+            host: proxyHost,
+            port: Int(proxyPortText.filter { $0.isNumber }) ?? proxyPort,
+            username: proxyUsername,
+            password: proxyPassword
+        )
+        let hasHost = !sanitized.host.isEmpty
         let effectiveProxyEnabled = proxyEnabled && hasHost
+
+        // If host/port changed compared to existing profile, clear stale detected IP so it re-verifies cleanly
+        var detIP = proxyDetectedIP
+        var detISP = proxyDetectedISP
+        var detCity = proxyDetectedCity
+        var detRegion = proxyDetectedRegion
+        var detCountry = proxyDetectedCountry
+        var detASN = proxyDetectedASN
+        var detTZ = proxyDetectedTimezone
+        if let existing = existingProfile,
+           existing.proxyHost != sanitized.host || existing.proxyPort != sanitized.port || existing.proxyUsername != sanitized.username {
+            if !proxyTestStatus.hasPrefix("✓ Verified") {
+                detIP = ""
+                detISP = ""
+            }
+        }
+
+        let targetProfile: BrowserProfile
+        let wasCreated: Bool
 
         if var updated = existingProfile {
             updated.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -784,18 +1052,18 @@ public struct ProfileEditorSheet: View {
             updated.deviceProfile = deviceProfile
             updated.sessionSeed = sessionSeed
             updated.proxyEnabled = effectiveProxyEnabled
-            updated.proxyType = proxyType
-            updated.proxyHost = proxyHost.trimmingCharacters(in: .whitespacesAndNewlines)
-            updated.proxyPort = proxyPort
-            updated.proxyUsername = proxyUsername.trimmingCharacters(in: .whitespacesAndNewlines)
-            updated.proxyPassword = proxyPassword
-            updated.proxyDetectedIP = proxyDetectedIP
-            updated.proxyDetectedCity = proxyDetectedCity
-            updated.proxyDetectedRegion = proxyDetectedRegion
-            updated.proxyDetectedCountry = proxyDetectedCountry
-            updated.proxyDetectedISP = proxyDetectedISP
-            updated.proxyDetectedASN = proxyDetectedASN
-            updated.proxyDetectedTimezone = proxyDetectedTimezone
+            updated.proxyType = sanitized.type
+            updated.proxyHost = sanitized.host
+            updated.proxyPort = sanitized.port
+            updated.proxyUsername = sanitized.username
+            updated.proxyPassword = sanitized.password
+            updated.proxyDetectedIP = detIP
+            updated.proxyDetectedCity = detCity
+            updated.proxyDetectedRegion = detRegion
+            updated.proxyDetectedCountry = detCountry
+            updated.proxyDetectedISP = detISP
+            updated.proxyDetectedASN = detASN
+            updated.proxyDetectedTimezone = detTZ
             updated.proxyUsageType = proxyUsageType
             updated.proxyConnectionType = proxyConnectionType
             updated.enableDnsProxyMatching = enableDnsProxyMatching
@@ -806,7 +1074,8 @@ public struct ProfileEditorSheet: View {
             updated.mockLocationName = mockLocationName
 
             profileManager.updateProfile(updated, privacyProfile: privacyProfile)
-            onSaved(updated, false)
+            targetProfile = updated
+            wasCreated = false
         } else {
             let created = profileManager.createProfile(
                 name: name,
@@ -814,18 +1083,18 @@ public struct ProfileEditorSheet: View {
                 themeColorHex: themeColorHex,
                 deviceProfile: deviceProfile,
                 proxyEnabled: effectiveProxyEnabled,
-                proxyType: proxyType,
-                proxyHost: proxyHost,
-                proxyPort: proxyPort,
-                proxyUsername: proxyUsername,
-                proxyPassword: proxyPassword,
-                proxyDetectedIP: proxyDetectedIP,
-                proxyDetectedCity: proxyDetectedCity,
-                proxyDetectedRegion: proxyDetectedRegion,
-                proxyDetectedCountry: proxyDetectedCountry,
-                proxyDetectedISP: proxyDetectedISP,
-                proxyDetectedASN: proxyDetectedASN,
-                proxyDetectedTimezone: proxyDetectedTimezone,
+                proxyType: sanitized.type,
+                proxyHost: sanitized.host,
+                proxyPort: sanitized.port,
+                proxyUsername: sanitized.username,
+                proxyPassword: sanitized.password,
+                proxyDetectedIP: detIP,
+                proxyDetectedCity: detCity,
+                proxyDetectedRegion: detRegion,
+                proxyDetectedCountry: detCountry,
+                proxyDetectedISP: detISP,
+                proxyDetectedASN: detASN,
+                proxyDetectedTimezone: detTZ,
                 proxyUsageType: proxyUsageType,
                 proxyConnectionType: proxyConnectionType,
                 enableDnsProxyMatching: enableDnsProxyMatching,
@@ -835,7 +1104,45 @@ public struct ProfileEditorSheet: View {
                 mockLongitude: mockLongitude,
                 mockLocationName: mockLocationName
             )
-            onSaved(created, true)
+            targetProfile = created
+            wasCreated = true
         }
+
+        // If proxy is enabled and IP/ISP haven't been verified yet, auto-resolve in the background and update the profile & live session!
+        if effectiveProxyEnabled && detIP.isEmpty {
+            let pid = targetProfile.id
+            Task {
+                let res = await ProxyService.shared.testProxyAsync(
+                    type: sanitized.type,
+                    host: sanitized.host,
+                    port: sanitized.port,
+                    username: sanitized.username,
+                    password: sanitized.password
+                )
+                if res.success {
+                    await MainActor.run {
+                        if var latest = profileManager.profiles.first(where: { $0.id == pid }) {
+                            if !res.resolvedType.isEmpty { latest.proxyType = res.resolvedType }
+                            latest.proxyDetectedIP = res.ip
+                            latest.proxyDetectedCity = res.city
+                            latest.proxyDetectedRegion = res.regionCode
+                            latest.proxyDetectedCountry = res.country
+                            latest.proxyDetectedISP = res.isp
+                            latest.proxyDetectedASN = res.asn
+                            latest.proxyDetectedTimezone = res.timezoneId
+                            latest.proxyUsageType = res.usageType
+                            latest.proxyConnectionType = res.connectionType
+                            latest.mockLocationEnabled = true
+                            latest.mockLatitude = res.latitude
+                            latest.mockLongitude = res.longitude
+                            latest.mockLocationName = "\(res.city), \(res.country)"
+                            profileManager.updateProfile(latest, privacyProfile: privacyProfile)
+                        }
+                    }
+                }
+            }
+        }
+
+        onSaved(targetProfile, wasCreated)
     }
 }

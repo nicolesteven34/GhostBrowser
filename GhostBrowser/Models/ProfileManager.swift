@@ -15,13 +15,36 @@ public class ProfileManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: userDefaultsKey),
            let decoded = try? JSONDecoder().decode([BrowserProfile].self, from: data),
            !decoded.isEmpty {
-            self.profiles = decoded
+            var sanitizedProfiles = decoded
+            var didRepair = false
+            for idx in sanitizedProfiles.indices {
+                let p = sanitizedProfiles[idx]
+                let clean = ProxyService.shared.sanitizeCredentials(
+                    type: p.proxyType,
+                    host: p.proxyHost,
+                    port: p.proxyPort,
+                    username: p.proxyUsername,
+                    password: p.proxyPassword
+                )
+                if clean.host != p.proxyHost || clean.port != p.proxyPort || clean.username != p.proxyUsername || clean.password != p.proxyPassword {
+                    sanitizedProfiles[idx].proxyType = clean.type
+                    sanitizedProfiles[idx].proxyHost = clean.host
+                    sanitizedProfiles[idx].proxyPort = clean.port
+                    sanitizedProfiles[idx].proxyUsername = clean.username
+                    sanitizedProfiles[idx].proxyPassword = clean.password
+                    didRepair = true
+                }
+            }
+            self.profiles = sanitizedProfiles
             if let savedActiveStr = UserDefaults.standard.string(forKey: activeIDKey),
                let savedActiveUUID = UUID(uuidString: savedActiveStr),
-               decoded.contains(where: { $0.id == savedActiveUUID }) {
+               sanitizedProfiles.contains(where: { $0.id == savedActiveUUID }) {
                 self.activeProfileID = savedActiveUUID
             } else {
-                self.activeProfileID = decoded[0].id
+                self.activeProfileID = sanitizedProfiles[0].id
+            }
+            if didRepair {
+                self.saveProfiles()
             }
         } else {
             let defaultProfile = BrowserProfile(
