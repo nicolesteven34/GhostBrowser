@@ -13,7 +13,10 @@ public struct ContentView: View {
     @State private var showSettingsSheet: Bool = false
     @State private var showProfileSheet: Bool = false
     @State private var showSessionToolsSheet: Bool = false
+    @State private var sessionToolsInitialTab: SessionToolsSheet.ToolTab = .proxy
     @State private var showWipeAlert: Bool = false
+    @State private var showHistoryDropdown: Bool = false
+    @FocusState private var isAddressBarFocused: Bool
 
     // Real Identity Rotation Toast Notification
     @State private var toastMessage: String? = nil
@@ -30,6 +33,17 @@ public struct ContentView: View {
 
     private var activeTab: BrowserTab? {
         tabs.first(where: { $0.id == activeTabID }) ?? tabs.first
+    }
+
+    private var filteredProfileHistory: [ProfileHistoryEntry] {
+        let all = profileManager.activeProfile.visitedHistory
+        let q = inputURLText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if q.isEmpty || q == (activeTab?.urlString.lowercased() ?? "") {
+            return Array(all.prefix(12))
+        }
+        return Array(all.filter {
+            $0.url.lowercased().contains(q) || $0.title.lowercased().contains(q)
+        }.prefix(12))
     }
 
     public var body: some View {
@@ -75,9 +89,19 @@ public struct ContentView: View {
                 .edgesIgnoringSafeArea(.bottom)
             }
 
+            // Per-Profile Omnibox History & Autocomplete Dropdown
+            if showHistoryDropdown && !filteredProfileHistory.isEmpty {
+                omniboxHistoryDropdownView
+            }
+
             // In-App Toast Banner on Identity / Profile Changes
             if let toast = toastMessage {
                 identityToastView(toast: toast)
+            }
+        }
+        .onChange(of: isAddressBarFocused) { focused in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                showHistoryDropdown = focused
             }
         }
         .onAppear {
@@ -105,9 +129,15 @@ public struct ContentView: View {
             privacyProfile.proxyPassword = active.proxyPassword
             privacyProfile.proxyDetectedIP = active.proxyDetectedIP
             privacyProfile.proxyDetectedCity = active.proxyDetectedCity
+            privacyProfile.proxyDetectedRegion = active.proxyDetectedRegion
             privacyProfile.proxyDetectedCountry = active.proxyDetectedCountry
             privacyProfile.proxyDetectedISP = active.proxyDetectedISP
+            privacyProfile.proxyDetectedASN = active.proxyDetectedASN
             privacyProfile.proxyDetectedTimezone = active.proxyDetectedTimezone
+            privacyProfile.proxyUsageType = active.proxyUsageType
+            privacyProfile.proxyConnectionType = active.proxyConnectionType
+            privacyProfile.enableDnsProxyMatching = active.enableDnsProxyMatching
+            privacyProfile.enableIpChangeKillSwitch = active.enableIpChangeKillSwitch
 
             if tabs.isEmpty {
                 let initial = BrowserTab()
@@ -155,6 +185,7 @@ public struct ContentView: View {
                     tabs[index].urlString = "local://startpage"
                     tabs[index].title = "Start Page"
                     inputURLText = ""
+                    showHistoryDropdown = false
                     profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                 }
             }) {
@@ -170,7 +201,7 @@ public struct ContentView: View {
                     .font(.system(size: 15, weight: .medium))
             }
 
-            // Safari Search & Address Bar
+            // Safari Search & Address Bar with Per-Profile History Dropdown Trigger
             HStack(spacing: 8) {
                 Image(systemName: "lock.shield.fill")
                     .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
@@ -181,9 +212,29 @@ public struct ContentView: View {
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                     .keyboardType(.webSearch)
+                    .focused($isAddressBarFocused)
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            showHistoryDropdown = true
+                        }
+                    }
                     .onSubmit {
+                        isAddressBarFocused = false
+                        showHistoryDropdown = false
                         submitNavigation()
                     }
+
+                if !profileManager.activeProfile.visitedHistory.isEmpty {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            showHistoryDropdown.toggle()
+                        }
+                    }) {
+                        Image(systemName: showHistoryDropdown ? "chevron.up.circle.fill" : "clock.arrow.circlepath")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 13))
+                    }
+                }
 
                 if !inputURLText.isEmpty {
                     Button(action: { inputURLText = "" }) {
@@ -192,7 +243,11 @@ public struct ContentView: View {
                             .font(.system(size: 13))
                     }
 
-                    Button(action: { submitNavigation() }) {
+                    Button(action: {
+                        isAddressBarFocused = false
+                        showHistoryDropdown = false
+                        submitNavigation()
+                    }) {
                         Image(systemName: "arrow.right.circle.fill")
                             .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
                             .font(.system(size: 16, weight: .semibold))
@@ -204,7 +259,7 @@ public struct ContentView: View {
             .background(Color(.systemGray6))
             .cornerRadius(10)
 
-            // Profile Switcher Pill
+            // Profile Switcher & Session Monitor Indicator Pill (shows IP • ISP • Type • State when Proxy Active)
             Button(action: {
                 showProfileSheet = true
             }) {
@@ -221,9 +276,16 @@ public struct ContentView: View {
                         .foregroundColor(.secondary)
                         .font(.system(size: 9))
 
-                    Text(shortPersonaName(privacyProfile.selectedDevice.rawValue))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                    if privacyProfile.proxyEnabled {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.green)
+                    }
+
+                    Text(privacyProfile.proxyEnabled ? privacyProfile.compactProxyBadge : shortPersonaName(privacyProfile.selectedDevice.rawValue))
+                        .font(.system(size: 11, weight: .semibold, design: privacyProfile.proxyEnabled ? .monospaced : .default))
+                        .foregroundColor(privacyProfile.proxyEnabled ? .green : .secondary)
+                        .lineLimit(1)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -240,12 +302,21 @@ public struct ContentView: View {
                     privacyProfile: privacyProfile,
                     onProfileSwitched: { newProfile in
                         switchActiveProfile(newProfile)
+                    },
+                    onLaunchGhostDetect: {
+                        if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
+                            tabs[index].urlString = "ghost://detect"
+                            tabs[index].title = "GhostDetect Lab"
+                            inputURLText = "ghost://detect"
+                            profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                        }
                     }
                 )
             }
 
-            // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera & Mock GPS)
+            // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera, Mock GPS & Evergreen Engine Updates)
             Button(action: {
+                sessionToolsInitialTab = .proxy
                 showSessionToolsSheet = true
             }) {
                 let isHudActive = privacyProfile.proxyEnabled || privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled
@@ -264,7 +335,20 @@ public struct ContentView: View {
                 .clipShape(Circle())
             }
             .sheet(isPresented: $showSessionToolsSheet) {
-                SessionToolsSheet(privacyProfile: privacyProfile, profileManager: profileManager)
+                SessionToolsSheet(privacyProfile: privacyProfile, profileManager: profileManager, initialTab: sessionToolsInitialTab)
+            }
+
+            // Evergreen Engine & Stealth Update Center Quick-Launch Button
+            Button(action: {
+                sessionToolsInitialTab = .updates
+                showSessionToolsSheet = true
+            }) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.green)
+                    .padding(8)
+                    .background(Color.green.opacity(0.12))
+                    .clipShape(Circle())
             }
 
             // Privacy & Signature Settings
@@ -458,6 +542,94 @@ public struct ContentView: View {
         .onTapGesture {
             selectTab(id: tab.id)
         }
+    }
+
+    // MARK: - Per-Profile Omnibox History & Autocomplete Dropdown
+    private var omniboxHistoryDropdownView: some View {
+        VStack(spacing: 0) {
+            // Header Bar
+            HStack {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
+                Text("RECENT VISITED SITES (\(profileManager.activeProfile.name.uppercased()))")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(action: {
+                    profileManager.clearProfileHistory()
+                    showHistoryDropdown = false
+                }) {
+                    Text("Clear Profile History")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.red)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+
+            Divider()
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(filteredProfileHistory) { item in
+                        Button(action: {
+                            inputURLText = item.url
+                            isAddressBarFocused = false
+                            showHistoryDropdown = false
+                            submitNavigation()
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
+                                    .frame(width: 22, height: 22)
+                                    .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
+                                    .cornerRadius(5)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                    Text(item.url)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer()
+
+                                Text("\(item.visitCount)x")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color(.systemGray5))
+                                    .foregroundColor(.secondary)
+                                    .cornerRadius(4)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        Divider()
+                    }
+                }
+            }
+            .frame(maxHeight: 280)
+        }
+        .background(.regularMaterial)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
+        .padding(.horizontal, 140)
+        .padding(.top, 54)
+        .zIndex(998)
     }
 
     // MARK: - Identity Toast Banner

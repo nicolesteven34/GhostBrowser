@@ -49,41 +49,185 @@ public class ProfileManager: ObservableObject {
         UserDefaults.standard.set(activeProfileID.uuidString, forKey: activeIDKey)
     }
 
+    public func nextRecommendedDeviceProfile() -> AppleDeviceProfile {
+        let realisticPool: [AppleDeviceProfile] = [
+            .iPadProM4_13,
+            .iPhone18ProMax_A20,
+            .iPhone17ProMax_A19,
+            .iPhone16ProMax_A18,
+            .iPadAirM2_11,
+            .macBookProM4Max_16,
+            .iPhone16_A18,
+            .macBookAirM3_13,
+            .iPhone15ProMax_A17,
+            .iPadMini6_A15
+        ]
+        let usedDevices = Set(profiles.map { $0.deviceProfile })
+        if let unused = realisticPool.first(where: { !usedDevices.contains($0) }) {
+            return unused
+        }
+        return realisticPool[profiles.count % realisticPool.count]
+    }
+
     @discardableResult
     public func createProfile(
         name: String,
         icon: String = "briefcase.fill",
         themeColorHex: String = "#BF5AF2",
-        deviceProfile: AppleDeviceProfile? = nil
+        deviceProfile: AppleDeviceProfile? = nil,
+        proxyEnabled: Bool = false,
+        proxyType: String = "SOCKS5",
+        proxyHost: String = "",
+        proxyPort: Int = 1080,
+        proxyUsername: String = "",
+        proxyPassword: String = "",
+        proxyDetectedIP: String = "",
+        proxyDetectedCity: String = "",
+        proxyDetectedRegion: String = "",
+        proxyDetectedCountry: String = "",
+        proxyDetectedISP: String = "",
+        proxyDetectedASN: String = "",
+        proxyDetectedTimezone: String = "",
+        proxyUsageType: String = "Residential",
+        proxyConnectionType: String = "Cable/Fiber",
+        enableDnsProxyMatching: Bool = true,
+        enableIpChangeKillSwitch: Bool = true,
+        mockLocationEnabled: Bool = false,
+        mockLatitude: Double = 37.7749,
+        mockLongitude: Double = -122.4194,
+        mockLocationName: String = "San Francisco, CA"
     ) -> BrowserProfile {
-        let realisticPool: [AppleDeviceProfile] = [
-            .iPhone18ProMax_A20,
-            .iPhone17ProMax_A19,
-            .iPhone16ProMax_A18,
-            .iPhone16_A18,
-            .iPadProM4_13,
-            .iPadAirM2_11,
-            .macBookProM4Max_16,
-            .macBookAirM3_13,
-            .iPhone15ProMax_A17,
-            .iPadMini6_A15
-        ]
-        let chosenDevice = deviceProfile ?? (realisticPool.randomElement() ?? .iPadProM4_13)
+        let chosenDevice = deviceProfile ?? nextRecommendedDeviceProfile()
         let freshTab = BrowserTab()
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let newProfile = BrowserProfile(
             id: UUID(),
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "New Profile" : name,
+            name: cleanName.isEmpty ? "Profile \(profiles.count + 1)" : cleanName,
             icon: icon,
             themeColorHex: themeColorHex,
             deviceProfile: chosenDevice,
             sessionSeed: Int.random(in: 100000...999999),
             buildIndex: Int.random(in: 0...4),
             tabs: [freshTab],
-            activeTabID: freshTab.id
+            activeTabID: freshTab.id,
+            mockLocationEnabled: mockLocationEnabled,
+            mockLatitude: mockLatitude,
+            mockLongitude: mockLongitude,
+            mockLocationName: mockLocationName,
+            proxyEnabled: proxyEnabled,
+            proxyType: proxyType,
+            proxyHost: proxyHost.trimmingCharacters(in: .whitespacesAndNewlines),
+            proxyPort: proxyPort,
+            proxyUsername: proxyUsername.trimmingCharacters(in: .whitespacesAndNewlines),
+            proxyPassword: proxyPassword,
+            proxyDetectedIP: proxyDetectedIP,
+            proxyDetectedCity: proxyDetectedCity,
+            proxyDetectedRegion: proxyDetectedRegion,
+            proxyDetectedCountry: proxyDetectedCountry,
+            proxyDetectedISP: proxyDetectedISP,
+            proxyDetectedASN: proxyDetectedASN,
+            proxyDetectedTimezone: proxyDetectedTimezone,
+            proxyUsageType: proxyUsageType,
+            proxyConnectionType: proxyConnectionType,
+            enableDnsProxyMatching: enableDnsProxyMatching,
+            enableIpChangeKillSwitch: enableIpChangeKillSwitch
         )
         profiles.append(newProfile)
         saveProfiles()
         return newProfile
+    }
+
+    public func updateProfile(_ updated: BrowserProfile, privacyProfile: PrivacyProfile? = nil) {
+        guard let index = profiles.firstIndex(where: { $0.id == updated.id }) else { return }
+        profiles[index] = updated
+        saveProfiles()
+
+        if updated.id == activeProfileID, let privacyProfile = privacyProfile {
+            syncPrivacyProfile(privacyProfile, from: updated)
+        }
+    }
+
+    @discardableResult
+    public func cloneProfile(id: UUID) -> BrowserProfile? {
+        guard let source = profiles.first(where: { $0.id == id }) else { return nil }
+        let freshTab = BrowserTab()
+        let cloned = BrowserProfile(
+            id: UUID(),
+            name: "\(source.name) (Clone)",
+            icon: source.icon,
+            themeColorHex: source.themeColorHex,
+            deviceProfile: source.deviceProfile,
+            sessionSeed: Int.random(in: 100000...999999),
+            buildIndex: (source.buildIndex + 1) % 5,
+            customUserAgent: source.customUserAgent,
+            searchEngine: source.searchEngine,
+            tabs: [freshTab],
+            activeTabID: freshTab.id,
+            mockLocationEnabled: source.mockLocationEnabled,
+            mockLatitude: source.mockLatitude,
+            mockLongitude: source.mockLongitude,
+            mockLocationName: source.mockLocationName,
+            virtualCameraEnabled: source.virtualCameraEnabled,
+            virtualCameraImageBase64: source.virtualCameraImageBase64,
+            virtualCameraPanX: source.virtualCameraPanX,
+            virtualCameraPanY: source.virtualCameraPanY,
+            virtualCameraZoom: source.virtualCameraZoom,
+            proxyEnabled: source.proxyEnabled,
+            proxyType: source.proxyType,
+            proxyHost: source.proxyHost,
+            proxyPort: source.proxyPort,
+            proxyUsername: source.proxyUsername,
+            proxyPassword: source.proxyPassword,
+            proxyDetectedIP: source.proxyDetectedIP,
+            proxyDetectedCity: source.proxyDetectedCity,
+            proxyDetectedRegion: source.proxyDetectedRegion,
+            proxyDetectedCountry: source.proxyDetectedCountry,
+            proxyDetectedISP: source.proxyDetectedISP,
+            proxyDetectedASN: source.proxyDetectedASN,
+            proxyDetectedTimezone: source.proxyDetectedTimezone,
+            proxyUsageType: source.proxyUsageType,
+            proxyConnectionType: source.proxyConnectionType,
+            enableDnsProxyMatching: source.enableDnsProxyMatching,
+            enableIpChangeKillSwitch: source.enableIpChangeKillSwitch
+        )
+        profiles.append(cloned)
+        saveProfiles()
+        return cloned
+    }
+
+    private func syncPrivacyProfile(_ privacyProfile: PrivacyProfile, from target: BrowserProfile) {
+        privacyProfile.selectedDevice = target.deviceProfile
+        privacyProfile.sessionSeed = target.sessionSeed
+        privacyProfile.buildIndex = target.buildIndex
+        privacyProfile.sessionDataStoreID = target.id
+        privacyProfile.searchEngine = target.searchEngine
+        privacyProfile.customUserAgent = target.customUserAgent
+        privacyProfile.mockLocationEnabled = target.mockLocationEnabled
+        privacyProfile.mockLatitude = target.mockLatitude
+        privacyProfile.mockLongitude = target.mockLongitude
+        privacyProfile.mockLocationName = target.mockLocationName
+        privacyProfile.virtualCameraEnabled = target.virtualCameraEnabled
+        privacyProfile.virtualCameraImageBase64 = target.virtualCameraImageBase64
+        privacyProfile.virtualCameraPanX = target.virtualCameraPanX
+        privacyProfile.virtualCameraPanY = target.virtualCameraPanY
+        privacyProfile.virtualCameraZoom = target.virtualCameraZoom
+        privacyProfile.proxyEnabled = target.proxyEnabled
+        privacyProfile.proxyType = target.proxyType
+        privacyProfile.proxyHost = target.proxyHost
+        privacyProfile.proxyPort = target.proxyPort
+        privacyProfile.proxyUsername = target.proxyUsername
+        privacyProfile.proxyPassword = target.proxyPassword
+        privacyProfile.proxyDetectedIP = target.proxyDetectedIP
+        privacyProfile.proxyDetectedCity = target.proxyDetectedCity
+        privacyProfile.proxyDetectedRegion = target.proxyDetectedRegion
+        privacyProfile.proxyDetectedCountry = target.proxyDetectedCountry
+        privacyProfile.proxyDetectedISP = target.proxyDetectedISP
+        privacyProfile.proxyDetectedASN = target.proxyDetectedASN
+        privacyProfile.proxyDetectedTimezone = target.proxyDetectedTimezone
+        privacyProfile.proxyUsageType = target.proxyUsageType
+        privacyProfile.proxyConnectionType = target.proxyConnectionType
+        privacyProfile.enableDnsProxyMatching = target.enableDnsProxyMatching
+        privacyProfile.enableIpChangeKillSwitch = target.enableIpChangeKillSwitch
     }
 
     public func switchProfile(to id: UUID, privacyProfile: PrivacyProfile? = nil) {
@@ -95,37 +239,13 @@ public class ProfileManager: ObservableObject {
         saveProfiles()
 
         if let privacyProfile = privacyProfile {
-            privacyProfile.selectedDevice = target.deviceProfile
-            privacyProfile.sessionSeed = target.sessionSeed
-            privacyProfile.buildIndex = target.buildIndex
-            privacyProfile.sessionDataStoreID = target.id
-            privacyProfile.searchEngine = target.searchEngine
-            privacyProfile.customUserAgent = target.customUserAgent
-            privacyProfile.mockLocationEnabled = target.mockLocationEnabled
-            privacyProfile.mockLatitude = target.mockLatitude
-            privacyProfile.mockLongitude = target.mockLongitude
-            privacyProfile.mockLocationName = target.mockLocationName
-            privacyProfile.virtualCameraEnabled = target.virtualCameraEnabled
-            privacyProfile.virtualCameraImageBase64 = target.virtualCameraImageBase64
-            privacyProfile.virtualCameraPanX = target.virtualCameraPanX
-            privacyProfile.virtualCameraPanY = target.virtualCameraPanY
-            privacyProfile.virtualCameraZoom = target.virtualCameraZoom
-            privacyProfile.proxyEnabled = target.proxyEnabled
-            privacyProfile.proxyType = target.proxyType
-            privacyProfile.proxyHost = target.proxyHost
-            privacyProfile.proxyPort = target.proxyPort
-            privacyProfile.proxyUsername = target.proxyUsername
-            privacyProfile.proxyPassword = target.proxyPassword
-            privacyProfile.proxyDetectedIP = target.proxyDetectedIP
-            privacyProfile.proxyDetectedCity = target.proxyDetectedCity
-            privacyProfile.proxyDetectedCountry = target.proxyDetectedCountry
-            privacyProfile.proxyDetectedISP = target.proxyDetectedISP
-            privacyProfile.proxyDetectedTimezone = target.proxyDetectedTimezone
+            syncPrivacyProfile(privacyProfile, from: target)
         }
     }
 
     public func saveProfileSensors(from privacyProfile: PrivacyProfile) {
         guard let index = profiles.firstIndex(where: { $0.id == activeProfileID }) else { return }
+        profiles[index].selectedDeviceSynced(from: privacyProfile)
         profiles[index].mockLocationEnabled = privacyProfile.mockLocationEnabled
         profiles[index].mockLatitude = privacyProfile.mockLatitude
         profiles[index].mockLongitude = privacyProfile.mockLongitude
@@ -143,9 +263,15 @@ public class ProfileManager: ObservableObject {
         profiles[index].proxyPassword = privacyProfile.proxyPassword
         profiles[index].proxyDetectedIP = privacyProfile.proxyDetectedIP
         profiles[index].proxyDetectedCity = privacyProfile.proxyDetectedCity
+        profiles[index].proxyDetectedRegion = privacyProfile.proxyDetectedRegion
         profiles[index].proxyDetectedCountry = privacyProfile.proxyDetectedCountry
         profiles[index].proxyDetectedISP = privacyProfile.proxyDetectedISP
+        profiles[index].proxyDetectedASN = privacyProfile.proxyDetectedASN
         profiles[index].proxyDetectedTimezone = privacyProfile.proxyDetectedTimezone
+        profiles[index].proxyUsageType = privacyProfile.proxyUsageType
+        profiles[index].proxyConnectionType = privacyProfile.proxyConnectionType
+        profiles[index].enableDnsProxyMatching = privacyProfile.enableDnsProxyMatching
+        profiles[index].enableIpChangeKillSwitch = privacyProfile.enableIpChangeKillSwitch
         saveProfiles()
     }
 
@@ -153,6 +279,42 @@ public class ProfileManager: ObservableObject {
         guard let index = profiles.firstIndex(where: { $0.id == activeProfileID }) else { return }
         profiles[index].tabs = tabs.isEmpty ? [BrowserTab()] : tabs
         profiles[index].activeTabID = activeTabID
+        saveProfiles()
+    }
+
+    public func recordHistoryVisit(url: String, title: String) {
+        let cleanURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanURL.isEmpty,
+              !cleanURL.hasPrefix("local://"),
+              !cleanURL.hasPrefix("ghost://"),
+              !cleanURL.contains("startpage.html"),
+              cleanURL != "about:blank",
+              let index = profiles.firstIndex(where: { $0.id == activeProfileID }) else {
+            return
+        }
+        let displayTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? (URL(string: cleanURL)?.host ?? cleanURL)
+            : title
+        if let existingIdx = profiles[index].visitedHistory.firstIndex(where: { $0.url.caseInsensitiveCompare(cleanURL) == .orderedSame }) {
+            var entry = profiles[index].visitedHistory.remove(at: existingIdx)
+            entry.visitCount += 1
+            entry.title = displayTitle
+            entry.lastVisitedAt = Date()
+            profiles[index].visitedHistory.insert(entry, at: 0)
+        } else {
+            let entry = ProfileHistoryEntry(url: cleanURL, title: displayTitle, visitCount: 1, lastVisitedAt: Date())
+            profiles[index].visitedHistory.insert(entry, at: 0)
+        }
+        if profiles[index].visitedHistory.count > 100 {
+            profiles[index].visitedHistory = Array(profiles[index].visitedHistory.prefix(100))
+        }
+        saveProfiles()
+    }
+
+    public func clearProfileHistory(id: UUID? = nil) {
+        let targetID = id ?? activeProfileID
+        guard let index = profiles.firstIndex(where: { $0.id == targetID }) else { return }
+        profiles[index].visitedHistory.removeAll()
         saveProfiles()
     }
 
@@ -200,6 +362,7 @@ public class ProfileManager: ObservableObject {
 
     public func clearProfileData(id: UUID) {
         UserDefaults.standard.removeObject(forKey: "ghost_vault_cookies_\(id.uuidString)")
+        clearProfileHistory(id: id)
         if #available(iOS 17.0, *) {
             WKWebsiteDataStore.remove(forIdentifier: id) { _ in }
         }
@@ -281,14 +444,19 @@ public class ProfileManager: ObservableObject {
             let next = profiles[0]
             activeProfileID = next.id
             if let privacyProfile = privacyProfile {
-                privacyProfile.selectedDevice = next.deviceProfile
-                privacyProfile.sessionSeed = next.sessionSeed
-                privacyProfile.buildIndex = next.buildIndex
-                privacyProfile.sessionDataStoreID = next.id
-                privacyProfile.searchEngine = next.searchEngine
-                privacyProfile.customUserAgent = next.customUserAgent
+                syncPrivacyProfile(privacyProfile, from: next)
             }
         }
         saveProfiles()
+    }
+}
+
+private extension BrowserProfile {
+    mutating func selectedDeviceSynced(from privacyProfile: PrivacyProfile) {
+        self.deviceProfile = privacyProfile.selectedDevice
+        self.sessionSeed = privacyProfile.sessionSeed
+        self.buildIndex = privacyProfile.buildIndex
+        self.customUserAgent = privacyProfile.customUserAgent
+        self.searchEngine = privacyProfile.searchEngine
     }
 }

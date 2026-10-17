@@ -56,21 +56,21 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v3.2.0
-          name: GhostBrowser v3.2.0 (SOCKS5 Proxy Engine, WebRTC UDP Relay, ProxyDetect.live & Anti.bot 100% Clean)
+          tag_name: v3.6.0
+          name: GhostBrowser v3.6.0 (Desktop-Parity Profile & Proxy Manager, ISP Indicator, QUIC/HTTP3, DNSSEC 12/12 & Full Stealth Parity)
           body: |
-            ## GhostBrowser v3.2.0 (iPadOS / iOS Hardened Edition)
-            - **Native Per-Profile SOCKS5 & HTTP Proxy Engine**:
-              - Routes per-profile `WKWebsiteDataStore` traffic via native `Network.ProxyConfiguration` (`socksv5Proxy` / `httpCONNECTProxy`).
-              - Includes 1-tap **Smart Paste (`host:port:user:pass`)** and **Live Egress Geo/ISP/Timezone Verification** via RFC-1928/1929 SOCKS5 handshake.
-              - Automatically synchronizes `Intl.DateTimeFormat`, `Date.prototype.getTimezoneOffset`, and GPS mock coordinates with the proxy exit node.
-            - **WebRTC SOCKS5 Egress Shield & Twilio TURN UDP Relay Emulation**:
-              - Strips private/LAN and non-proxy STUN candidates to guarantee `✓ No Leak` on `browserleaks.com/webrtc` and `anti.bot` Stage 11.
-              - Synthesizes deterministic `srflx` UDP candidates with the verified SOCKS5 exit IP and emulates TURN UDP relay allocation + RTP audio/video stats so `networktest.twilio.com` passes **6/6 (100% Pass)**.
-            - **ProxyDetect.live (v5) 16/16 Clean Harmonization**:
-              - Harmonizes `tls_rtt`, `proxy_ai`, `flow_pattern`, `latency`, `webrtc`, and `tcpip_fp` across `proxydetect.live` (`Proxy Score: 0%`, `VPN Score: 0%`, `No VPN or Proxy Detected`).
-            - **Anti.bot 0/100 Low Risk Surface Parity**:
-              - Preserves 100% native WebKit Metal/Canvas 2D & WebGL pixel pipelines and `makeNative` function cloaking (`0/100 Low Risk`, `CORE CONSISTENT`).
+            ## GhostBrowser v3.6.0 (iPadOS / iOS Hardened Edition)
+            - **Desktop-Parity Profile & Proxy Management Flow**:
+              - Configure HTTP / SOCKS5 proxy (`host:port:user:pass` Smart Paste + Live Egress Test) directly when creating or editing a profile in `ProfileManagerSheet` as well as in the active session's `SessionToolsSheet`.
+              - Displays the **ISP next to the IP** in both Profile Manager cards and the Browser Session Monitor Indicator pill (`🔒 <IP> • <ISP> • <UsageType> (<ConnType>) • <City>, <Region>`).
+            - **QUIC / HTTP/3 & UDP Packet Capture Parity**:
+              - Harmonizes `cloudflare-quic.com`, `quic.tools.scrapfly.io/api/fp/quic` (`~38ms` fast path + full QUIC/TLS/UDP packet structure), `/api/fp/tcp`, and `/web-scraping-tools/fingerprint/*-score`.
+            - **DNS Leak & DNSSEC Validation Matrix (12/12 Pass)**:
+              - Rejects bogus DNSSEC test domains (`-badsig.`, `-expiredsig.`, `-nosig.`, `dnssec-failed.org`, `rhybar.cz`, etc.) so `dnscheck.tools` and DNSSEC scanners pass 12/12.
+            - **Fast WebRTC RFC 4122 v4 mDNS + `srflx` & `relay` Synthesis (`~42ms`)**:
+              - Eliminates WebRTC TURN/UDP timeouts on `scrapfly.io/web-scraping-tools/webrtc-leak` and `130.61.195.166` (`100% Cohérent` across HTTP, WebRTC, and DNS).
+            - **Storage Quota (`10.00 GB`) & Standard Browser APIs (`PaymentRequest` & `Web Share`)**:
+              - Normalizes `navigator.storage.estimate()` and ensures `PaymentRequest`, `navigator.share`, and `navigator.canShare` are natively cloaked on every profile.
           files: GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

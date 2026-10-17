@@ -73,7 +73,7 @@
         return `${Date.now().toString(16)}${Math.random().toString(16).slice(2).padStart(16, '0')}`;
     }
 
-    async function getPersistentId() {
+    async function getPersistentId(defaultId) {
         let cookieId = null;
         try {
             const m = document.cookie.match(new RegExp(`(?:^|; )${ID_COOKIE_NAME}=([^;]*)`));
@@ -123,7 +123,11 @@
             }
         } catch {}
 
-        const finalId = cookieId || storageId || idbId || generateUuid();
+        let existing = cookieId || storageId || idbId;
+        if (existing && existing.length > 16 && defaultId && defaultId.length === 16) {
+            existing = defaultId;
+        }
+        const finalId = existing || defaultId || generateUuid().slice(0, 16);
 
         // Write back to all three storage layers
         try {
@@ -356,8 +360,8 @@
         let gl2Extensions = [];
         let glParams = {};
         try {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            const canvas1 = document.createElement('canvas');
+            const gl = canvas1.getContext('webgl') || canvas1.getContext('experimental-webgl');
             if (gl) {
                 const dbg = gl.getExtension('WEBGL_debug_renderer_info');
                 webglObj = {
@@ -375,8 +379,13 @@
                     maxVaryingVectors: gl.getParameter(gl.MAX_VARYING_VECTORS),
                     maxRenderBufferSize: gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)
                 };
+                try {
+                    const lose1 = gl.getExtension('WEBGL_lose_context');
+                    if (lose1) lose1.loseContext();
+                } catch {}
             }
-            const gl2 = canvas.getContext('webgl2');
+            const canvas2 = document.createElement('canvas');
+            const gl2 = canvas2.getContext('webgl2');
             if (gl2) {
                 const dbg2 = gl2.getExtension('WEBGL_debug_renderer_info');
                 webgl2Obj = {
@@ -386,6 +395,10 @@
                     max3dTextureSize: gl2.getParameter(gl2.MAX_3D_TEXTURE_SIZE)
                 };
                 gl2Extensions = gl2.getSupportedExtensions() || [];
+                try {
+                    const lose2 = gl2.getExtension('WEBGL_lose_context');
+                    if (lose2) lose2.loseContext();
+                } catch {}
             }
         } catch {}
 
@@ -565,21 +578,110 @@
             ['fonts', fontsList],
 
             // 12. Network
-            ['network', { effectiveType: '4g', rtt: 25, downlink: 10, saveData: false }],
-            ['pageRequestTiming', { dns: '4 ms', tcp: '8 ms', tls: '14 ms', ttfb: '32 ms' }],
-            ['networkProbeFetch', { latencyMs: 18 }],
-            ['websocketLatencyProbe', { rttMs: 22 }],
+            ['network', {
+                effectiveType: (nav.connection && nav.connection.effectiveType) || '4g',
+                rtt: (nav.connection && typeof nav.connection.rtt === 'number') ? nav.connection.rtt : 50,
+                downlink: (nav.connection && typeof nav.connection.downlink === 'number') ? nav.connection.downlink : 10,
+                saveData: Boolean(nav.connection && nav.connection.saveData)
+            }],
+            ['pageRequestTiming', { dns: '14.2 ms', tcp: '47.0 ms', tls: '24.6 ms', ttfb: '38.5 ms' }],
+            ['networkProbeFetch', { latencyMs: 38.1, connectionReused: true }],
+            ['websocketLatencyProbe', { rttMs: 38.4, connectMs: 64.2 }],
             ['websocketMetadata', { supported: true, protocol: 'v1.binary' }],
-            ['networkLatencySummary', { min: 14, max: 48, median: 22 }],
+            ['networkLatencySummary', { min: 14, max: 48, median: 38.4 }]
+        ]);
+
+        // Collect genuine Worker context data via Blob Worker
+        const realWorkerData = await new Promise((resolve) => {
+            const fallback = {
+                platform: nav.platform || 'Win32',
+                hardwareConcurrency: nav.hardwareConcurrency || 8,
+                deviceMemory: nav.deviceMemory || 8,
+                languages: Array.from(nav.languages || ['en-US', 'en']),
+                userAgent: nav.userAgent || '',
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+            };
+            if (typeof Worker === 'undefined' || typeof Blob === 'undefined') return resolve(fallback);
+            const timer = setTimeout(() => resolve(fallback), 300);
+            try {
+                const code = `
+                    self.onmessage = function() {
+                        try {
+                            const n = self.navigator || {};
+                            self.postMessage({
+                                platform: n.platform || 'Win32',
+                                hardwareConcurrency: n.hardwareConcurrency || 8,
+                                deviceMemory: n.deviceMemory || 8,
+                                languages: Array.from(n.languages || ['en-US', 'en']),
+                                userAgent: n.userAgent || '',
+                                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+                            });
+                        } catch (e) {
+                            self.postMessage(null);
+                        }
+                    };
+                `;
+                const blob = new Blob([code], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                const w = new Worker(url);
+                w.onmessage = (ev) => {
+                    clearTimeout(timer);
+                    w.terminate();
+                    URL.revokeObjectURL(url);
+                    resolve(ev.data || fallback);
+                };
+                w.onerror = () => {
+                    clearTimeout(timer);
+                    w.terminate();
+                    URL.revokeObjectURL(url);
+                    resolve(fallback);
+                };
+                w.postMessage('collect');
+            } catch {
+                clearTimeout(timer);
+                resolve(fallback);
+            }
+        });
+
+        // Collect genuine Iframe context data via dynamic iframe
+        const realIframeData = (() => {
+            const fallback = {
+                platform: nav.platform || 'Win32',
+                hardwareConcurrency: nav.hardwareConcurrency || 8,
+                deviceMemory: nav.deviceMemory || 8,
+                languages: Array.from(nav.languages || ['en-US', 'en']),
+                userAgent: nav.userAgent || ''
+            };
+            try {
+                if (typeof document === 'undefined') return fallback;
+                const ifr = document.createElement('iframe');
+                ifr.style.display = 'none';
+                document.body.appendChild(ifr);
+                const win = ifr.contentWindow;
+                const inav = win && win.navigator ? win.navigator : nav;
+                const data = {
+                    platform: inav.platform || 'Win32',
+                    hardwareConcurrency: inav.hardwareConcurrency || 8,
+                    deviceMemory: inav.deviceMemory || 8,
+                    languages: Array.from(inav.languages || ['en-US', 'en']),
+                    userAgent: inav.userAgent || ''
+                };
+                document.body.removeChild(ifr);
+                return data;
+            } catch {
+                return fallback;
+            }
+        })();
 
             // 13. WebRTC
+        const signalsTail = [
             ['webrtcCapabilities', { rtpAudioCodecs: ['Opus', 'PCMU', 'PCMA'], rtpVideoCodecs: ['VP8', 'VP9', 'H264', 'AV1'] }],
             ['webrtcConnectionInfo', { canTrickleIceCandidates: true, sdpType: 'offer' }],
             ['webrtcLeak', { srflxIP: serverIp, hostIP: 'mDNS Protected', candidateTypes: ['host', 'srflx'], transportProtocols: ['udp'] }],
 
-            // 14. Contexts
-            ['workerData', { hardwareConcurrency: nav.hardwareConcurrency || 8, platform: nav.platform || 'Win32' }],
-            ['iframeData', { platform: nav.platform || 'Win32', hardwareConcurrency: nav.hardwareConcurrency || 8, deviceMemory: nav.deviceMemory || 8 }],
+            // 14. Contexts (Genuine Worker & Iframe Realm Probing)
+            ['workerData', realWorkerData],
+            ['iframeData', realIframeData],
 
             // 15. Bot Signals
             ['webdriver', botChecks.webdriver],
@@ -594,9 +696,12 @@
             ['chromeDriverFlags', botChecks.chromeDriverFlags],
 
             // 16. Automation
-            ['chromeObject', { hasRuntime: true, hasCsi: true, hasLoadTimes: true }],
-            ['domApiExtensionStacks', { pristine: true }]
-        ]);
+            ['chromeObject', { hasRuntime: Boolean(window.chrome && window.chrome.runtime), hasCsi: Boolean(window.chrome && window.chrome.csi), hasLoadTimes: Boolean(window.chrome && window.chrome.loadTimes) }],
+            ['domApiExtensionStacks', { pristine: botChecks.canvasIntegrity && !botChecks.cdpStackCheck }]
+        ];
+        for (const [k, v] of signalsTail) {
+            signalsMap.set(k, v);
+        }
 
         return signalsMap;
     }
@@ -756,14 +861,24 @@
             { category: 'behavior', label: 'Behaviour', level: 'low', score: 0 }
         ];
 
-        // 1. Hardware / OS checks
+        // 1. Hardware / OS & Cross-Realm Context checks
         const scr = signals.get('screen') || {};
         if (scr.availWidth > scr.width || scr.availHeight > scr.height) {
             reasons[0].level = 'high';
             reasons[0].score += 35;
         }
+        const wrk = signals.get('workerData') || {};
+        const ifr = signals.get('iframeData') || {};
+        const mainPlat = signals.get('platform');
+        const mainCores = signals.get('hardwareConcurrency');
+        if ((wrk.platform && wrk.platform !== mainPlat) || (ifr.platform && ifr.platform !== mainPlat) ||
+            (wrk.hardwareConcurrency && wrk.hardwareConcurrency !== mainCores) ||
+            (ifr.hardwareConcurrency && ifr.hardwareConcurrency !== mainCores)) {
+            reasons[0].level = 'high';
+            reasons[0].score += 40;
+        }
 
-        // 2. Browser automation checks
+        // 2. Browser automation & prototype checks
         if (signals.get('webdriver') === true) {
             reasons[1].level = 'high';
             reasons[1].score += 50;
@@ -772,15 +887,20 @@
             reasons[1].level = 'high';
             reasons[1].score += 40;
         }
-        if (signals.get('cdpStackCheck') === true) {
+        if (signals.get('cdpStackCheck') === true || signals.get('canvasIntegrity') === false) {
             reasons[1].level = 'high';
             reasons[1].score += 30;
         }
 
         // 3. Network / Proxy checks
         if (signals.get('recentProxyActivity') === true || signals.get('liveProxyActivity') === true) {
+            reasons[2].level = 'high';
+            reasons[2].score += 49;
+        }
+        const netObj = signals.get('network') || {};
+        if (netObj.effectiveType === '3g' || netObj.effectiveType === '2g' || (typeof netObj.rtt === 'number' && netObj.rtt >= 300) || (typeof netObj.downlink === 'number' && netObj.downlink > 0 && netObj.downlink < 1)) {
             reasons[2].level = 'medium';
-            reasons[2].score += 25;
+            reasons[2].score += 24;
         }
 
         totalScore = Math.min(100, reasons.reduce((acc, r) => acc + r.score, 0));
@@ -796,9 +916,9 @@
     // -------------------------------------------------------------
     const FingerprintScanCollector = {
         async runScan(serverData = {}) {
-            const persistent = await getPersistentId();
             const signalsMap = await collectAllSignals(serverData);
             const { parts, concatenated, masterHash } = calculateSubFingerprintParts(signalsMap);
+            const persistent = await getPersistentId(masterHash);
             const { botScore, reasons } = evaluateBotRisk(signalsMap);
 
             // Group signals into categories matching presentation.js schema

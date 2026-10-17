@@ -12,6 +12,8 @@ public struct SessionToolsSheet: View {
     @State private var previewImage: UIImage? = nil
     @State private var isProcessingImage: Bool = false
 
+    @ObservedObject private var updateService = EngineUpdateService.shared
+
     // Proxy Testing State
     @State private var isTestingProxy: Bool = false
     @State private var proxyStatusMessage: String = ""
@@ -21,6 +23,7 @@ public struct SessionToolsSheet: View {
         case proxy = "SOCKS5 Proxy"
         case gps = "GPS Location"
         case camera = "Virtual Camera"
+        case updates = "Engine Updates"
 
         public var id: String { rawValue }
     }
@@ -44,9 +47,10 @@ public struct SessionToolsSheet: View {
         CityPreset(name: "Toronto", flag: "🍁", lat: 43.653225, lng: -79.383186)
     ]
 
-    public init(privacyProfile: PrivacyProfile, profileManager: ProfileManager) {
+    public init(privacyProfile: PrivacyProfile, profileManager: ProfileManager, initialTab: ToolTab = .proxy) {
         self.privacyProfile = privacyProfile
         self.profileManager = profileManager
+        self._selectedTab = State(initialValue: initialTab)
     }
 
     public var body: some View {
@@ -54,9 +58,10 @@ public struct SessionToolsSheet: View {
             VStack(spacing: 0) {
                 // Segmented Tab Control
                 Picker("Tool Mode", selection: $selectedTab) {
-                    Label("SOCKS5 Proxy", systemImage: "network.badge.shield.half.filled").tag(ToolTab.proxy)
-                    Label("GPS Location", systemImage: "location.fill.viewfinder").tag(ToolTab.gps)
-                    Label("Virtual Camera", systemImage: "camera.viewfinder").tag(ToolTab.camera)
+                    Label("Proxy", systemImage: "network.badge.shield.half.filled").tag(ToolTab.proxy)
+                    Label("GPS", systemImage: "location.fill.viewfinder").tag(ToolTab.gps)
+                    Label("Camera", systemImage: "camera.viewfinder").tag(ToolTab.camera)
+                    Label("Updates", systemImage: "arrow.triangle.2.circlepath.circle.fill").tag(ToolTab.updates)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
@@ -69,14 +74,16 @@ public struct SessionToolsSheet: View {
                             proxySection
                         } else if selectedTab == .gps {
                             gpsSection
-                        } else {
+                        } else if selectedTab == .camera {
                             cameraSection
+                        } else {
+                            engineUpdatesSection
                         }
                     }
                     .padding(16)
                 }
             }
-            .navigationTitle("Proxy, GPS & Camera HUD")
+            .navigationTitle("Proxy, Sensors & Evergreen Engine HUD")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -113,6 +120,48 @@ public struct SessionToolsSheet: View {
                     .onChange(of: privacyProfile.proxyEnabled) { _ in
                         profileManager.saveProfileSensors(from: privacyProfile)
                     }
+            }
+            .padding(14)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+
+            // DNS Proxy Matching & Pre-Transmission IP Kill-Switch Toggles
+            VStack(spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("DNS Proxy Matching & DNSSEC Chain")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Text("Routes DNS over SOCKS5 proxy + harmonizes 6-node ISP recursive DNS chain & zero ECS leak")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $privacyProfile.enableDnsProxyMatching)
+                        .labelsHidden()
+                        .onChange(of: privacyProfile.enableDnsProxyMatching) { _ in
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }
+                }
+
+                Divider()
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pre-Transmission IP Change Kill-Switch")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Text("Immediately halts WebKit navigation, fetch, XHR & WebRTC before any packet leaves if egress IP changes")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $privacyProfile.enableIpChangeKillSwitch)
+                        .labelsHidden()
+                        .onChange(of: privacyProfile.enableIpChangeKillSwitch) { _ in
+                            profileManager.saveProfileSensors(from: privacyProfile)
+                        }
+                }
             }
             .padding(14)
             .background(Color(.systemGray6))
@@ -256,24 +305,24 @@ public struct SessionToolsSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            // Verified Egress Telemetry Card
+            // Verified Egress Telemetry Card with Compact Proxy Classification Badge
             if !privacyProfile.proxyDetectedIP.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Image(systemName: "checkmark.seal.fill")
                             .foregroundColor(.green)
-                        Text("Verified Egress: \(privacyProfile.proxyDetectedIP)")
+                        Text("Verified: \(privacyProfile.proxyDetectedIP)\(privacyProfile.proxyDetectedISP.isEmpty ? "" : " • \(privacyProfile.proxyDetectedISP)")")
                             .font(.system(.subheadline, design: .monospaced))
                             .fontWeight(.bold)
                             .foregroundColor(.green)
                         Spacer()
-                        Text(privacyProfile.proxyType)
+                        Text(privacyProfile.compactProxyBadge)
                             .font(.system(size: 10, weight: .bold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.green.opacity(0.15))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.green.opacity(0.18))
                             .foregroundColor(.green)
-                            .cornerRadius(4)
+                            .cornerRadius(6)
                     }
 
                     Text("Location: \(privacyProfile.proxyDetectedCity), \(privacyProfile.proxyDetectedCountry) • TZ: \(privacyProfile.proxyDetectedTimezone)")
@@ -281,7 +330,7 @@ public struct SessionToolsSheet: View {
                         .foregroundColor(.primary)
 
                     if !privacyProfile.proxyDetectedISP.isEmpty {
-                        Text("ISP / ASN: \(privacyProfile.proxyDetectedISP)")
+                        Text("ISP / ASN: \(privacyProfile.proxyDetectedISP) \(privacyProfile.proxyDetectedASN.isEmpty ? "" : "(\(privacyProfile.proxyDetectedASN))")")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -322,21 +371,165 @@ public struct SessionToolsSheet: View {
                     privacyProfile.proxyEnabled = true
                     privacyProfile.proxyDetectedIP = res.ip
                     privacyProfile.proxyDetectedCity = res.city
+                    privacyProfile.proxyDetectedRegion = res.regionCode
                     privacyProfile.proxyDetectedCountry = res.country
                     privacyProfile.proxyDetectedISP = res.isp
+                    privacyProfile.proxyDetectedASN = res.asn
                     privacyProfile.proxyDetectedTimezone = res.timezoneId
+                    privacyProfile.proxyUsageType = res.usageType
+                    privacyProfile.proxyConnectionType = res.connectionType
                     privacyProfile.mockLocationEnabled = true
                     privacyProfile.mockLatitude = res.latitude
                     privacyProfile.mockLongitude = res.longitude
                     privacyProfile.mockLocationName = "\(res.city), \(res.country)"
                     profileManager.saveProfileSensors(from: privacyProfile)
                     proxyStatusError = false
-                    proxyStatusMessage = "✓ Verified \(res.ip) (\(res.city), \(res.country)) — Timezone & WebRTC Egress synced!"
+                    proxyStatusMessage = "✓ Verified \(res.ip) • \(res.compactTypeBadge) — Timezone, DNS & WebRTC synced!"
                 } else {
                     proxyStatusError = true
                     proxyStatusMessage = "✗ \(res.errorMessage)"
                 }
             }
+        }
+    }
+
+    // MARK: - Evergreen Engine & Stealth Update Center Section
+    private var engineUpdatesSection: some View {
+        VStack(spacing: 16) {
+            // Status Banner Card
+            HStack(spacing: 12) {
+                Image(systemName: updateService.isChecking ? "arrow.triangle.2.circlepath.circle.fill" : "checkmark.shield.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.green)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(updateService.statusMessage)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    Text("Last checked: \(updateService.lastCheckTimestamp) • Auto-synchronized with Apple WebKit & Stealth Definitions")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(14)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+            )
+
+            // On-Demand Check Button
+            Button(action: {
+                Task {
+                    await updateService.checkForUpdatesNow(manualRequest: true)
+                }
+            }) {
+                HStack(spacing: 8) {
+                    if updateService.isChecking {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    Text(updateService.isChecking ? "Checking Evergreen Engine & Stealth Signatures..." : "Check for Engine & Stealth Updates Now")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .disabled(updateService.isChecking)
+
+            // 3 Telemetry Version Cards
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Native Safari / WebKit Runtime:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("WebKit \(updateService.installedWebKitVersion) (Safari \(updateService.latestSafariVersion))")
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.green)
+                }
+                Divider()
+                HStack {
+                    Text("Stealth Core & DNS/WebTransport Guard:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("v\(updateService.stealthCoreVersion)")
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                }
+                Divider()
+                HStack {
+                    Text("UA & Hardware Persona Matrix:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("Safari \(updateService.latestSafariVersion) • Zero VersionLag")
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.purple)
+                }
+            }
+            .padding(14)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+
+            // Auto-Check & Channel Settings
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Automatic Background Update Checks (Every 30m)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    Spacer()
+                    Toggle("", isOn: $updateService.autoCheckEnabled)
+                        .labelsHidden()
+                }
+                Divider()
+                HStack {
+                    Text("Update Channel:")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    Spacer()
+                    Picker("Channel", selection: $updateService.updateChannel) {
+                        Text("Stable (Recommended)").tag("Stable (Recommended)")
+                        Text("Beta").tag("Beta")
+                        Text("Nightly Stealth").tag("Nightly Stealth")
+                    }
+                    .pickerStyle(.menu)
+                }
+            }
+            .padding(14)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+
+            // Live Update Audit Log
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Live Update & Verification Log")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+
+                ForEach(updateService.updateHistoryLog, id: \.self) { entry in
+                    Text(entry)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 2)
+                }
+            }
+            .padding(12)
+            .background(Color(.systemGray6).opacity(0.7))
+            .cornerRadius(10)
         }
     }
 

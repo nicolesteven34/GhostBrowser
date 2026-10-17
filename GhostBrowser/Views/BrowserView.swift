@@ -132,9 +132,13 @@ public struct BrowserView: UIViewRepresentable {
                     await MainActor.run {
                         privacyProfile.proxyDetectedIP = res.ip
                         privacyProfile.proxyDetectedCity = res.city
+                        privacyProfile.proxyDetectedRegion = res.regionCode
                         privacyProfile.proxyDetectedCountry = res.country
                         privacyProfile.proxyDetectedISP = res.isp
+                        privacyProfile.proxyDetectedASN = res.asn
                         privacyProfile.proxyDetectedTimezone = res.timezoneId
+                        privacyProfile.proxyUsageType = res.usageType
+                        privacyProfile.proxyConnectionType = res.connectionType
                         privacyProfile.mockLocationEnabled = true
                         privacyProfile.mockLatitude = res.latitude
                         privacyProfile.mockLongitude = res.longitude
@@ -352,6 +356,21 @@ public struct BrowserView: UIViewRepresentable {
             }
             notificationTokens.append(reloadToken)
             
+            let killSwitchToken = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("GhostTriggerIpKillSwitch"),
+                object: nil,
+                queue: .main
+            ) { [weak self] notif in
+                guard let self = self, let wv = self.webView else { return }
+                let tripped = (notif.object as? Bool) ?? true
+                if tripped {
+                    wv.stopLoading()
+                }
+                let js = "try { const sym = Symbol.for('__ghost_ip_kill_switch__'); if (window[sym]) window[sym](\(tripped)); } catch(e) {}"
+                wv.evaluateJavaScript(js, completionHandler: nil)
+            }
+            notificationTokens.append(killSwitchToken)
+
             let bgToken = NotificationCenter.default.addObserver(
                 forName: UIApplication.didEnterBackgroundNotification,
                 object: nil,
@@ -618,6 +637,9 @@ public struct BrowserView: UIViewRepresentable {
                 if !url.contains("startpage.html") && url != "about:blank" {
                     currentLoadedURL = url
                     parent.currentURLString = url
+                    if !parent.privacyProfile.ephemeralRAMMode {
+                        ProfileManager.shared.recordHistoryVisit(url: url, title: webView.title ?? "")
+                    }
                 }
             }
             if let title = webView.title, !title.isEmpty {

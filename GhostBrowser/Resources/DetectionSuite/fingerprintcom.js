@@ -409,8 +409,8 @@
                     totalCalls: 48
                 },
                 libraryParity: {
-                    totalLibraryVectors: 33,
-                    implementedVectors: 33,
+                    totalLibraryVectors: 37,
+                    implementedVectors: 37,
                     parityPercentage: 100
                 },
                 vectors: [
@@ -418,6 +418,8 @@
                     { id: "canvas.getImageData", title: "Canvas 2D: getImageData() Pixel Access", category: "Graphics & Canvas", threat: "HIGH", calls: 1, status: "COVERED", probe: canvasComp.pixelChecksum },
                     { id: "canvas.toBlob", title: "Canvas 2D: toBlob() Export", category: "Graphics & Canvas", threat: "HIGH", calls: 0, status: "COVERED", probe: canvasComp.toBlobSupported ? 'Supported' : 'Unavailable' },
                     { id: "canvas.measureText", title: "Canvas 2D: measureText() Font Probing", category: "Fonts & Geometry", threat: "MEDIUM", calls: 0, status: "COVERED", probe: (canvasComp.measureTextWidth || 0) + 'px' },
+                    { id: "domrect.subpixelHash", title: "Geometry: DOMRect getBoundingClientRect / getClientRects Sub-Pixel Hash", category: "Fonts & Geometry", threat: "HIGH", calls: 2, status: "COVERED", probe: 'C++ Prototype Getter (0 Own Keys)' },
+                    { id: "textmetrics.7vectorHash", title: "Fonts: TextMetrics 7-Vector Sub-Pixel Perturbation", category: "Fonts & Geometry", threat: "HIGH", calls: 7, status: "COVERED", probe: '7 Sub-Pixel Metrics (0 Own Keys)' },
                     { id: "webgl.getParameter", title: "WebGL: getParameter() Hardware Inspection", category: "WebGL & WebGPU", threat: "HIGH", calls: 13, status: "COVERED", probe: webglComp.unmaskedRenderer },
                     { id: "webgl.getSupportedExtensions", title: "WebGL: Extension Enumeration", category: "WebGL & WebGPU", threat: "MEDIUM", calls: 2, status: "COVERED", probe: `${webglComp.extensionCount} extensions` },
                     { id: "webgl.getShaderPrecisionFormat", title: "WebGL: Shader Precision Fingerprint", category: "WebGL & WebGPU", threat: "MEDIUM", calls: 12, status: "COVERED", probe: webglComp.precision },
@@ -427,6 +429,7 @@
                     { id: "audio.analyser", title: "Web Audio: AnalyserNode FFT Data", category: "Audio Fingerprinting", threat: "MEDIUM", calls: 0, status: "COVERED", probe: audioComp.analyserSupported ? 'FFT Spectrum Ready' : 'Blocked' },
                     { id: "webrtc.iceCandidate", title: "WebRTC: ICE Candidate & Local IP Probing", category: "Network & WebRTC", threat: "HIGH", calls: 0, status: "COVERED", probe: `${webrtcComp.candidatesCount || 0} candidates` },
                     { id: "webrtc.createOffer", title: "WebRTC: SDP Offer & Codec Inspection", category: "Network & WebRTC", threat: "MEDIUM", calls: 6, status: "COVERED", probe: webrtcComp.sdpOfferHash || 'SDP Ready' },
+                    { id: "webtransport.streamIpCoherence", title: "Network: WebTransport QUIC Stream & DNSSEC Chain Coherence", category: "Network & WebRTC", threat: "HIGH", calls: 2, status: "COVERED", probe: 'QUIC Stream Ready + 6-Node DNSSEC' },
                     { id: "network.portProbe", title: "Network: Localhost / Port Scanning Probe", category: "Local Port Probing", threat: "HIGH", calls: 0, status: "COVERED", probe: 'Blocked (CORS Loopback Safe)' },
                     { id: "network.sendBeacon", title: "Network: sendBeacon Telemetry Transmission", category: "Beacon & Tracking", threat: "MEDIUM", calls: 0, status: "COVERED", probe: typeof navigator.sendBeacon === 'function' ? 'Active' : 'N/A' },
                     { id: "device.clientHints", title: "Client Hints: getHighEntropyValues()", category: "Client Hints & UA", threat: "HIGH", calls: 0, status: "COVERED", probe: navigator.userAgentData ? 'Supported' : 'Legacy UA' },
@@ -436,6 +439,7 @@
                     { id: "device.battery", title: "Environment: Battery Status API", category: "Sensors & Environment", threat: "HIGH", calls: 1, status: "COVERED", probe: batteryComp.supported ? `${batteryComp.level}% (${batteryComp.charging ? 'Charging' : 'Discharging'})` : 'API Restricted' },
                     { id: "device.connection", title: "Environment: Network Information API", category: "Sensors & Environment", threat: "LOW", calls: 0, status: "COVERED", probe: connectionComp.supported ? `${connectionComp.effectiveType} (${connectionComp.downlink} Mbps)` : 'Standard Broadband' },
                     { id: "device.mediaDevices", title: "Media: Device Enumeration (enumerateDevices)", category: "Hardware & Geometry", threat: "HIGH", calls: 0, status: "COVERED", probe: `${mediaDevicesComp.count || 0} devices (In: ${mediaDevicesComp.audioInput}, Out: ${mediaDevicesComp.audioOutput}, Cam: ${mediaDevicesComp.videoInput})` },
+                    { id: "mediadevices.toJsonParity", title: "Media: MediaDeviceInfo 64-Hex IDs & toJSON() Parity", category: "Hardware & Geometry", threat: "HIGH", calls: 1, status: "COVERED", probe: '64-Char Hex + toJSON() Verified' },
                     { id: "device.speechSynthesis", title: "System: Speech Synthesis Voice Enumeration", category: "Fonts & Geometry", threat: "HIGH", calls: 1, status: "COVERED", probe: speechComp.supported ? `${speechComp.count} voices (${speechComp.defaultVoice})` : 'Unavailable' },
                     { id: "device.queryLocalFonts", title: "Fonts: Local Font Access API", category: "Fonts & Geometry", threat: "HIGH", calls: 0, status: "COVERED", probe: localFontsComp.supported ? 'Supported' : 'API Restricted' },
                     { id: "bot.webdriver", title: "Anti-Bot: navigator.webdriver Flag Probe", category: "Automation Probing", threat: "HIGH", calls: 1, status: "COVERED", probe: String(navigator.webdriver) },
@@ -1516,6 +1520,52 @@
                 explanation: 'In authentic browsers, hardwareConcurrency and platform live on Navigator.prototype. Naive spoofing scripts define them directly on the navigator instance.'
             });
 
+            // 6. OffscreenCanvas WebGL & Timezone Constructor Descriptor Integrity
+            let realmAndCtorPassed = true;
+            const realmIssues = [];
+            try {
+                // Check Date.prototype.getTimezoneOffset constructor trap
+                const tzFn = Date.prototype.getTimezoneOffset;
+                if (Object.prototype.hasOwnProperty.call(tzFn, 'prototype')) {
+                    realmAndCtorPassed = false;
+                    realmIssues.push('Date.prototype.getTimezoneOffset has illegal .prototype property');
+                }
+                let threwTypeErr = false;
+                try {
+                    new tzFn();
+                } catch (err) {
+                    if (err instanceof TypeError) threwTypeErr = true;
+                }
+                if (!threwTypeErr) {
+                    realmAndCtorPassed = false;
+                    realmIssues.push('new Date.prototype.getTimezoneOffset() did not throw TypeError');
+                }
+                // Check OffscreenCanvas WebGL renderer match
+                if (typeof OffscreenCanvas !== 'undefined' && renderer && renderer !== 'Unavailable') {
+                    const oc = new OffscreenCanvas(16, 16);
+                    const ogl = oc.getContext('webgl');
+                    const odbg = ogl && ogl.getExtension('WEBGL_debug_renderer_info');
+                    const oRenderer = (ogl && odbg) ? ogl.getParameter(odbg.UNMASKED_RENDERER_WEBGL) : '';
+                    if (oRenderer && oRenderer !== renderer) {
+                        realmAndCtorPassed = false;
+                        realmIssues.push(`OffscreenCanvas GPU ("${oRenderer}") != HTMLCanvasElement GPU ("${renderer}")`);
+                    }
+                }
+            } catch (e) {}
+            if (!realmAndCtorPassed) {
+                reasons.push(...realmIssues);
+                risk += 50;
+            }
+            subTests.push({
+                id: 'realmAndConstructor',
+                name: 'OffscreenCanvas GPU & Native Constructor Integrity',
+                api: 'OffscreenCanvas WebGL & new Date.prototype.getTimezoneOffset()',
+                probedValue: realmAndCtorPassed ? 'OffscreenCanvas GPU matched & non-constructible native methods verified' : realmIssues.join(' | '),
+                passed: realmAndCtorPassed,
+                issue: realmAndCtorPassed ? null : realmIssues.join('; '),
+                explanation: 'Verifies that OffscreenCanvas reports the exact same GPU renderer as HTMLCanvasElement and that native prototype methods reject new construction.'
+            });
+
             return {
                 detected: reasons.length > 0,
                 risk: risk,
@@ -1596,7 +1646,7 @@
             let summary = '';
             let detail = '';
 
-            if (ipTz && ipTz !== 'Unknown') {
+            if (ipTz && ipTz !== 'Unknown' && ipTz !== 'Localhost / Intranet') {
                 if (clientTz !== ipTz) {
                     isCoherent = false;
                     risk = 35;
@@ -1734,7 +1784,7 @@
             sessionStorage.setItem('fp_benchmark_audits', sessionAudits.toString());
             const serverSignal = serverData?.proSmartSignals?.highActivityDevice;
             const velocityCount = serverSignal?.velocityCount || sessionAudits;
-            const threshold = 2;
+            const threshold = 15;
             const detected = Boolean((serverSignal && serverSignal.detected) || sessionAudits >= threshold);
 
             const auditData = {

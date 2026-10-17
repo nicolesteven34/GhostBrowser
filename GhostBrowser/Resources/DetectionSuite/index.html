@@ -46,14 +46,23 @@
             </div>
         </header>
 
-        <!-- Navigation Tabs: Categorized Dual-Deck (Tier 1 & Tier 2) -->
+        <!-- Navigation Tabs: Categorized Dual-Part Deck (Part I: Device Validation vs Part II: Behavioral Biometrics) -->
         <nav class="nav-tabs nav-tabs-deck">
+            <!-- PART I HEADER -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(0, 229, 255, 0.07); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 8px; margin-bottom: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: #00e5ff; color: #090d16; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART I &bull; DEVICE &amp; ENVIRONMENT VALIDATION</span>
+                    <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Hardware, OS, Browser, GPU, Audio, Workers, TLS &amp; Proxy Egress Integrity</span>
+                </div>
+                <span style="font-size: 11px; color: #34d399; font-weight: 700;">✓ 100% Automated by GhostBrowser Engine</span>
+            </div>
+
             <!-- Tier 1: Browser Identity & Bot Detection Labs -->
             <div class="nav-tier">
                 <div class="nav-tier-header">
                     <div class="nav-tier-label">
                         <span class="nav-tier-dot dot-cyan"></span>
-                        <span class="nav-tier-tag">TIER 1 &bull; BROWSER IDENTITY &amp; BOT DETECTION LABS</span>
+                        <span class="nav-tier-tag">PART I (TIER 1) &bull; BROWSER IDENTITY &amp; BOT DETECTION LABS</span>
                     </div>
                     <span class="nav-tier-count">5 ACTIVE ENGINES</span>
                 </div>
@@ -132,7 +141,7 @@
                 <div class="nav-tier-header">
                     <div class="nav-tier-label">
                         <span class="nav-tier-dot dot-gold"></span>
-                        <span class="nav-tier-tag">TIER 2 &bull; ENTERPRISE FRAUD AUDIT &amp; PAYMENT TITANS</span>
+                        <span class="nav-tier-tag">PART I (TIER 2) &bull; ENTERPRISE FRAUD AUDIT &amp; PAYMENT TITANS</span>
                     </div>
                     <span class="nav-tier-count">5 TITANS &bull; 1,983 AUDIT CALLS</span>
                 </div>
@@ -203,12 +212,48 @@
                     </button>
                 </div>
             </div>
+
+            <!-- PART II HEADER & TAB: USER BEHAVIORAL BIOMETRICS & OPERATIONAL PLAYBOOK -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(168, 85, 247, 0.09); border: 1px solid rgba(168, 85, 247, 0.32); border-radius: 8px; margin-top: 6px; margin-bottom: 4px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: #a855f7; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART II &bull; USER BEHAVIOR &amp; ACTIVITY TELEMETRY</span>
+                    <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Live Behavioral Biometrics Benchmark (Fitts's Law, Keystroke Cadence, Click &amp; Scroll Dynamics) &amp; Tier-1 Browsing Guidelines</span>
+                </div>
+                <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(168, 85, 247, 0.45); background: rgba(168, 85, 247, 0.14);">
+                    <div class="nav-tab-icon" style="color: #c084fc;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        </svg>
+                    </div>
+                    <div class="nav-tab-content">
+                        <span class="nav-tab-title" style="color: #f3e8ff;">Behavioral Biometrics &amp; Playbook</span>
+                        <span class="nav-tab-sub" style="color: #d8b4fe;">Live Human Benchmark + Operational Rules</span>
+                    </div>
+                </button>
+            </div>
         </nav>
 
         <!-- ======================================================== -->
         <!-- TAB 1: FINGERPRINT & BROWSER INTEGRITY LAB              -->
         <!-- ======================================================== -->
         <div id="fingerprintView" class="tab-view active">
+            <!-- Dual-Part Distinction Banner -->
+            <div style="background: linear-gradient(90deg, rgba(0,229,255,0.08) 0%, rgba(168,85,247,0.08) 100%); border: 1px solid rgba(148,163,184,0.22); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 12.5px; font-weight: 700; color: #f8fafc;">
+                        <span style="color: #00e5ff;">PART I: Device &amp; Environment Validation (Active Below)</span>
+                        <span style="color: #64748b; margin: 0 8px;">|</span>
+                        <span style="color: #c084fc;">PART II: User Behavioral Biometrics &amp; Activity Telemetry</span>
+                    </div>
+                    <div style="font-size: 11.5px; color: #94a3b8;">
+                        Part I verifies that your browser hardware, OS, GPU, WebRTC, and proxy network signals are 100% authentic and zero-leak. Part II benchmarks live human interaction physics (mouse kinematics, typing cadence, scroll momentum, paste hygiene) and provides operational rules for Tier-1/Tier-2 sites.
+                    </div>
+                </div>
+                <button class="copy-pill" style="background: rgba(168, 85, 247, 0.2); color: #e9d5ff; border: 1px solid rgba(168, 85, 247, 0.5); font-weight: 600; padding: 6px 12px;" onclick="switchTab('behavior')">
+                    Open Part II: Behavioral Benchmark &amp; Playbook &rarr;
+                </button>
+            </div>
+
             <!-- Hero Grid -->
             <section class="fp-hero-grid">
                 <!-- Left: Visitor Identity & Status -->
@@ -324,6 +369,16 @@
                     <span id="hashMath" class="entropy-card-val">--</span>
                     <span class="entropy-card-sub" id="subMath">IEEE 754 Coherent</span>
                 </div>
+            </div>
+
+            <!-- INDEPENDENT SECTION: COMPREHENSIVE DEEP FINGERPRINT (130.61.195.166), SCRAPFLY SUITE, HTTP/3 QUIC & PROTOCOL VS PROFILE MATRIX -->
+            <div id="comprehensiveDeepFpScrapflySection" class="card" style="padding: 0; overflow: hidden; margin-bottom: 18px; border: 1px solid rgba(56, 189, 248, 0.42); background: linear-gradient(180deg, rgba(13, 21, 35, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%);">
+                <!-- Populated dynamically by renderComprehensiveDeepFpScrapflySection() -->
+            </div>
+
+            <!-- INDEPENDENT SECTION: COMPREHENSIVE ISP RECURSIVE DNS, SINGLE-CLUSTER RESOLVER & RFC 4035 DNSSEC VALIDATION -->
+            <div id="comprehensiveDnsLabSection" class="card" style="padding: 0; overflow: hidden; margin-bottom: 18px; border: 1px solid rgba(16, 185, 129, 0.38); background: linear-gradient(180deg, rgba(13, 21, 32, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%);">
+                <!-- Populated dynamically by renderComprehensiveDnsSection() -->
             </div>
 
             <!-- Deep Vector Audit Table -->
@@ -797,6 +852,16 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- INDEPENDENT SECTION IN NETWORK SNIFFER: DEEP FINGERPRINT (130.61.195.166), SCRAPFLY SUITE, HTTP/3 QUIC & PROTOCOL VS PROFILE MATRIX -->
+            <div id="comprehensiveDeepFpNetworkSection" class="card" style="padding: 0; overflow: hidden; margin-top: 18px; border: 1px solid rgba(56, 189, 248, 0.42); background: linear-gradient(180deg, rgba(13, 21, 35, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%);">
+                <!-- Populated dynamically by renderComprehensiveDeepFpScrapflySection() -->
+            </div>
+
+            <!-- INDEPENDENT SECTION IN NETWORK SNIFFER: COMPREHENSIVE ISP RECURSIVE DNS & DNSSEC AUDIT -->
+            <div id="comprehensiveDnsNetworkSection" class="card" style="padding: 0; overflow: hidden; margin-top: 18px; border: 1px solid rgba(16, 185, 129, 0.38); background: linear-gradient(180deg, rgba(13, 21, 32, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%);">
+                <!-- Populated dynamically by renderComprehensiveDnsSection() -->
             </div>
         </div>
 
@@ -1824,6 +1889,9 @@
                     <button class="pd-subtab-btn active" id="pdSubEngineBtn" onclick="switchPdSubTab('engine')">
                         🛡️ Live Detection Engine
                     </button>
+                    <button class="pd-subtab-btn" id="pdSubDnssecBtn" onclick="switchPdSubTab('dnssec')">
+                        🌐 Comprehensive DNS &amp; DNSSEC
+                    </button>
                     <button class="pd-subtab-btn" id="pdSubTcpipBtn" onclick="switchPdSubTab('tcpip')">
                         🧬 TCP/IP Fingerprint
                     </button>
@@ -1928,6 +1996,14 @@
                             <span id="pdEngineIpText" style="font-family: monospace; color: #9ca3af;">IP: 135.134.139.92 (TDS TELECOM)</span>
                         </div>
                     </div>
+
+                    <!-- Independent Comprehensive DNS & DNSSEC Resolution Card inside ProxyDetect Live Engine -->
+                    <div id="comprehensiveDnsPdEngineSection" style="margin-top: 18px;"></div>
+                </div>
+
+                <!-- SUB-PANE 1B: COMPREHENSIVE DNS & DNSSEC RESOLUTION -->
+                <div id="pdPaneDnssec" class="pd-pane">
+                    <div id="comprehensiveDnsPdSubPaneSection"></div>
                 </div>
 
                 <!-- SUB-PANE 2: TCP/IP FINGERPRINT -->
@@ -2801,16 +2877,17 @@
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">VIEW SCOPE:</span>
                     <div class="component-filter-bar" style="margin: 0; display: flex; flex-wrap: wrap; gap: 6px;">
-                        <button class="filter-pill active" id="ec3SysAll" onclick="switchECommerce3System('all')">Merged Quintet-System (797 Calls &bull; 18 Vectors)</button>
+                        <button class="filter-pill active" id="ec3SysAll" onclick="switchECommerce3System('all')">Merged Sextet-System (888 Calls &bull; 18 Vectors)</button>
                         <button class="filter-pill" id="ec3SysApple" onclick="switchECommerce3System('apple')">Apple Store (45 Calls)</button>
                         <button class="filter-pill" id="ec3SysDell" onclick="switchECommerce3System('dell')">Dell Technologies (170 Calls)</button>
                         <button class="filter-pill" id="ec3SysEbay" onclick="switchECommerce3System('ebay')">eBay Sign-In (194 Calls)</button>
                         <button class="filter-pill" id="ec3SysSamsung" onclick="switchECommerce3System('samsung')">Samsung Shop (164 Calls)</button>
                         <button class="filter-pill" id="ec3SysWalmart" onclick="switchECommerce3System('walmart')">Walmart DataDome (224 Calls)</button>
+                        <button class="filter-pill" id="ec3SysMatch" onclick="switchECommerce3System('match')">Match.com Arkose (91 Calls)</button>
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <span class="badge-pass" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; font-size: 11px;">5 Enterprise Giants Merged</span>
+                    <span class="badge-pass" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; font-size: 11px;">6 Enterprise Systems Merged</span>
                 </div>
             </div>
 
@@ -2821,31 +2898,31 @@
                     <div>
                         <div class="engine-title-bar">
                             <span class="engine-tag" style="background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.4);">
-                                QUINTET-SYSTEM ENTERPRISE ECOMMERCE FRAUD AUDIT &amp; SENSOR BENCHMARK
+                                SEXTET-SYSTEM ENTERPRISE ECOMMERCE &amp; REGISTRATION FRAUD AUDIT BENCHMARK
                             </span>
                             <div class="verdict-container">
-                                <div id="ec3VerdictBadge" class="verdict-badge verdict-clean">TRUSTED HUMAN (QUINTET-SYSTEM APPROVED)</div>
+                                <div id="ec3VerdictBadge" class="verdict-badge verdict-clean">TRUSTED HUMAN (SEXTET-SYSTEM APPROVED)</div>
                             </div>
                         </div>
                         <h2 id="ec3Headline" style="font-size: 20px; font-weight: 700; margin-top: 8px;">
-                            Apple (xp.apple) &bull; Dell (Akamai &amp; reCAPTCHA) &bull; eBay (ThreatMetrix) &bull; Samsung (shop.samsung) &bull; Walmart (DataDome)
+                            Apple (xp.apple) &bull; Dell (Akamai) &bull; eBay (ThreatMetrix) &bull; Samsung &bull; Walmart (DataDome) &bull; Match.com (Arkose)
                         </h2>
                         <p id="ec3Summary" class="hero-desc" style="margin-top: 6px;">
-                            Merged forensic audit simulating and cross-checking 797 live intercepted API calls across 18 active vector types (DataDome font kerning sweeps, Samsung Criteo/TikTok beacons, Localhost port scan, WebGL shader precision, Akamai BMP sensor, Web Audio DSP, and SecureMetrics beacons) on <code>apple.com</code>, <code>dell.com</code>, <code>ebay.com</code>, <code>shop.samsung.com</code>, and <code>walmart.com</code>.
+                            Merged forensic audit simulating and cross-checking 888 live intercepted API calls across 18 active vector types (DataDome font kerning sweeps, Samsung Criteo/TikTok beacons, Localhost port scan, WebGL shader precision, Akamai BMP sensor, Match.com Arkose FunCaptcha registration checks, and Pre-Action checkout/signin integrity) on <code>apple.com</code>, <code>dell.com</code>, <code>ebay.com</code>, <code>shop.samsung.com</code>, <code>walmart.com</code>, and <code>match.com</code>.
                         </p>
                     </div>
 
                     <!-- Sensor Hash & Session Row -->
                     <div>
                         <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px;">
-                            Quintet-System Master Sensor Hash (<code>apple_dell_ebay_samsung_walmart_sensor_data</code>)
+                            Sextet-System Master Sensor Hash (<code>apple_dell_ebay_samsung_walmart_match_sensor_data</code>)
                         </div>
                         <div class="visitor-id-row">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                             </svg>
-                            <span id="ec3SensorHashVal" class="visitor-id-val" style="font-size: 13px;">quintet_sensor_calculating...</span>
+                            <span id="ec3SensorHashVal" class="visitor-id-val" style="font-size: 13px;">sextet_sensor_calculating...</span>
                             <button class="copy-pill" style="margin-left: 8px;" onclick="copyECommerce3SensorHash()">Copy Sensor Hash</button>
                         </div>
                     </div>
@@ -2854,13 +2931,13 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
                         <span id="ec3TimingBadge" class="badge-pass">⚡ Audited in -- ms</span>
                         <span class="badge-pass" style="background: rgba(0, 229, 255, 0.1); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3);">
-                            Merged Target: Apple &bull; Dell &bull; eBay &bull; Samsung &bull; Walmart
+                            Merged Target: Apple &bull; Dell &bull; eBay &bull; Samsung &bull; Walmart &bull; Match
                         </span>
                         <span class="badge-pass" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            797 Live Calls (100% Vector Parity)
+                            888 Live Calls (100% Vector Parity)
                         </span>
                         <span class="badge-pass" style="background: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3);">
-                            Zero Cloud API Dependencies (100% Local)
+                            Pre-Action Checkout &amp; Registration Verified
                         </span>
                     </div>
                 </div>
@@ -2868,8 +2945,8 @@
                 <!-- Right: Risk Gauge & Score Card -->
                 <div class="fp-score-card">
                     <div class="score-header">
-                        <span class="score-title">QUINTET-SYSTEM COMPOSITE RISK SCORE</span>
-                        <span class="info-icon" title="Consolidated multi-system fraud rating across Apple SecureMetrics, Dell Akamai Sensor, eBay ThreatMetrix, Samsung Shop, and Walmart DataDome.">ℹ</span>
+                        <span class="score-title">SEXTET-SYSTEM COMPOSITE RISK SCORE</span>
+                        <span class="info-icon" title="Consolidated multi-system fraud rating across Apple SecureMetrics, Dell Akamai Sensor, eBay ThreatMetrix, Samsung Shop, Walmart DataDome, and Match.com Arkose FunCaptcha.">ℹ</span>
                     </div>
                     <div class="score-display">
                         <div class="score-gauge">
@@ -2886,7 +2963,7 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px;">
                             <span style="color: var(--text-muted);">Apple Store Defense</span>
                             <span class="font-mono text-cyan" id="ec3AppleStatusVal">45 Calls &bull; Clean Consumer</span>
@@ -2907,39 +2984,43 @@
                             <span style="color: var(--text-muted);">Walmart DataDome Defense</span>
                             <span class="font-mono text-green" id="ec3WalmartStatusVal">224 Calls &bull; DataDome Clean</span>
                         </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                            <span style="color: var(--text-muted);">Match.com Arkose Registration</span>
+                            <span class="font-mono text-cyan" id="ec3MatchStatusVal">91 Calls &bull; Arkose Clean</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- DetectExpert Pro Forensic Audit Metrics Ribbon (100% Vector Parity - Apple • Dell • eBay • Samsung • Walmart) -->
+            <!-- DetectExpert Pro Forensic Audit Metrics Ribbon (100% Vector Parity - Apple • Dell • eBay • Samsung • Walmart • Match) -->
             <div class="card" style="padding: 16px 20px; margin-bottom: 22px; background: linear-gradient(135deg, rgba(17, 26, 45, 0.95), rgba(13, 17, 23, 0.95)); border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.08);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="background: rgba(0, 229, 255, 0.15); color: #00e5ff; font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 4px; border: 1px solid rgba(0, 229, 255, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">DetectExpert Pro Forensic Parity</span>
-                        <span style="font-size: 13.5px; font-weight: 600; color: #e2e8f0;">Quintet-System Interception Audit vs. Local Suite Parity (Apple &bull; Dell &bull; eBay &bull; Samsung &bull; Walmart)</span>
+                        <span style="font-size: 13.5px; font-weight: 600; color: #e2e8f0;">Sextet-System Interception Audit vs. Local Suite Parity (Apple &bull; Dell &bull; eBay &bull; Samsung &bull; Walmart &bull; Match)</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="badge-pass" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;">100% Vector Parity (18 Active / 33 Library)</span>
-                        <button class="copy-pill" style="background: rgba(0, 229, 255, 0.2); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.5); font-weight: 600; cursor: pointer;" onclick="openECommerce3ForensicMatrixModal()">🔬 View 18-Vector Quintet-System Matrix &raquo;</button>
+                        <button class="copy-pill" style="background: rgba(0, 229, 255, 0.2); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.5); font-weight: 600; cursor: pointer;" onclick="openECommerce3ForensicMatrixModal()">🔬 View 18-Vector Sextet-System Matrix &raquo;</button>
                     </div>
                 </div>
 
                 <div class="forensic-counters-grid">
                     <div class="forensic-counter-pill"><span class="forensic-counter-num">18</span><span class="forensic-counter-label">Active Vectors</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">173</span><span class="forensic-counter-label">Beacons</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">269</span><span class="forensic-counter-label">Canvas 2D</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">210</span><span class="forensic-counter-label">WebGL / GPU</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">32</span><span class="forensic-counter-label">Audio Checks</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">225</span><span class="forensic-counter-label">Beacons</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">270</span><span class="forensic-counter-label">Canvas 2D</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">237</span><span class="forensic-counter-label">WebGL / GPU</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">34</span><span class="forensic-counter-label">Audio Checks</span></div>
                     <div class="forensic-counter-pill"><span class="forensic-counter-num">20</span><span class="forensic-counter-label">WebRTC</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">38</span><span class="forensic-counter-label">Hardware</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">39</span><span class="forensic-counter-label">Anti-Fraud</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">44</span><span class="forensic-counter-label">Hardware</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">42</span><span class="forensic-counter-label">Anti-Fraud</span></div>
                     <div class="forensic-counter-pill"><span class="forensic-counter-num">16</span><span class="forensic-counter-label">Port Probes</span></div>
-                    <div class="forensic-counter-pill"><span class="forensic-counter-num">129</span><span class="forensic-counter-label">Cookies</span></div>
-                    <div class="forensic-counter-pill" style="border-color: rgba(0, 229, 255, 0.5);"><span class="forensic-counter-num" style="color: #00e5ff;">797</span><span class="forensic-counter-label" style="color: #00e5ff;">Total Calls</span></div>
+                    <div class="forensic-counter-pill"><span class="forensic-counter-num">160</span><span class="forensic-counter-label">Cookies</span></div>
+                    <div class="forensic-counter-pill" style="border-color: rgba(0, 229, 255, 0.5);"><span class="forensic-counter-num" style="color: #00e5ff;">888</span><span class="forensic-counter-label" style="color: #00e5ff;">Total Calls</span></div>
                 </div>
             </div>
 
-            <!-- 4 Dedicated Enterprise System Cards -->
+            <!-- 6 Dedicated Enterprise System Cards -->
             <div class="fp-card-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 22px;">
                 <!-- System 1: Apple Store Defense & Telemetry -->
                 <div class="card">
@@ -3135,43 +3216,83 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- System 6: Match.com Arkose Labs FunCaptcha & Registration Gate -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <span class="card-title">6. Match.com Arkose Registration</span>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                                91 Intercepted Calls &bull; www.match.com/registration/birthdate
+                            </div>
+                        </div>
+                        <span class="badge-pass" id="ec3MatchBadge">91 CALLS PASS</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-row">
+                            <span class="metric-label">Arkose &amp; Registration Beacons</span>
+                            <span class="metric-value font-mono text-cyan">52 Payloads (match-api.arkoselabs.com)</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">WebGL Shader Precision &amp; Params</span>
+                            <span class="metric-value font-mono text-green">27 Calls (12 Precision + 13 Params + 2 Ext)</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Hardware &amp; Media Enumeration</span>
+                            <span class="metric-value font-mono text-cyan">6 Calls (Media, Battery, CPU, RAM, Voices)</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Arkose Anti-Bot &amp; Webdriver</span>
+                            <span class="metric-value text-green">3 Calls (domAutomation, _phantom, webdriver)</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Web Audio Offline DSP Synthesis</span>
+                            <span class="metric-value font-mono text-green">2 Calls &bull; 44.1kHz PCM Checksum</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Canvas 2D &amp; Pre-Registration Gate</span>
+                            <span class="metric-value font-mono text-cyan">1 toDataURL + Event.isTrusted Verified</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Master Merged Component Breakdown & 797-Call Audit Table -->
+            <!-- Master Merged Component Breakdown & 888-Call Audit Table -->
             <div class="card" style="padding: 0; overflow: hidden; margin-top: 24px;">
                 <div style="padding: 18px 24px; background: #0D1117; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <div>
                             <h3 style="font-size: 15px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
                                 <span style="background: rgba(0, 229, 255, 0.15); color: #00e5ff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(0, 229, 255, 0.4);">
-                                    FULL 797-CALL AUDIT
+                                    FULL 888-CALL AUDIT
                                 </span>
-                                Master Merged Component Breakdown &amp; 797-Call Audit Table (18 Active Vectors across 5 Systems)
+                                Master Merged Component Breakdown &amp; 888-Call Audit Table (18 Active Vectors across 6 Systems)
                             </h3>
                             <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                                Complete cross-system forensic audit across Apple Store (45), Dell Technologies (170), eBay Sign-In (194), Samsung Shop (164), and Walmart DataDome (224).
+                                Complete cross-system forensic audit across Apple Store (45), Dell Technologies (170), eBay Sign-In (194), Samsung Shop (164), Walmart DataDome (224), and Match.com Registration (91).
                             </p>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <span class="badge-pass" id="ec3MasterSummaryBadge">100% Clean &bull; 797/797 Calls Passed</span>
+                            <span class="badge-pass" id="ec3MasterSummaryBadge">100% Clean &bull; 888/888 Calls Passed</span>
                             <button class="copy-pill" style="background: rgba(0, 229, 255, 0.2); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.5);" onclick="exportECommerce3ForensicDossierJson()">Export Dossier JSON</button>
                         </div>
                     </div>
 
                     <!-- Category Filter Buttons -->
                     <div class="component-filter-bar">
-                        <button class="filter-pill active" id="ec3FilterAll" onclick="filterECommerce3Components('all')">All Checks (797 Live Calls)</button>
+                        <button class="filter-pill active" id="ec3FilterAll" onclick="filterECommerce3Components('all')">All Checks (888 Live Calls)</button>
                         <button class="filter-pill" id="ec3FilterApple" onclick="filterECommerce3Components('apple')">Apple System (45 Calls)</button>
                         <button class="filter-pill" id="ec3FilterDell" onclick="filterECommerce3Components('dell')">Dell System (170 Calls)</button>
                         <button class="filter-pill" id="ec3FilterEbay" onclick="filterECommerce3Components('ebay')">eBay System (194 Calls)</button>
                         <button class="filter-pill" id="ec3FilterSamsung" onclick="filterECommerce3Components('samsung')">Samsung System (164 Calls)</button>
                         <button class="filter-pill" id="ec3FilterWalmart" onclick="filterECommerce3Components('walmart')">Walmart System (224 Calls)</button>
+                        <button class="filter-pill" id="ec3FilterMatch" onclick="filterECommerce3Components('match')">Match.com System (91 Calls)</button>
                         <button class="filter-pill" id="ec3FilterPorts" onclick="filterECommerce3Components('ports')">Port Probes (16 Calls)</button>
-                        <button class="filter-pill" id="ec3FilterWebgl" onclick="filterECommerce3Components('webgl')">WebGL &amp; Shaders (210 Calls)</button>
-                        <button class="filter-pill" id="ec3FilterCanvas" onclick="filterECommerce3Components('canvas')">Canvas &amp; Fonts (269 Calls)</button>
-                        <button class="filter-pill" id="ec3FilterAudio" onclick="filterECommerce3Components('audio')">Audio DSP (32 Calls)</button>
-                        <button class="filter-pill" id="ec3FilterBeacons" onclick="filterECommerce3Components('beacons')">Beacons &amp; RUM (173 Calls)</button>
-                        <button class="filter-pill" id="ec3FilterHardware" onclick="filterECommerce3Components('hardware')">Hardware &amp; Media (38 Calls)</button>
+                        <button class="filter-pill" id="ec3FilterWebgl" onclick="filterECommerce3Components('webgl')">WebGL &amp; Shaders (237 Calls)</button>
+                        <button class="filter-pill" id="ec3FilterCanvas" onclick="filterECommerce3Components('canvas')">Canvas &amp; Fonts (270 Calls)</button>
+                        <button class="filter-pill" id="ec3FilterAudio" onclick="filterECommerce3Components('audio')">Audio DSP (34 Calls)</button>
+                        <button class="filter-pill" id="ec3FilterBeacons" onclick="filterECommerce3Components('beacons')">Beacons &amp; RUM (225 Calls)</button>
+                        <button class="filter-pill" id="ec3FilterHardware" onclick="filterECommerce3Components('hardware')">Hardware &amp; Media (44 Calls)</button>
                     </div>
                 </div>
 
@@ -3690,6 +3811,226 @@
                         </thead>
                         <tbody id="payMasterTableBody">
                             <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- PART II: BEHAVIORAL BIOMETRICS & OPERATIONAL PLAYBOOK     -->
+        <!-- ======================================================== -->
+        <div id="behaviorView" class="tab-view">
+            <!-- Hero Header Banner -->
+            <div class="card" style="margin-bottom: 20px; border: 1px solid rgba(168, 85, 247, 0.38); background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(13, 17, 23, 0.96) 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                    <div style="max-width: 760px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="background: #a855f7; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 5px; letter-spacing: 0.6px;">PART II &bull; USER BEHAVIORAL BIOMETRICS &amp; ACTIVITY TELEMETRY</span>
+                            <span class="badge-pass" id="behVerdictBadge">LIVE TELEMETRY SANDBOX READY</span>
+                        </div>
+                        <h2 style="font-size: 21px; font-weight: 800; color: #f8fafc; margin-bottom: 6px;">
+                            Human Activity Biometrics Benchmark &amp; Tier-1 Flawless Browsing Playbook
+                        </h2>
+                        <p style="font-size: 13px; color: #cbd5e1; line-height: 1.55;">
+                            <strong>Architectural Separation:</strong> <strong>Part I (Tabs 1–10)</strong> validates static and dynamic <em>Device, Hardware, Browser, and Network</em> parameters (100% automated by GhostBrowser's stealth engine). <strong>Part II (This Module)</strong> measures <em>User Interaction Physics &amp; Behavioral Telemetry</em> (BioCatch, Sardine.ai, Akamai BMP v3, ThreatMetrix, Forter, Stripe Radar) that depend on how you move your mouse, type, click, scroll, and manage sessions.
+                        </p>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 10px; padding: 14px 20px; min-width: 240px; text-align: center;">
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: #d8b4fe; font-weight: 700;">Live Human Authenticity Index</div>
+                        <div id="behHumanScoreVal" style="font-size: 30px; font-weight: 800; color: #34d399; margin: 4px 0;">100 / 100</div>
+                        <div id="behHumanScoreSub" style="font-size: 11.5px; color: #94a3b8;">Baseline Ready &bull; Interact Below to Benchmark</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Behavioral Sandbox & 6 Live Biometric Sensors -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 18px; margin-bottom: 22px;">
+                <!-- Interactive Test Pad -->
+                <div class="card" style="border: 1px solid rgba(0, 229, 255, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 15px; font-weight: 700; color: #00e5ff;">🎯 Interactive Biometric Calibration Arena</h3>
+                        <button class="copy-pill" onclick="resetBehavioralTelemetry()">Reset Telemetry</button>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                        Move your cursor naturally across this card, type a short phrase in the field below (without pasting), and click the target button to benchmark your live Fitts's Law kinematics and keystroke cadence.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <label style="font-size: 11px; font-weight: 700; color: #94a3b8; display: block; margin-bottom: 4px;">
+                                KEYSTROKE CADENCE &amp; PASTE HYGIENE TEST FIELD (Try typing vs. pasting):
+                            </label>
+                            <input id="behTestInput" type="text" placeholder="Type e.g. 'Verifica-4920-Human' naturally here..." style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #334155; background: #090d16; color: #f8fafc; font-size: 13px; outline: none;" />
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 4px;">
+                            <button id="behTestClickBtn" class="btn-primary" style="padding: 8px 16px; font-size: 12.5px;" onclick="recordBehavioralTargetClick(event)">
+                                🖱️ Click Target (Measure Center Offset &amp; Hold Time)
+                            </button>
+                            <span id="behLastEventPill" style="font-size: 11.5px; color: #a855f7; font-family: monospace;">Awaiting interaction...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live 6-Sensor Telemetry Matrix -->
+                <div class="card">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">📊 Real-Time Behavioral Biometrics Telemetry (6 Sensors)</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                        <div style="background: rgba(15,23,42,0.65); border: 1px solid #1e293b; border-radius: 8px; padding: 10px;">
+                            <div style="color: #94a3b8; font-size: 11px;">1. Mouse Path Efficiency (Fitts's Law)</div>
+                            <div id="behMouseMetric" style="font-weight: 700; color: #34d399; margin-top: 3px;">0.86 Curvature (Natural Arc)</div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Human: 0.70–0.96 | Bot: 1.000 Linear</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.65); border: 1px solid #1e293b; border-radius: 8px; padding: 10px;">
+                            <div style="color: #94a3b8; font-size: 11px;">2. Keystroke Dwell / Flight Cadence</div>
+                            <div id="behKeyMetric" style="font-weight: 700; color: #34d399; margin-top: 3px;">Dwell: 84ms &bull; Flight σ: 31ms</div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Human σ &gt; 15ms | Bot σ &lt; 3ms</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.65); border: 1px solid #1e293b; border-radius: 8px; padding: 10px;">
+                            <div style="color: #94a3b8; font-size: 11px;">3. Click Geometry &amp; Hold Duration</div>
+                            <div id="behClickMetric" style="font-weight: 700; color: #34d399; margin-top: 3px;">Offset: +4.2px, -3.1px &bull; Hold: 78ms</div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Human: Non-zero offset, 45–160ms hold</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.65); border: 1px solid #1e293b; border-radius: 8px; padding: 10px;">
+                            <div style="color: #94a3b8; font-size: 11px;">4. Scroll Physics &amp; Wheel Momentum</div>
+                            <div id="behScrollMetric" style="font-weight: 700; color: #34d399; margin-top: 3px;">Inertial Decay Verified</div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Human: Progressive ΔY | Bot: Instant Jump</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.65); border: 1px solid #1e293b; border-radius: 8px; padding: 10px;">
+                            <div style="color: #94a3b8; font-size: 11px;">5. Sensitive Input Paste / Autofill Audit</div>
+                            <div id="behPasteMetric" style="font-weight: 700; color: #34d399; margin-top: 3px;">0 Paste Events (100% Native Key Events)</div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">BioCatch/Sardine flag paste on CVV/Auth</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.65); border: 1px solid #1e293b; border-radius: 8px; padding: 10px;">
+                            <div style="color: #94a3b8; font-size: 11px;">6. Session Dwell &amp; Focus Continuity</div>
+                            <div id="behDwellMetric" style="font-weight: 700; color: #34d399; margin-top: 3px;">Active Focus &bull; Natural Dwell</div>
+                            <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Human &gt; 4.5s pre-submit dwell time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Golden Operational Guidelines for Flawless Browsing Across Any Tier -->
+            <div class="card" style="margin-bottom: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <span style="background: rgba(52, 211, 153, 0.15); color: #34d399; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(52, 211, 153, 0.35);">
+                            OPERATIONAL STANDARD OPERATING PROCEDURE (SOP)
+                        </span>
+                        <h3 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-top: 6px;">
+                            6 Golden Guidelines for a Flawless Browsing Experience Across Tier-1, Tier-2 &amp; Tier-3 Websites
+                        </h3>
+                    </div>
+                    <span class="badge-pass">All Device Vectors Covered by Engine &bull; Follow Rules Below for Behavior</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;">
+                    <div style="background: rgba(15, 23, 42, 0.6); border-left: 3px solid #00e5ff; border-radius: 6px; padding: 12px 14px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">1. Sticky Residential / ISP Proxy Discipline</div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5;">
+                            Always use a <strong>sticky residential or mobile/ISP SOCKS5 session</strong> rather than per-request rotating proxies. Never change your proxy IP mid-session or between login and checkout. GhostBrowser automatically synchronizes your Timezone, Locale, WebRTC candidate IP, and GPS coordinates to your proxy egress IP on launch.
+                        </p>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border-left: 3px solid #a855f7; border-radius: 6px; padding: 12px 14px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">2. Never Copy-Paste Sensitive Checkout / Auth Fields</div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5;">
+                            Enterprise behavioral SDKs (<strong>BioCatch, Sardine.ai, Forter, Stripe Radar, PayPal</strong>) attach listeners to credit card, CVV, password, and 2FA inputs. Pasting (`Ctrl+V`) into a card number or CVV box adds +35 to +60 behavioral risk score. <strong>Always type sensitive digits manually</strong> so natural keystroke `keydown`/`keyup` flight &amp; dwell telemetry is recorded.
+                        </p>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border-left: 3px solid #34d399; border-radius: 6px; padding: 12px 14px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">3. Natural Page Warm-Up &amp; Pre-Submit Dwell Time</div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5;">
+                            Do not paste a deep `/checkout` or `/login` URL into a brand-new tab and submit within 2 seconds. Navigate from the home or product page, scroll naturally, and allow <strong>15–45 seconds of normal reading/cursor movement</strong> so Akamai `_abck`, Cloudflare Turnstile, and Kasada sensor beacons collect sufficient human entropy before form submission.
+                        </p>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border-left: 3px solid #f59e0b; border-radius: 6px; padding: 12px 14px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">4. Strict 1-Account-Per-Profile Isolation &amp; Cookie Continuity</div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5;">
+                            Each GhostBrowser profile possesses a cryptographically unique hardware seed, isolated IndexedDB/LocalStorage sandbox, and dedicated `cookies_vault.json`. Never log into two different accounts on the same site inside one profile. Keep returning to the <strong>same profile</strong> for the same account so trust cookies (`_abck`, `bm_sz`, `cf_clearance`, `stripe.mid`) age naturally.
+                        </p>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border-left: 3px solid #38bdf8; border-radius: 6px; padding: 12px 14px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">5. Hardware-Consistent Persona Selection</div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5;">
+                            When operating from Windows PC, prefer <strong>Windows 11 Desktop personas</strong> for desktop-heavy banking/enterprise portals; when operating from iPadOS, prefer <strong>Apple M-series / A-series personas</strong>. GhostBrowser harmonizes WebGL, WebGPU, Audio, Navigator, Client Hints, and Worker realms automatically for your chosen persona.
+                        </p>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border-left: 3px solid #ec4899; border-radius: 6px; padding: 12px 14px;">
+                        <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">6. Window Focus &amp; Rate-Velocity Discipline</div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5;">
+                            During payment authorization, 3DSecure challenges, or Turnstile verification, keep the browser window focused (`document.visibilityState === 'visible'`) and avoid rapid `Alt+Tab` switching or opening 10+ simultaneous tabs to the same domain within seconds (which triggers server-side IP rate/velocity limits).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Complete Matrix: Device Validation (Part I) vs. Behavioral Telemetry (Part II) -->
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <div style="padding: 16px 22px; background: #0D1117; border-bottom: 1px solid var(--border);">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #f8fafc;">
+                        🔍 Complete Anti-Fraud Coverage Matrix: Device Validation (Part I) vs. Behavioral Biometrics (Part II)
+                    </h3>
+                </div>
+                <div class="table-container">
+                    <table class="vector-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px;">Domain / Layer</th>
+                                <th style="width: 210px;">Detection Vector</th>
+                                <th style="width: 140px;">Classification</th>
+                                <th style="width: 170px;">Used By (Tier-1 Systems)</th>
+                                <th>GhostBrowser Engine &amp; Operational Mitigation</th>
+                                <th style="width: 110px; text-align: center;">Coverage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Hardware &amp; GPU</strong></td>
+                                <td>WebGL 1/2, WebGPU Adapter, Canvas 2D, AudioContext DSP, Math/SIMD</td>
+                                <td><span class="badge-pass">PART I: DEVICE</span></td>
+                                <td>FingerprintPro, Anti.bot, CreepJS, Akamai</td>
+                                <td>Deterministic per-profile PRNG seeding across Main, Iframe, and Worker realms; offscreen context management prevents WebGL context loss.</td>
+                                <td style="text-align: center;"><span class="badge-pass">100% ENGINE</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Navigator &amp; Client Hints</strong></td>
+                                <td>UA-CH (`brands`, `formFactors`, `wow64`, `architecture`), `webdriver`, `plugins`, `connection`</td>
+                                <td><span class="badge-pass">PART I: DEVICE</span></td>
+                                <td>Cloudflare Turnstile, DataDome, Fingerprint-Scan</td>
+                                <td>WebIDL-compliant prototype getters; strips `WebView2` brand token; forces `NetworkInformation` to clean `4g / 50ms RTT / 10 Mbps`.</td>
+                                <td style="text-align: center;"><span class="badge-pass">100% ENGINE</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Network &amp; Proxy Egress</strong></td>
+                                <td>SOCKS5 Latency Ratio, WebRTC STUN Candidates, Timezone/Geo Coherence</td>
+                                <td><span class="badge-pass">PART I: DEVICE</span></td>
+                                <td>ProxyDetect.live, Fingerprint-Scan, ThreatMetrix</td>
+                                <td>LocalProxyBridge tunnels SOCKS5 with zero UDP leak; harmonizes Navigation/Resource/WebSocket RTT telemetry and `srflx` public candidate IP.</td>
+                                <td style="text-align: center;"><span class="badge-pass">100% ENGINE</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Pointer &amp; Mouse Physics</strong></td>
+                                <td>Fitts's Law Path Curvature, Sub-Pixel Velocity Bell Curve, Coalesced Events</td>
+                                <td><span style="background: rgba(168,85,247,0.2); color: #d8b4fe; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">PART II: BEHAVIOR</span></td>
+                                <td>Akamai BMP v3, PerimeterX/HUMAN, DataDome</td>
+                                <td>Native OS mouse/touch events pass unmodified through Chromium/WebKit; move cursor with natural arcs and avoid macro/auto-clicker tools.</td>
+                                <td style="text-align: center;"><span class="badge-pass">BENCHMARKED</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Keystroke Biometrics</strong></td>
+                                <td>Key Hold Duration (Dwell), Inter-Key Flight Time Variance, Paste Detection</td>
+                                <td><span style="background: rgba(168,85,247,0.2); color: #d8b4fe; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">PART II: BEHAVIOR</span></td>
+                                <td>BioCatch, Sardine.ai, Stripe Radar, Forter, Banks</td>
+                                <td>Type sensitive fields (Card #, CVV, Password, OTP) manually instead of `Ctrl+V` pasting; maintain natural typing rhythm.</td>
+                                <td style="text-align: center;"><span class="badge-pass">BENCHMARKED</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Session &amp; Flow Hygiene</strong></td>
+                                <td>Pre-Submit Dwell Time, Scroll Momentum, Focus/Blur Continuity, Cookie Aging</td>
+                                <td><span style="background: rgba(168,85,247,0.2); color: #d8b4fe; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">PART II: BEHAVIOR</span></td>
+                                <td>Amazon FWCIM, BestBuy, Kasada, Shape/F5</td>
+                                <td>Browse landing/product pages for 15–45s before checkout; keep 1 account per profile; let GhostBrowser Cookie Vault persist session tokens.</td>
+                                <td style="text-align: center;"><span class="badge-pass">BENCHMARKED</span></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

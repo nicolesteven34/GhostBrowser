@@ -243,7 +243,37 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
         case .iPhone14_A15: return "Apple A15 GPU"
         case .macBookProM4Max_16: return "Apple M4 Max"
         case .macBookAirM3_13: return "Apple M3"
-        case .custom, .nativeHost: return "Apple GPU"
+        case .custom, .nativeHost: return "Apple M4"
+        }
+    }
+
+    public func webglRendererVariant(seed: Int) -> String {
+        let idx = abs(seed) % 3
+        switch self {
+        case .iPadProM4_13:
+            return ["Apple M4", "Apple M4 (10-core GPU)", "Apple M4 (9-core GPU)"][idx]
+        case .iPadAirM2_11:
+            return ["Apple M2", "Apple M2 (9-core GPU)", "Apple M2 (10-core GPU)"][idx]
+        case .iPadMini6_A15:
+            return ["Apple A15 GPU", "Apple A15 Bionic GPU (5-core)", "Apple A15 Bionic GPU"][idx]
+        case .iPhone18ProMax_A20:
+            return ["Apple A20 Pro GPU", "Apple A20 Pro GPU (6-core)", "Apple A20 Pro Metal GPU"][idx]
+        case .iPhone17ProMax_A19:
+            return ["Apple A19 Pro GPU", "Apple A19 Pro GPU (6-core)", "Apple A19 Pro Metal GPU"][idx]
+        case .iPhone16ProMax_A18:
+            return ["Apple A18 Pro GPU", "Apple A18 Pro GPU (6-core)", "Apple A18 Pro Metal GPU"][idx]
+        case .iPhone16_A18:
+            return ["Apple A18 GPU", "Apple A18 GPU (5-core)", "Apple A18 Metal GPU"][idx]
+        case .iPhone15ProMax_A17:
+            return ["Apple A17 Pro GPU", "Apple A17 Pro GPU (6-core)", "Apple A17 Pro Metal GPU"][idx]
+        case .iPhone14_A15:
+            return ["Apple A15 GPU", "Apple A15 Bionic GPU (5-core)", "Apple A15 Metal GPU"][idx]
+        case .macBookProM4Max_16:
+            return ["Apple M4 Max", "Apple M4 Max (40-core GPU)", "Apple M4 Pro"][idx]
+        case .macBookAirM3_13:
+            return ["Apple M3", "Apple M3 (10-core GPU)", "Apple M3 (8-core GPU)"][idx]
+        case .custom, .nativeHost:
+            return ["Apple M4", "Apple M3", "Apple M2"][idx]
         }
     }
 
@@ -338,9 +368,54 @@ public class PrivacyProfile: ObservableObject {
     @Published public var proxyPassword: String = ""
     @Published public var proxyDetectedIP: String = ""
     @Published public var proxyDetectedCity: String = ""
+    @Published public var proxyDetectedRegion: String = ""
     @Published public var proxyDetectedCountry: String = ""
     @Published public var proxyDetectedISP: String = ""
+    @Published public var proxyDetectedASN: String = ""
     @Published public var proxyDetectedTimezone: String = ""
+    @Published public var proxyUsageType: String = "Residential"
+    @Published public var proxyConnectionType: String = "Cable/Fiber"
+    @Published public var enableDnsProxyMatching: Bool = true
+    @Published public var enableIpChangeKillSwitch: Bool = true
+
+    public var compactProxyBadge: String {
+        guard proxyEnabled else { return "Direct Egress" }
+        let proto = proxyType.uppercased() == "HTTP" ? "HTTP" : "Socks5"
+        let usage = proxyUsageType.isEmpty ? "Residential" : proxyUsageType
+        let conn = proxyConnectionType.isEmpty ? "Cable/Fiber" : proxyConnectionType
+        let locState = !proxyDetectedRegion.isEmpty ? proxyDetectedRegion : proxyDetectedCountry
+        let loc = !proxyDetectedCity.isEmpty
+            ? "\(proxyDetectedCity)\(!locState.isEmpty ? ", \(locState)" : "")"
+            : locState
+        if !proxyDetectedIP.isEmpty {
+            let ispPart = !proxyDetectedISP.isEmpty ? " • \(proxyDetectedISP)" : ""
+            return loc.isEmpty
+                ? "\(proxyDetectedIP)\(ispPart) • \(usage) (\(conn))"
+                : "\(proxyDetectedIP)\(ispPart) • \(usage) (\(conn)) • \(loc)"
+        }
+        return loc.isEmpty ? "\(proto): \(usage) (\(conn))" : "\(proto): \(usage) (\(conn)) • \(loc)"
+    }
+
+    public var sessionMonitorIndicatorText: String {
+        guard proxyEnabled else { return "Direct Egress (Host Network)" }
+        let proto = proxyType.uppercased().contains("HTTP") ? "HTTP" : "SOCKS5"
+        let usage = proxyUsageType.isEmpty ? "Residential" : proxyUsageType
+        let conn = proxyConnectionType.isEmpty ? "Cable/Fiber" : proxyConnectionType
+        let locState = !proxyDetectedRegion.isEmpty ? proxyDetectedRegion : proxyDetectedCountry
+        let loc = !proxyDetectedCity.isEmpty
+            ? "\(proxyDetectedCity)\(!locState.isEmpty ? ", \(locState)" : "")"
+            : locState
+        if !proxyDetectedIP.isEmpty {
+            let ispPart = !proxyDetectedISP.isEmpty ? " • \(proxyDetectedISP)" : ""
+            return loc.isEmpty
+                ? "\(proxyDetectedIP)\(ispPart) • \(usage) (\(conn))"
+                : "\(proxyDetectedIP)\(ispPart) • \(usage) (\(conn)) • \(loc)"
+        }
+        if !proxyHost.isEmpty {
+            return "\(proto) \(proxyHost):\(proxyPort) • \(usage) (\(conn))"
+        }
+        return "\(proto) Proxy Active"
+    }
 
     public init() {
         let active = ProfileManager.shared.activeProfile
@@ -367,9 +442,15 @@ public class PrivacyProfile: ObservableObject {
         self.proxyPassword = active.proxyPassword
         self.proxyDetectedIP = active.proxyDetectedIP
         self.proxyDetectedCity = active.proxyDetectedCity
+        self.proxyDetectedRegion = active.proxyDetectedRegion
         self.proxyDetectedCountry = active.proxyDetectedCountry
         self.proxyDetectedISP = active.proxyDetectedISP
+        self.proxyDetectedASN = active.proxyDetectedASN
         self.proxyDetectedTimezone = active.proxyDetectedTimezone
+        self.proxyUsageType = active.proxyUsageType
+        self.proxyConnectionType = active.proxyConnectionType
+        self.enableDnsProxyMatching = active.enableDnsProxyMatching
+        self.enableIpChangeKillSwitch = active.enableIpChangeKillSwitch
     }
 
     public func rotateIdentitySeed() {
@@ -435,7 +516,7 @@ public class PrivacyProfile: ObservableObject {
     public var effectiveTouchPoints: Int { selectedDevice.maxTouchPoints }
     public var effectiveCores: Int { selectedDevice.cpuCores }
     public var effectiveRAM: Int { selectedDevice.ramGB }
-    public var effectiveRenderer: String { selectedDevice.webglRenderer }
+    public var effectiveRenderer: String { selectedDevice.webglRendererVariant(seed: sessionSeed) }
     public var effectiveScreenWidth: Int { selectedDevice.screenWidth }
     public var effectiveScreenHeight: Int { selectedDevice.screenHeight }
     public var effectiveDevicePixelRatio: Double { selectedDevice.devicePixelRatio }
@@ -473,9 +554,13 @@ public class PrivacyProfile: ObservableObject {
 
         let escapedProxyIp = proxyEnabled ? proxyDetectedIP.replacingOccurrences(of: "\"", with: "") : ""
         let escapedProxyCity = proxyEnabled ? proxyDetectedCity.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedProxyRegion = proxyEnabled ? proxyDetectedRegion.replacingOccurrences(of: "\"", with: "") : ""
         let escapedProxyCountry = proxyEnabled ? proxyDetectedCountry.replacingOccurrences(of: "\"", with: "") : ""
         let escapedProxyIsp = proxyEnabled ? proxyDetectedISP.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedProxyAsn = proxyEnabled ? proxyDetectedASN.replacingOccurrences(of: "\"", with: "") : ""
         let escapedTimezone = proxyEnabled ? proxyDetectedTimezone.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedUsageType = proxyUsageType.replacingOccurrences(of: "\"", with: "")
+        let escapedConnType = proxyConnectionType.replacingOccurrences(of: "\"", with: "")
 
         return """
         window.__GHOST_VISITOR_ID__ = "\(visitorID)";
@@ -511,8 +596,14 @@ public class PrivacyProfile: ObservableObject {
             proxyType: "\(proxyType)",
             proxyIp: "\(escapedProxyIp)",
             proxyCity: "\(escapedProxyCity)",
+            proxyRegion: "\(escapedProxyRegion)",
             proxyCountry: "\(escapedProxyCountry)",
             proxyIsp: "\(escapedProxyIsp)",
+            proxyAsn: "\(escapedProxyAsn)",
+            proxyUsageType: "\(escapedUsageType)",
+            proxyConnectionType: "\(escapedConnType)",
+            enableDnsProxyMatching: \(enableDnsProxyMatching),
+            enableIpKillSwitch: \(enableIpChangeKillSwitch),
             timezone: "\(escapedTimezone)"
         };
         """
