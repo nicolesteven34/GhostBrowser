@@ -3551,9 +3551,40 @@
             const OrigWebSocket = window.WebSocket;
             const wsProto = OrigWebSocket.prototype;
             const origWsSend = wsProto.send;
+            const origWsClose = wsProto.close;
+            const origWsAddEv = wsProto.addEventListener;
             const origOnOpenDesc = Object.getOwnPropertyDescriptor(wsProto, 'onopen');
             const origOnMessageDesc = Object.getOwnPropertyDescriptor(wsProto, 'onmessage');
             const origOnErrorDesc = Object.getOwnPropertyDescriptor(wsProto, 'onerror');
+            const origOnCloseDesc = Object.getOwnPropertyDescriptor(wsProto, 'onclose');
+
+            function isPacketProbeWsUrl(urlStr) {
+                if (!urlStr) return false;
+                const s = String(urlStr).toLowerCase();
+                return s.includes('packetprobe.com');
+            }
+
+            function ensureWsSignalingGuards(ws) {
+                if (!ws || ws._ghostSignalingGuarded) return;
+                ws._ghostSignalingGuarded = true;
+                ws._ghostIsWebRtcSignaling = true;
+                ws._ghostClientClosed = false;
+                try {
+                    Object.defineProperty(ws, 'readyState', {
+                        get: function() { return ws._ghostClientClosed ? 3 : 1; },
+                        configurable: true
+                    });
+                } catch (e) {}
+                try {
+                    if (typeof origWsClose === 'function' && !ws._ghostCloseWrapped) {
+                        ws._ghostCloseWrapped = true;
+                        ws.close = makeNative(function close() {
+                            ws._ghostClientClosed = true;
+                            try { return origWsClose.apply(ws, arguments); } catch (e) {}
+                        }, 'close', 0);
+                    }
+                } catch (e) {}
+            }
 
             function activateWsTimeClamp(perfVal, wallVal, microtaskTicks) {
                 _wsPerfClampVal = perfVal;
@@ -3579,6 +3610,7 @@
                 if (typeof fn !== 'function') return fn;
                 if (fn._ghostWsOpenWrapped) return fn._ghostWsOpenWrapped;
                 const wrapped = function(ev) {
+                    if (ws) ws._ghostOpenFired = true;
                     return fn.apply(this, arguments);
                 };
                 fn._ghostWsOpenWrapped = wrapped;
@@ -3596,7 +3628,15 @@
                             if (ev.data.includes('"handshake"')) isHandshakeMsg = true;
                             if (ev.data.includes('"clientSentAt"')) isClientSentAtPong = true;
                             const parsed = JSON.parse(ev.data);
-                            if (harmonizeUniversalNetworkTelemetryJson(parsed)) {
+                            if (parsed && parsed.type === 'upload-log' && Array.isArray(parsed.packets)) {
+                                if (parsed.packets.length === 0 && Array.isArray(_lastWebRtcUploadedPackets) && _lastWebRtcUploadedPackets.length > 0) {
+                                    parsed.packets = _lastWebRtcUploadedPackets.slice();
+                                    const patchedStr = JSON.stringify(parsed);
+                                    try {
+                                        Object.defineProperty(ev, 'data', { value: patchedStr, configurable: true });
+                                    } catch (e) {}
+                                }
+                            } else if (harmonizeUniversalNetworkTelemetryJson(parsed)) {
                                 const cleanStr = JSON.stringify(parsed);
                                 try {
                                     Object.defineProperty(ev, 'data', { value: cleanStr, configurable: true });
@@ -3623,16 +3663,23 @@
                     get: makeNative(function() { return origGetOnOpen.call(this); }, 'get onopen', 0),
                     set: makeNative(function(fn) {
                         try {
-                            const wsUrl = (this && this.url) ? String(this.url) : '';
-                            if (typeof fn === 'function' && (wsUrl.includes('networktest.proxywing.com') || wsUrl.includes('proxywing.com'))) {
+                            const wsUrl = (this && (this._ghostRewriteUrl || this.url)) ? String(this._ghostRewriteUrl || this.url) : '';
+                            if (typeof fn === 'function' && (wsUrl.includes('networktest.proxywing.com') || wsUrl.includes('proxywing.com') || isPacketProbeWsUrl(wsUrl))) {
                                 const ws = this;
+                                if (isPacketProbeWsUrl(wsUrl)) {
+                                    ensureWsSignalingGuards(ws);
+                                }
                                 let fired = false;
                                 const fireOnce = function(ev) {
-                                    if (fired) return;
+                                    if (fired || (ws && ws._ghostClientClosed)) return;
                                     fired = true;
+                                    ws._ghostOpenFired = true;
                                     try { fn.call(ws, ev || new Event('open')); } catch (e) {}
                                 };
-                                setTimeout(() => fireOnce(new Event('open')), Math.max(45, Math.round(_lastHarmonizedTcpRtt)));
+                                const synthOpenDelay = isPacketProbeWsUrl(wsUrl)
+                                    ? 45
+                                    : Math.max(45, Math.round(_lastHarmonizedTcpRtt));
+                                setTimeout(() => fireOnce(new Event('open')), synthOpenDelay);
                                 return origSetOnOpen.call(this, fireOnce);
                             }
                             if (typeof fn === 'function') {
@@ -3672,9 +3719,16 @@
                     get: makeNative(function() { return origGetOnError.call(this); }, 'get onerror', 0),
                     set: makeNative(function(fn) {
                         try {
-                            const wsUrl = (this && this.url) ? String(this.url) : '';
-                            if (wsUrl.includes('networktest.proxywing.com')) {
+                            const ws = this;
+                            const wsUrl = (ws && (ws._ghostRewriteUrl || ws.url)) ? String(ws._ghostRewriteUrl || ws.url) : '';
+                            if (wsUrl.includes('networktest.proxywing.com') || isPacketProbeWsUrl(wsUrl)) {
                                 return origSetOnError.call(this, function() {});
+                            }
+                            if (typeof fn === 'function') {
+                                return origSetOnError.call(this, function(ev) {
+                                    if (ws && (ws._ghostIsWebRtcSignaling || isPacketProbeWsUrl(wsUrl))) return;
+                                    return fn.apply(this, arguments);
+                                });
                             }
                         } catch (e) {}
                         return origSetOnError.call(this, fn);
@@ -3684,9 +3738,83 @@
                 });
             }
 
+            if (origOnCloseDesc && origOnCloseDesc.set && origOnCloseDesc.get) {
+                const origSetOnClose = origOnCloseDesc.set;
+                const origGetOnClose = origOnCloseDesc.get;
+                Object.defineProperty(wsProto, 'onclose', {
+                    get: makeNative(function() { return origGetOnClose.call(this); }, 'get onclose', 0),
+                    set: makeNative(function(fn) {
+                        try {
+                            const ws = this;
+                            const wsUrl = (ws && (ws._ghostRewriteUrl || ws.url)) ? String(ws._ghostRewriteUrl || ws.url) : '';
+                            if (isPacketProbeWsUrl(wsUrl)) {
+                                ensureWsSignalingGuards(ws);
+                            }
+                            if (typeof fn === 'function') {
+                                return origSetOnClose.call(this, function(ev) {
+                                    if (ws && (ws._ghostIsWebRtcSignaling || isPacketProbeWsUrl(wsUrl))) {
+                                        return;
+                                    }
+                                    return fn.apply(this, arguments);
+                                });
+                            }
+                        } catch (e) {}
+                        return origSetOnClose.call(this, fn);
+                    }, 'set onclose', 1),
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+
+            if (typeof origWsAddEv === 'function') {
+                wsProto.addEventListener = makeNative(function addEventListener(type, listener, options) {
+                    if (typeof listener === 'function' && (type === 'close' || type === 'error')) {
+                        const ws = this;
+                        const wsUrl = (ws && (ws._ghostRewriteUrl || ws.url)) ? String(ws._ghostRewriteUrl || ws.url) : '';
+                        const wrapped = function(ev) {
+                            if (ws && (ws._ghostIsWebRtcSignaling || isPacketProbeWsUrl(wsUrl))) {
+                                return;
+                            }
+                            return listener.apply(this, arguments);
+                        };
+                        return origWsAddEv.call(this, type, wrapped, options);
+                    }
+                    return origWsAddEv.apply(this, arguments);
+                }, 'addEventListener', 2);
+            }
+
+            try {
+                const HookedWebSocket = makeNative(function WebSocket(url, protocols) {
+                    if (!(this instanceof HookedWebSocket) && !new.target) {
+                        throw new TypeError("Failed to construct 'WebSocket': Please use the 'new' operator, this DOM object constructor cannot be called as a function.");
+                    }
+                    let targetUrl = url;
+                    try {
+                        const s = String(url || '');
+                        if (/^wss?:\/\/(www\.)?packetprobe\.com(\/|$)/i.test(s)) {
+                            targetUrl = 'wss://us-east.packetprobe.com';
+                        }
+                    } catch (e) {}
+                    const ws = (arguments.length > 1 && protocols !== undefined)
+                        ? new OrigWebSocket(targetUrl, protocols)
+                        : new OrigWebSocket(targetUrl);
+                    ws._ghostRewriteUrl = String(targetUrl || url || '');
+                    if (isPacketProbeWsUrl(ws._ghostRewriteUrl)) {
+                        ensureWsSignalingGuards(ws);
+                    }
+                    return ws;
+                }, 'WebSocket', 1);
+                HookedWebSocket.prototype = wsProto;
+                HookedWebSocket.CONNECTING = 0;
+                HookedWebSocket.OPEN = 1;
+                HookedWebSocket.CLOSING = 2;
+                HookedWebSocket.CLOSED = 3;
+                Object.setPrototypeOf(HookedWebSocket, OrigWebSocket);
+                window.WebSocket = HookedWebSocket;
+            } catch (e) {}
+
             if (typeof origWsSend === 'function') {
                 let _pwPingIdx = 0;
-                const origWsClose = wsProto.close;
                 const hookedWsSend = makeNative(({
                     send(data) {
                         try {
@@ -3699,23 +3827,23 @@
                             if (typeof data === 'string' && data.length > 2 && data.startsWith('{')) {
                                 if (data.includes('"start-test"') || (data.includes('"sdp"') && data.includes('"offer"'))) {
                                     const ws = this;
-                                    ws._ghostIsWebRtcSignaling = true;
-                                    ws._ghostClientClosed = false;
-                                    try {
-                                        Object.defineProperty(ws, 'readyState', {
-                                            get: function() { return ws._ghostClientClosed ? 3 : 1; },
-                                            configurable: true
-                                        });
-                                        if (typeof origWsClose === 'function' && !ws._ghostCloseWrapped) {
-                                            ws._ghostCloseWrapped = true;
-                                            ws.close = makeNative(function close() {
-                                                ws._ghostClientClosed = true;
-                                                try { return origWsClose.apply(ws, arguments); } catch (e) {}
-                                            }, 'close', 0);
-                                        }
-                                    } catch (e) {}
+                                    ensureWsSignalingGuards(ws);
+                                    if (data.includes('"start-test"')) {
+                                        setTimeout(() => {
+                                            try {
+                                                if (_activeLoopbackDataChannels && _activeLoopbackDataChannels.size > 0) {
+                                                    for (const dc of Array.from(_activeLoopbackDataChannels)) {
+                                                        if (dc && typeof dc._ghostTriggerOpen === 'function') {
+                                                            dc._ghostTriggerOpen();
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e) {}
+                                        }, 35);
+                                    }
                                 } else if (data.includes('"end-test"')) {
                                     const ws = this;
+                                    ensureWsSignalingGuards(ws);
                                     const uploadedSnapshot = Array.isArray(_lastWebRtcUploadedPackets)
                                         ? _lastWebRtcUploadedPackets.slice()
                                         : [];
@@ -3747,11 +3875,11 @@
                                             }
                                         } catch (e) {}
                                     }, 25);
-                                    try { return origWsSend.apply(this, arguments); } catch (e) { return; }
+                                    return;
                                 }
                             }
 
-                            const wsUrl = (this && this.url) ? String(this.url) : '';
+                            const wsUrl = (this && (this._ghostRewriteUrl || this.url)) ? String(this._ghostRewriteUrl || this.url) : '';
                             if ((wsUrl.includes('networktest.proxywing.com') || wsUrl.includes('proxywing.com')) &&
                                 (data === 'ping' || data === 'ping_ts')) {
                                 const ws = this;
