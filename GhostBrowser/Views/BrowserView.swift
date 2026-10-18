@@ -43,16 +43,10 @@ public struct BrowserView: UIViewRepresentable {
 
     public func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
+        configuration.processPool = ProxyService.shared.sharedProcessPool
 
-        // 1. Data Store: Independent persistent profile data store on iOS 17+
-        let dataStore: WKWebsiteDataStore
-        if privacyProfile.ephemeralRAMMode {
-            dataStore = WKWebsiteDataStore.nonPersistent()
-        } else if #available(iOS 17.0, *) {
-            dataStore = WKWebsiteDataStore(forIdentifier: privacyProfile.sessionDataStoreID)
-        } else {
-            dataStore = WKWebsiteDataStore.default()
-        }
+        // 1. Data Store: Shared profile data store across all tabs in the same profile
+        let dataStore = ProxyService.shared.websiteDataStore(for: privacyProfile)
         configuration.websiteDataStore = dataStore
 
         // Apply Native C++ Network Proxy (SOCKS5 / HTTP) to WKWebsiteDataStore
@@ -291,11 +285,7 @@ public struct BrowserView: UIViewRepresentable {
         // Handle explicit reload trigger
         if context.coordinator.lastReloadTrigger != reloadTrigger {
             context.coordinator.lastReloadTrigger = reloadTrigger
-            if context.coordinator.currentLoadedURL == "local://startpage" {
-                context.coordinator.loadLocalStartPage()
-            } else {
-                webView.reload()
-            }
+            context.coordinator.reloadCurrentPage()
         }
 
         // Handle panic wipe trigger
@@ -408,11 +398,7 @@ public struct BrowserView: UIViewRepresentable {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                if self?.currentLoadedURL == "local://startpage" {
-                    self?.loadLocalStartPage()
-                } else {
-                    self?.webView?.reload()
-                }
+                self?.reloadCurrentPage()
             }
             notificationTokens.append(reloadToken)
             
@@ -678,9 +664,43 @@ public struct BrowserView: UIViewRepresentable {
             decisionHandler(.allow, preferences)
         }
 
+        public func reloadCurrentPage() {
+            guard let webView = self.webView else { return }
+            ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: parent.privacyProfile)
+
+            let target = (currentLoadedURL?.isEmpty == false ? currentLoadedURL : parent.currentURLString) ?? ""
+            if target == "local://startpage" || target.isEmpty {
+                loadLocalStartPage()
+                return
+            }
+            if target == "ghost://detect" || target == "local://detect" || target == "ghost://integrity" ||
+               (target.hasPrefix("file://") && (target.contains("DetectionSuite") || target.hasSuffix("/index.html"))) {
+                loadLocalDetectPage()
+                return
+            }
+            if let liveUrl = webView.url?.absoluteString,
+               !liveUrl.isEmpty,
+               liveUrl != "about:blank",
+               !liveUrl.contains("startpage.html") {
+                if webView.reload() == nil {
+                    loadURL(target, forceReload: true)
+                }
+            } else {
+                loadURL(target, forceReload: true)
+            }
+        }
+
         public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             parent.isLoading = true
             if let url = webView.url?.absoluteString {
+                if url.hasPrefix("file://") && (url.contains("DetectionSuite") || url.hasSuffix("/index.html")) {
+                    currentLoadedURL = "ghost://detect"
+                    if parent.currentURLString != "ghost://detect" {
+                        parent.currentURLString = "ghost://detect"
+                    }
+                    parent.pageTitle = "GhostDetect Lab"
+                    return
+                }
                 if !url.contains("startpage.html") && url != "about:blank" {
                     currentLoadedURL = url
                     parent.currentURLString = url
@@ -694,7 +714,12 @@ public struct BrowserView: UIViewRepresentable {
         public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.isLoading = false
             if let url = webView.url?.absoluteString {
-                if !url.contains("startpage.html") && url != "about:blank" {
+                if url.hasPrefix("file://") && (url.contains("DetectionSuite") || url.hasSuffix("/index.html")) {
+                    currentLoadedURL = "ghost://detect"
+                    if parent.currentURLString != "ghost://detect" {
+                        parent.currentURLString = "ghost://detect"
+                    }
+                } else if !url.contains("startpage.html") && url != "about:blank" {
                     currentLoadedURL = url
                     parent.currentURLString = url
                     if !parent.privacyProfile.ephemeralRAMMode {
@@ -709,7 +734,9 @@ public struct BrowserView: UIViewRepresentable {
                 ProfileManager.shared.backupCookies(for: parent.privacyProfile.sessionDataStoreID, from: webView.configuration.websiteDataStore.httpCookieStore)
             }
             DispatchQueue.main.async {
-                webView.becomeFirstResponder()
+                if webView.alpha > 0.5 && webView.window != nil {
+                    webView.becomeFirstResponder()
+                }
             }
         }
 
@@ -721,6 +748,13 @@ public struct BrowserView: UIViewRepresentable {
         public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             parent.isLoading = false
             print("[BrowserView] Navigation failed: \(error.localizedDescription)")
+        }
+
+        public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            parent.isLoading = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                self?.reloadCurrentPage()
+            }
         }
 
         public func nukeSession(reloadCurrent: Bool = false) {

@@ -233,6 +233,70 @@
             </div>
         </nav>
 
+        <!-- LIVE MULTI-STAGE AUDIT TELEMETRY & RE-SCAN PIPELINE BANNER -->
+        <style>
+            @keyframes ghostAuditSpin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            @keyframes ghostCardScanSweep {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+            }
+            @keyframes ghostFreshResultPulse {
+                0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.45); }
+                60% { box-shadow: 0 0 0 8px rgba(0, 229, 255, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
+            }
+            .ghost-audit-spinner {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(0, 229, 255, 0.28);
+                border-top-color: #00e5ff;
+                border-radius: 50%;
+                animation: ghostAuditSpin 0.65s linear infinite;
+                flex-shrink: 0;
+            }
+            .btn-scanning-active {
+                opacity: 0.92;
+                pointer-events: none;
+                box-shadow: 0 0 14px rgba(0, 229, 255, 0.38) !important;
+            }
+            .tab-view.audit-scanning-active .card,
+            .tab-view.audit-scanning-active .fp-visitor-card,
+            .tab-view.audit-scanning-active .gauge-card,
+            .tab-view.audit-scanning-active .entropy-card,
+            .tab-view.audit-scanning-active .smart-signal-card,
+            .tab-view.audit-scanning-active .ab-surface-card,
+            .tab-view.audit-scanning-active .fps-hero-card {
+                position: relative;
+                opacity: 0.72;
+                transition: opacity 0.16s ease, transform 0.16s ease;
+            }
+            .tab-view.audit-fresh-complete .fp-visitor-card,
+            .tab-view.audit-fresh-complete .gauge-card,
+            .tab-view.audit-fresh-complete .fps-hero-card {
+                animation: ghostFreshResultPulse 0.85s ease-out;
+            }
+        </style>
+        <div id="liveAuditProgressBanner" style="margin: 0 0 16px 0; border-radius: 10px; border: 1px solid rgba(0, 229, 255, 0.38); background: linear-gradient(90deg, rgba(13, 22, 38, 0.96) 0%, rgba(15, 29, 48, 0.96) 100%); overflow: hidden; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32); transition: border-color 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="liveAuditSpinner" class="ghost-audit-spinner"></span>
+                    <span id="liveAuditStagePill" style="background: rgba(0, 229, 255, 0.18); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.45); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; font-family: monospace;">STAGE 1 / 6</span>
+                    <span id="liveAuditStageText" style="font-size: 12.5px; font-weight: 600; color: #f8fafc;">Initializing GhostDetect Multi-Engine Silicon &amp; Network Pipeline...</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span id="liveAuditStageSub" style="font-size: 11px; font-family: monospace; color: #94a3b8;">Probing live hardware &amp; transport...</span>
+                    <span id="liveAuditPctBadge" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 4px; font-family: monospace;">0%</span>
+                </div>
+            </div>
+            <div style="height: 4px; width: 100%; background: rgba(255, 255, 255, 0.07);">
+                <div id="liveAuditProgressBar" style="height: 100%; width: 8%; background: linear-gradient(90deg, #00e5ff 0%, #3b82f6 50%, #10b981 100%); transition: width 0.14s ease-out;"></div>
+            </div>
+        </div>
+
         <!-- ======================================================== -->
         <!-- TAB 1: FINGERPRINT & BROWSER INTEGRITY LAB              -->
         <!-- ======================================================== -->
@@ -1236,6 +1300,11 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Stage 18: 16-Probe Advanced Canvas Anomaly Detector + FPINT v7 6-Family Cross-Surface Integrity -->
+                <div id="abStage18AndFpintSection" style="margin-top: 20px;">
+                    <!-- Populated dynamically by renderAntiBotResults() -->
+                </div>
             </div>
 
             <!-- ======================================================== -->
@@ -1348,7 +1417,7 @@
             <div id="abPaneGpu" class="ab-pane">
                 <div class="diag-callout" style="border-left-color: #A371F7; background: rgba(163, 113, 247, 0.05); margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <strong style="color: #A371F7; font-size: 13px;">Module 3 &bull; Stage 16: WebGPU Direct Hardware Adapter &amp; Compute Shaders</strong>
+                        <strong style="color: #A371F7; font-size: 13px;">Module 3 &bull; Stage 16: WebGPU Direct Hardware Adapter &amp; 5 WGSL Compute Shaders</strong>
                         <span class="badge-pass" id="abGpuVerdictBadge">WEBGPU ACTIVE</span>
                     </div>
                     <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
@@ -1422,6 +1491,11 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Stage 16: 5 WGSL Compute Kernels & Server Nonce Verification Table -->
+                <div id="abStage16WgslKernelsSection" style="margin-top: 20px;">
+                    <!-- Populated dynamically by renderAntiBotResults() -->
                 </div>
             </div>
 
@@ -1542,20 +1616,24 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Stage 17: Cross-Family Integrity Overview -->
+                <div id="abStage17CrossFamilySection" style="margin-top: 20px;">
+                    <!-- Populated dynamically by renderAntiBotResults() -->
+                </div>
             </div>
 
             <!-- ======================================================== -->
-            <!-- SUBTAB 5: ACTIVE CONSISTENCY & WEBRTC (STAGE 3 & 10)     -->
+            <!-- SUBTAB 5: ACTIVE CONSISTENCY & WEBRTC (STAGE 3, 10 & 11) -->
             <!-- ======================================================== -->
             <div id="abPaneConsistency" class="ab-pane">
                 <div class="diag-callout" style="border-left-color: #58A6FF; background: rgba(88, 166, 255, 0.05); margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <strong style="color: #58A6FF; font-size: 13px;">Module 5 &bull; Stage 3, 10 &amp; 11: Active Network Consistency, WebRTC &amp; Port Probes</strong>
+                        <strong style="color: #58A6FF; font-size: 13px;">Module 5 &bull; Stage 3, 10 &amp; 11: Active Network Consistency, 4-Channel Route Asymmetry, Port Recon &amp; WebRTC v5 TURN Attestation</strong>
                         <span class="badge-pass" id="abConsistencyVerdictBadge">CONSISTENT</span>
                     </div>
                     <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
-                        Checks for network-layer leakage: WebRTC STUN candidate public IP vs audited HTTP server IP, private LAN IP disclosure (RFC 1918), 
-                        system clock skew against HTTP server response timestamps, and local proxy port exposures.
+                        Checks for network-layer leakage across all 12 Stage-3 active probes: WebRTC v5 Simultaneous TURN (UDP + TCP) candidate public IP vs audited HTTP server IP, 4-channel transport RTT asymmetry (TCP, STUN, WebSocket, QUIC/WebTransport) against Great-Circle fiber speed-of-light bounds, private LAN IP disclosure (RFC 1918), and 18-port active service exposure recon.
                     </div>
                 </div>
 
@@ -1582,8 +1660,8 @@
                                 <span class="metric-value" id="abPrivateLeak">Protected (mDNS Masked)</span>
                             </div>
                             <div class="metric-row">
-                                <span class="metric-label">STUN Protocol Status</span>
-                                <span class="metric-value text-green" id="abStunStatus">Verified Google STUN</span>
+                                <span class="metric-label">STUN / TURN Protocol Status</span>
+                                <span class="metric-value text-green" id="abStunStatus">COMPLETE (v5 Dual TURN + STUN)</span>
                             </div>
                         </div>
                     </div>
@@ -1620,20 +1698,24 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Comprehensive Stage 3 (12 Signals), Stage 10 (Recon + 4-Channel Route Asymmetry) & Stage 11 (WebRTC v5 Simultaneous TURN Attestation) -->
+                <div id="abComprehensiveConsistencySection" style="margin-top: 20px;">
+                    <!-- Populated dynamically by renderAntiBotResults() -->
+                </div>
             </div>
 
             <!-- ======================================================== -->
-            <!-- SUBTAB 6: DPI & DUAL-STACK NETWORK (STAGE 1 & 2)         -->
+            <!-- SUBTAB 6: DPI & DUAL-STACK NETWORK (STAGE 1, 2, 4, 5, 7) -->
             <!-- ======================================================== -->
             <div id="abPaneDpi" class="ab-pane">
                 <div class="diag-callout" style="border-left-color: #388BFD; background: rgba(56, 139, 253, 0.05); margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <strong style="color: #388BFD; font-size: 13px;">Module 6 &bull; Stage 1, 2 &amp; 7: Deep Packet Inspection (DPI) &amp; Dual-Stack Flow Analysis</strong>
-                        <span class="badge-pass" id="abDpiVerdictBadge">DPI VERIFIED</span>
+                        <strong style="color: #388BFD; font-size: 13px;">Module 6 &bull; Stage 1, 2, 4, 5 &amp; 7: Deep Packet Inspection (Suricata IDS, Cisco Mercury, ntop nDPI, ML-PCAP, Passive DNS Sniffer &amp; Zardaxt OS)</strong>
+                        <span class="badge-pass" id="abDpiVerdictBadge">DPI VERIFIED &bull; 0 ALERTS</span>
                     </div>
                     <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
-                        DPI analyzes the low-level TLS 1.3 ClientHello handshake, ALPN protocols, and TCP MSS/MTU headers.
-                        Cisco Mercury models identify the exact client executable and operating system from TLS entropy, detecting curl/python/node headless emulations.
+                        Full multi-engine Deep Packet Inspection replicating <code>anti.bot</code>: Suricata 15-Signal Score Engine (IPv4 &amp; IPv6), Cisco Mercury randomized-control process/OS inference, ntop nDPI wire protocol &amp; TCP MSS/MTU inspection, Random-Forest ML PCAP traffic classification (<code>rf+heuristic</code>), Per-Test Passive DNS Sniffer analytics, Zardaxt OS TCP SYN Fingerprinting, and Stage 7 Dual-Stack coherence.
                     </div>
                 </div>
 
@@ -1657,7 +1739,7 @@
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">JA4 TLS Fingerprint</span>
-                                <span class="metric-value font-mono text-cyan" id="abJa4">t13d1516h2_8daaf6152771_0271d4d0b641</span>
+                                <span class="metric-value font-mono text-cyan" id="abJa4">t13d2014h2_a09f3c656075_14788d8d241b</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">IPv4 / IPv6 Dual-Stack</span>
@@ -1668,24 +1750,24 @@
 
                     <div class="card">
                         <div class="card-header">
-                            <span class="card-title">Cisco Mercury &amp; ntop nDPI Flow Inference</span>
+                            <span class="card-title">Cisco Mercury &amp; ntop nDPI Summary</span>
                         </div>
                         <div class="card-body">
                             <div class="metric-row">
                                 <span class="metric-label">Cisco Mercury Inferred Client</span>
-                                <span class="metric-value text-green" id="abMercuryClient">Google Chrome (Blink Engine)</span>
+                                <span class="metric-value text-green" id="abMercuryClient">Apple Safari (WebKit Engine)</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">Mercury Inferred OS</span>
-                                <span class="metric-value" id="abMercuryOs">Windows NT 10.0</span>
+                                <span class="metric-value" id="abMercuryOs">iOS / iPadOS (Darwin ARM64)</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">ntop nDPI Traffic Class</span>
-                                <span class="metric-value" id="abNdpiClass">Web / HTTPS TLS Traffic</span>
+                                <span class="metric-value" id="abNdpiClass">Web / Encrypted Browser Traffic</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">DPI Match Confidence</span>
-                                <span class="metric-value font-mono text-cyan" id="abNdpiConfidence">99.4% (Direct Match)</span>
+                                <span class="metric-value font-mono text-cyan" id="abNdpiConfidence">99.8% (Direct Match)</span>
                             </div>
                             <div class="metric-row">
                                 <span class="metric-label">Residential Relay Anonymizer</span>
@@ -1693,6 +1775,11 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Comprehensive Deep Packet Inspection Suite (Suricata 15-Signal, Cisco Mercury Full, ntop nDPI Full, ML-PCAP, Passive DNS Sniffer, Stage 7 Dual-Stack & Zardaxt OS) -->
+                <div id="abComprehensiveDpiSection" style="margin-top: 20px;">
+                    <!-- Populated dynamically by renderAntiBotResults() -->
                 </div>
             </div>
 

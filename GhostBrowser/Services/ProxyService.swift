@@ -196,13 +196,45 @@ public final class ProxyService {
         return (outType, outHost, outPort, outUser, outPass)
     }
 
+    public let sharedProcessPool = WKProcessPool()
     private var activeDnsBridge: LocalSocks5DnsBridge?
+    private var activeBridgeConfigKey: String = ""
+    private var activeBridgePort: UInt16 = 0
+    private var lastAppliedConfigKey: String = ""
+    private var sharedDataStores: [String: WKWebsiteDataStore] = [:]
+    private var activeDataStores = NSHashTable<WKWebsiteDataStore>.weakObjects()
+
+    /// Returns a shared WKWebsiteDataStore for the given profile so all tabs in the same profile
+    /// share the exact same underlying network session and proxy tunnel without conflicts.
+    public func websiteDataStore(for profile: PrivacyProfile) -> WKWebsiteDataStore {
+        let key = "\(profile.sessionDataStoreID.uuidString)_\(profile.ephemeralRAMMode ? "ram" : "disk")"
+        if let existing = sharedDataStores[key] {
+            activeDataStores.add(existing)
+            return existing
+        }
+        let ds: WKWebsiteDataStore
+        if profile.ephemeralRAMMode {
+            ds = WKWebsiteDataStore.nonPersistent()
+        } else if #available(iOS 17.0, *) {
+            ds = WKWebsiteDataStore(forIdentifier: profile.sessionDataStoreID)
+        } else {
+            ds = WKWebsiteDataStore.default()
+        }
+        sharedDataStores[key] = ds
+        activeDataStores.add(ds)
+        return ds
+    }
+
+    public func invalidateDataStore(for profile: PrivacyProfile) {
+        let key = "\(profile.sessionDataStoreID.uuidString)_\(profile.ephemeralRAMMode ? "ram" : "disk")"
+        sharedDataStores.removeValue(forKey: key)
+    }
 
     /// Applies native C++ Network.ProxyConfiguration to WKWebsiteDataStore on iOS 17+
-    /// and routes SOCKS5 traffic through LocalSocks5DnsBridge (with automatic fallback for mobile proxies that block TCP Port 53).
+    /// and routes SOCKS5 traffic through a persistent LocalSocks5DnsBridge shared across all open tabs.
     public func applyProxy(to dataStore: WKWebsiteDataStore, profile: PrivacyProfile) {
         if #available(iOS 17.0, *) {
-            NWParameters.PrivacyContext.default.flushCache()
+            activeDataStores.add(dataStore)
             let sanitized = sanitizeCredentials(
                 type: profile.proxyType,
                 host: profile.proxyHost,
@@ -211,6 +243,25 @@ public final class ProxyService {
                 password: profile.proxyPassword
             )
             let host = sanitized.host
+            let isHttp = sanitized.type.uppercased().contains("HTTP")
+            let user = sanitized.username
+            let pass = sanitized.password
+
+            let configKey = "\(profile.proxyEnabled)|\(isHttp ? "HTTP" : "SOCKS5")|\(host.lowercased())|\(sanitized.port)|\(user)|\(pass)|\(profile.enableDnsProxyMatching)"
+            let configDidChange = (configKey != lastAppliedConfigKey)
+            if configDidChange {
+                lastAppliedConfigKey = configKey
+                NWParameters.PrivacyContext.default.flushCache()
+            }
+
+            let applyToAllStores: ([ProxyConfiguration]) -> Void = { [weak self] configs in
+                dataStore.proxyConfigurations = configs
+                guard let self = self else { return }
+                for store in self.activeDataStores.allObjects where store !== dataStore {
+                    store.proxyConfigurations = configs
+                }
+            }
+
             guard profile.proxyEnabled,
                   !host.isEmpty,
                   sanitized.port > 0,
@@ -218,15 +269,25 @@ public final class ProxyService {
                   let nwPort = NWEndpoint.Port(rawValue: UInt16(sanitized.port)) else {
                 activeDnsBridge?.stop()
                 activeDnsBridge = nil
-                dataStore.proxyConfigurations = []
+                activeBridgeConfigKey = ""
+                activeBridgePort = 0
+                applyToAllStores([])
                 return
             }
 
-            let isHttp = sanitized.type.uppercased().contains("HTTP")
-            let user = sanitized.username
-            let pass = sanitized.password
-
             if !isHttp && profile.enableDnsProxyMatching {
+                if let existingBridge = activeDnsBridge,
+                   existingBridge.isListening,
+                   activeBridgePort > 0,
+                   activeBridgeConfigKey == configKey,
+                   let bridgeNwPort = NWEndpoint.Port(rawValue: activeBridgePort) {
+                    existingBridge.updateDetectedMetadata(isp: profile.proxyDetectedISP, asn: profile.proxyDetectedASN)
+                    let localEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: bridgeNwPort)
+                    let proxyConfig = ProxyConfiguration(socksv5Proxy: localEndpoint)
+                    applyToAllStores([proxyConfig])
+                    return
+                }
+
                 activeDnsBridge?.stop()
                 let bridge = LocalSocks5DnsBridge(
                     upstreamHost: host,
@@ -239,11 +300,18 @@ public final class ProxyService {
                 if let localPort = bridge.start(),
                    let bridgeNwPort = NWEndpoint.Port(rawValue: localPort) {
                     activeDnsBridge = bridge
+                    activeBridgePort = localPort
+                    activeBridgeConfigKey = configKey
                     let localEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: bridgeNwPort)
                     let proxyConfig = ProxyConfiguration(socksv5Proxy: localEndpoint)
-                    dataStore.proxyConfigurations = [proxyConfig]
+                    applyToAllStores([proxyConfig])
                     return
                 }
+            } else {
+                activeDnsBridge?.stop()
+                activeDnsBridge = nil
+                activeBridgeConfigKey = ""
+                activeBridgePort = 0
             }
 
             let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: nwPort)
@@ -258,7 +326,7 @@ public final class ProxyService {
                 proxyConfig.applyCredential(username: user, password: pass)
             }
 
-            dataStore.proxyConfigurations = [proxyConfig]
+            applyToAllStores([proxyConfig])
         }
     }
 
@@ -708,14 +776,21 @@ public final class LocalSocks5DnsBridge {
     private let upstreamPort: UInt16
     private let username: String
     private let password: String
-    private let detectedIsp: String
-    private let detectedAsn: String
+    private var detectedIsp: String
+    private var detectedAsn: String
     private let queue = DispatchQueue(label: "com.ghostbrowser.socks5dnsbridge", attributes: .concurrent)
     private let cacheLock = NSLock()
     private var dnsCache: [String: (ip: String?, expires: Date)] = [:]
     private var port53ConsecutiveFailures: Int = 0
     private var port53BlockedByProxy: Bool = false
     private var listener: NWListener?
+    private var currentBoundPort: UInt16 = 0
+
+    public var isListening: Bool {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        return listener != nil && currentBoundPort > 0
+    }
 
     public init(
         upstreamHost: String,
@@ -737,19 +812,40 @@ public final class LocalSocks5DnsBridge {
         }
     }
 
+    public func updateDetectedMetadata(isp: String, asn: String) {
+        cacheLock.lock()
+        if !isp.isEmpty { self.detectedIsp = isp }
+        if !asn.isEmpty { self.detectedAsn = asn }
+        cacheLock.unlock()
+    }
+
     public func start() -> UInt16? {
         guard let listener = try? NWListener(using: .tcp, on: .any) else { return nil }
         self.listener = listener
         let readySem = DispatchSemaphore(value: 0)
         var boundPort: UInt16?
+        var signaled = false
 
-        listener.stateUpdateHandler = { state in
+        listener.stateUpdateHandler = { [weak self] state in
             switch state {
             case .ready:
-                boundPort = listener.port?.rawValue
-                readySem.signal()
+                let p = listener.port?.rawValue
+                boundPort = p
+                self?.cacheLock.lock()
+                self?.currentBoundPort = p ?? 0
+                self?.cacheLock.unlock()
+                if !signaled {
+                    signaled = true
+                    readySem.signal()
+                }
             case .failed, .cancelled:
-                readySem.signal()
+                self?.cacheLock.lock()
+                self?.currentBoundPort = 0
+                self?.cacheLock.unlock()
+                if !signaled {
+                    signaled = true
+                    readySem.signal()
+                }
             default:
                 break
             }
@@ -765,17 +861,25 @@ public final class LocalSocks5DnsBridge {
     }
 
     public func stop() {
-        listener?.cancel()
+        cacheLock.lock()
+        currentBoundPort = 0
+        let l = listener
         listener = nil
+        cacheLock.unlock()
+        l?.cancel()
     }
 
     private var refusedDnsServers: Set<String> = []
     private var verifiedDnsServers: Set<String> = []
-    private var dynamicDiscoveredServers: [String]?
 
     private func ispDnsServers() -> [String] {
+        cacheLock.lock()
         let isp = detectedIsp.lowercased()
         let asn = detectedAsn.lowercased()
+        let refused = refusedDnsServers
+        let verified = verifiedDnsServers
+        cacheLock.unlock()
+
         let user = username.lowercased()
         var candidates: [String] = []
 
@@ -809,29 +913,9 @@ public final class LocalSocks5DnsBridge {
             candidates.append(contentsOf: ["167.206.112.138", "167.206.7.4"])
         }
 
-        if candidates.isEmpty && (!isp.isEmpty || !asn.isEmpty) {
-            cacheLock.lock()
-            let cachedDynamic = dynamicDiscoveredServers
-            cacheLock.unlock()
-            if let dyn = cachedDynamic {
-                candidates.append(contentsOf: dyn)
-            } else {
-                let discovered = discoverDynamicAsnResolversSync(ispLower: isp, asnLower: asn)
-                cacheLock.lock()
-                dynamicDiscoveredServers = discovered
-                cacheLock.unlock()
-                candidates.append(contentsOf: discovered)
-            }
-        }
-
         if candidates.isEmpty {
             candidates.append(contentsOf: ["71.250.0.12", "209.18.47.61", "75.75.75.75", "68.94.156.1"])
         }
-
-        cacheLock.lock()
-        let refused = refusedDnsServers
-        let verified = verifiedDnsServers
-        cacheLock.unlock()
 
         var seen = Set<String>()
         let unique = candidates.filter { ip in
@@ -844,135 +928,156 @@ public final class LocalSocks5DnsBridge {
         }
     }
 
-    private func discoverDynamicAsnResolversSync(ispLower: String, asnLower: String) -> [String] {
-        guard let url = URL(string: "https://public-dns.info/nameserver/us.json") else { return [] }
-        let sem = DispatchSemaphore(value: 0)
-        var result: [String] = []
-        let asnNum = Int(asnLower.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)) ?? 0
-        let tokens = ispLower.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { $0.count >= 3 && !["inc", "llc", "ltd", "communications", "telecom", "business"].contains($0) }
-
-        let task = URLSession.shared.dataTask(with: url) { data, _, _ in
-            defer { sem.signal() }
-            guard let data = data,
-                  let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-            var exact: [String] = []
-            var orgMatch: [String] = []
-            for item in arr {
-                guard let ip = item["ip"] as? String, !ip.contains(":") else { continue }
-                let itemAsn = (item["as_number"] as? Int) ?? 0
-                if [15169, 13335, 36692, 19281, 34939].contains(itemAsn) { continue }
-                let org = ((item["as_org"] as? String) ?? "").lowercased()
-                if org.contains("google") || org.contains("cloudflare") || org.contains("opendns") || org.contains("nextdns") { continue }
-                if asnNum > 0 && itemAsn == asnNum {
-                    exact.append(ip)
-                } else if tokens.contains(where: { org.contains($0) }) {
-                    orgMatch.append(ip)
-                }
-            }
-            result = Array((exact + orgMatch).prefix(6))
-        }
-        task.resume()
-        _ = sem.wait(timeout: .now() + 2.5)
-        return result
-    }
-
     private func handleClientConnection(_ clientConn: NWConnection) {
         clientConn.start(queue: queue)
-        clientConn.receive(minimumIncompleteLength: 2, maximumLength: 64) { [weak self] data, _, _, err in
-            guard let self = self, let data = data, data.count >= 2, err == nil, data[0] == 0x05 else {
+        // Read exact 2-byte SOCKS5 greeting header [VER, NMETHODS] so we never over-read into the CONNECT frame
+        clientConn.receive(minimumIncompleteLength: 2, maximumLength: 2) { [weak self] hdr, _, _, err in
+            guard let self = self, let hdr = hdr, hdr.count == 2, err == nil, hdr[0] == 0x05 else {
                 clientConn.cancel()
                 return
             }
-            // Send NO AUTH REQUIRED (0x05 0x00)
-            clientConn.send(content: Data([0x05, 0x00]), completion: .contentProcessed { sendErr in
-                guard sendErr == nil else {
-                    clientConn.cancel()
-                    return
+            let nmethods = Int(hdr[1])
+            let replyNoAuth = { [weak self] in
+                guard let self = self else { return }
+                clientConn.send(content: Data([0x05, 0x00]), completion: .contentProcessed { sendErr in
+                    guard sendErr == nil else {
+                        clientConn.cancel()
+                        return
+                    }
+                    self.readClientSocks5Request(clientConn)
+                })
+            }
+            if nmethods > 0 {
+                clientConn.receive(minimumIncompleteLength: nmethods, maximumLength: nmethods) { methodsData, _, _, mErr in
+                    guard methodsData?.count == nmethods, mErr == nil else {
+                        clientConn.cancel()
+                        return
+                    }
+                    replyNoAuth()
                 }
-                self.readClientSocks5Request(clientConn)
-            })
+            } else {
+                replyNoAuth()
+            }
         }
     }
 
     private func readClientSocks5Request(_ clientConn: NWConnection) {
-        clientConn.receive(minimumIncompleteLength: 4, maximumLength: 512) { [weak self] reqData, _, _, err in
-            guard let self = self, let reqData = reqData, reqData.count >= 7, err == nil,
-                  reqData[0] == 0x05, reqData[1] == 0x01 else {
+        // Read exact 4-byte SOCKS5 request header [VER, CMD, RSV, ATYP]
+        clientConn.receive(minimumIncompleteLength: 4, maximumLength: 4) { [weak self] hdr, _, _, err in
+            guard let self = self, let hdr = hdr, hdr.count == 4, err == nil,
+                  hdr[0] == 0x05, hdr[1] == 0x01 else {
                 clientConn.cancel()
                 return
             }
 
-            let atyp = reqData[3]
-            var targetHost = ""
-            var targetPort: UInt16 = 0
-
-            if atyp == 0x01, reqData.count >= 10 {
-                targetHost = "\(reqData[4]).\(reqData[5]).\(reqData[6]).\(reqData[7])"
-                targetPort = (UInt16(reqData[8]) << 8) | UInt16(reqData[9])
-            } else if atyp == 0x03 {
-                let dlen = Int(reqData[4])
-                guard reqData.count >= 5 + dlen + 2 else {
-                    clientConn.cancel()
-                    return
+            let atyp = hdr[3]
+            if atyp == 0x01 {
+                // IPv4: 4 bytes IP + 2 bytes port = 6 bytes
+                clientConn.receive(minimumIncompleteLength: 6, maximumLength: 6) { [weak self] body, _, _, bErr in
+                    guard let self = self, let body = body, body.count == 6, bErr == nil else {
+                        clientConn.cancel()
+                        return
+                    }
+                    let bytes = Array(body)
+                    let targetHost = "\(bytes[0]).\(bytes[1]).\(bytes[2]).\(bytes[3])"
+                    let targetPort = (UInt16(bytes[4]) << 8) | UInt16(bytes[5])
+                    if targetHost == "0.0.0.0" || targetHost.hasPrefix("127.") {
+                        clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
+                            clientConn.cancel()
+                        })
+                        return
+                    }
+                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
                 }
-                let domBytes = reqData.subdata(in: 5..<(5 + dlen))
-                targetHost = String(data: domBytes, encoding: .ascii) ?? ""
-                targetPort = (UInt16(reqData[5 + dlen]) << 8) | UInt16(reqData[6 + dlen])
+            } else if atyp == 0x03 {
+                // Domain name: 1 byte length + dlen bytes domain + 2 bytes port
+                clientConn.receive(minimumIncompleteLength: 1, maximumLength: 1) { [weak self] lenData, _, _, lErr in
+                    guard let self = self, let lenData = lenData, lenData.count == 1, lErr == nil else {
+                        clientConn.cancel()
+                        return
+                    }
+                    let dlen = Int(lenData[0])
+                    let rem = dlen + 2
+                    guard dlen > 0 else {
+                        clientConn.cancel()
+                        return
+                    }
+                    clientConn.receive(minimumIncompleteLength: rem, maximumLength: rem) { [weak self] body, _, _, bErr in
+                        guard let self = self, let body = body, body.count == rem, bErr == nil else {
+                            clientConn.cancel()
+                            return
+                        }
+                        let domBytes = body.subdata(in: 0..<dlen)
+                        let targetHost = String(data: domBytes, encoding: .utf8) ?? String(data: domBytes, encoding: .ascii) ?? ""
+                        let portHi = UInt16(body[dlen])
+                        let portLo = UInt16(body[dlen + 1])
+                        let targetPort = (portHi << 8) | portLo
+                        self.handleDomainConnectRequest(clientConn: clientConn, targetHost: targetHost, targetPort: targetPort)
+                    }
+                }
+            } else if atyp == 0x04 {
+                // IPv6: consume 18 bytes and fast-fail so WebKit Happy Eyeballs immediately uses IPv4 tunnel
+                clientConn.receive(minimumIncompleteLength: 18, maximumLength: 18) { _, _, _, _ in
+                    clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
+                        clientConn.cancel()
+                    })
+                }
             } else {
-                // Fast-fail IPv6 (0x04) so all egress uses verified IPv4 ISP tunnel
                 clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
                     clientConn.cancel()
                 })
-                return
             }
+        }
+    }
 
-            if atyp == 0x03 {
-                // 1. Synchronous 0ms Bogus DNSSEC Guard (passes dnscheck.tools 12/12 on all proxies)
-                if self.isBogusDnssecHostname(targetHost) {
+    private func handleDomainConnectRequest(clientConn: NWConnection, targetHost: String, targetPort: UInt16) {
+        // 1. Synchronous 0ms Bogus DNSSEC Guard (passes dnscheck.tools / wander.science / ianix 12/12 on all proxies)
+        if isBogusDnssecHostname(targetHost) {
+            clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
+                clientConn.cancel()
+            })
+            return
+        }
+
+        // 2. For normal websites, forward ATYP=0x03 directly to the upstream SOCKS5 proxy in 0ms
+        //    so subresources across multiple tabs never stall on Port 53 DNS probes.
+        //    Only run in-tunnel TCP Port 53 ISP DNS resolution for explicit DNS resolver leak test beacons when Port 53 is open.
+        cacheLock.lock()
+        let bypassPort53 = port53BlockedByProxy
+        cacheLock.unlock()
+
+        if bypassPort53 || !isDnsResolverProbeHostname(targetHost) {
+            connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
+            return
+        }
+
+        // 3. In-tunnel TCP Port 53 ISP DNS resolution for DNS leak test domains
+        resolveDomainViaTunnelIspDns(domain: targetHost) { [weak self] handled, resolvedIp in
+            guard let self = self else { return }
+            if handled {
+                guard let finalHost = resolvedIp, !finalHost.isEmpty,
+                      finalHost != "0.0.0.0", !finalHost.hasPrefix("127.") else {
                     clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
                         clientConn.cancel()
                     })
                     return
                 }
-
-                // 2. If this proxy blocks raw TCP Port 53 (e.g., mobile.lightningproxies.net), forward ATYP=0x03 directly to upstream
-                self.cacheLock.lock()
-                let bypassPort53 = self.port53BlockedByProxy
-                self.cacheLock.unlock()
-
-                if bypassPort53 {
-                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
-                    return
-                }
-
-                // 3. Otherwise attempt in-tunnel TCP Port 53 ISP DNS resolution
-                self.resolveDomainViaTunnelIspDns(domain: targetHost) { [weak self] handled, resolvedIp in
-                    guard let self = self else { return }
-                    if handled {
-                        guard let finalHost = resolvedIp, !finalHost.isEmpty,
-                              finalHost != "0.0.0.0", !finalHost.hasPrefix("127.") else {
-                            // Explicit NXDOMAIN / SERVFAIL from ISP DNS server
-                            clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
-                                clientConn.cancel()
-                            })
-                            return
-                        }
-                        self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: finalHost, targetPort: targetPort)
-                    } else {
-                        // TCP Port 53 was blocked by the proxy firewall — fall back to upstream ATYP=0x03 resolution so pages load!
-                        self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
-                    }
-                }
+                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: finalHost, targetPort: targetPort)
             } else {
-                if targetHost == "0.0.0.0" || targetHost.hasPrefix("127.") {
-                    clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
-                        clientConn.cancel()
-                    })
-                    return
-                }
                 self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
             }
         }
+    }
+
+    private func isDnsResolverProbeHostname(_ host: String) -> Bool {
+        let h = host.lowercased()
+        return h.hasSuffix(".dnscheck.tools") ||
+               h.hasSuffix(".addr.tools") ||
+               h.contains("dnsleak") ||
+               h.hasSuffix(".bash.ws") ||
+               h.hasSuffix(".perfect-privacy.com") ||
+               h.hasSuffix(".ipleak.net") ||
+               h.hasSuffix(".browserleaks.com")
     }
 
     private func resolveDomainViaTunnelIspDns(domain: String, completion: @escaping (Bool, String?) -> Void) {
@@ -1028,7 +1133,7 @@ public final class LocalSocks5DnsBridge {
             completion(handled, ip)
         }
 
-        queue.asyncAfter(deadline: .now() + 2.2) {
+        queue.asyncAfter(deadline: .now() + 2.0) {
             finish(false, nil)
         }
 
@@ -1233,6 +1338,13 @@ public final class LocalSocks5DnsBridge {
             return
         }
         let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: .tcp)
+        var handshaked = false
+        queue.asyncAfter(deadline: .now() + 14.0) {
+            if !handshaked {
+                upConn.cancel()
+                clientConn.cancel()
+            }
+        }
         upConn.stateUpdateHandler = { [weak self] state in
             guard let self = self else { return }
             switch state {
@@ -1245,6 +1357,7 @@ public final class LocalSocks5DnsBridge {
                         })
                         return
                     }
+                    handshaked = true
                     clientConn.send(content: Data([0x05, 0x00, 0x00, 0x01, 127, 0, 0, 1, 0, 0]), completion: .contentProcessed { err in
                         guard err == nil else {
                             clientConn.cancel()
@@ -1265,19 +1378,21 @@ public final class LocalSocks5DnsBridge {
     }
 
     private func pipe(from source: NWConnection, to destination: NWConnection) {
-        source.receive(minimumIncompleteLength: 1, maximumLength: 32768) { [weak self] data, _, isComplete, err in
+        source.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, err in
             if let data = data, !data.isEmpty {
-                destination.send(content: data, completion: .contentProcessed { sendErr in
-                    if sendErr != nil || isComplete || err != nil {
+                destination.send(content: data, isComplete: isComplete, completion: .contentProcessed { sendErr in
+                    if sendErr != nil || err != nil {
                         source.cancel()
                         destination.cancel()
-                    } else {
+                    } else if !isComplete {
                         self?.pipe(from: source, to: destination)
                     }
                 })
-            } else {
+            } else if err != nil {
                 source.cancel()
                 destination.cancel()
+            } else if isComplete {
+                destination.send(content: nil, contentContext: .finalMessage, isComplete: true, completion: .contentProcessed { _ in })
             }
         }
     }

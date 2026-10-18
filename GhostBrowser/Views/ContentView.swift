@@ -82,7 +82,8 @@ public struct ContentView: View {
                             wipeTrigger: $wipeTrigger
                         )
                         .id("\(tab.id)-\(privacyProfile.sessionDataStoreID)")
-                        .opacity(tab.id == activeTabID ? 1.0 : 0.0)
+                        .opacity(tab.id == activeTabID ? 1.0 : 0.001)
+                        .zIndex(tab.id == activeTabID ? 10 : 0)
                         .allowsHitTesting(tab.id == activeTabID)
                     }
                 }
