@@ -231,50 +231,11 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
     }
 
     public var webglRenderer: String {
-        switch self {
-        case .iPadProM4_13: return "Apple M4"
-        case .iPadAirM2_11: return "Apple M2"
-        case .iPadMini6_A15: return "Apple A15 GPU"
-        case .iPhone18ProMax_A20: return "Apple A20 Pro GPU"
-        case .iPhone17ProMax_A19: return "Apple A19 Pro GPU"
-        case .iPhone16ProMax_A18: return "Apple A18 Pro GPU"
-        case .iPhone16_A18: return "Apple A18 GPU"
-        case .iPhone15ProMax_A17: return "Apple A17 Pro GPU"
-        case .iPhone14_A15: return "Apple A15 GPU"
-        case .macBookProM4Max_16: return "Apple M4 Max"
-        case .macBookAirM3_13: return "Apple M3"
-        case .custom, .nativeHost: return "Apple M4"
-        }
+        return "Apple GPU"
     }
 
     public func webglRendererVariant(seed: Int) -> String {
-        let idx = abs(seed) % 3
-        switch self {
-        case .iPadProM4_13:
-            return ["Apple M4", "Apple M4 (10-core GPU)", "Apple M4 (9-core GPU)"][idx]
-        case .iPadAirM2_11:
-            return ["Apple M2", "Apple M2 (9-core GPU)", "Apple M2 (10-core GPU)"][idx]
-        case .iPadMini6_A15:
-            return ["Apple A15 GPU", "Apple A15 Bionic GPU (5-core)", "Apple A15 Bionic GPU"][idx]
-        case .iPhone18ProMax_A20:
-            return ["Apple A20 Pro GPU", "Apple A20 Pro GPU (6-core)", "Apple A20 Pro Metal GPU"][idx]
-        case .iPhone17ProMax_A19:
-            return ["Apple A19 Pro GPU", "Apple A19 Pro GPU (6-core)", "Apple A19 Pro Metal GPU"][idx]
-        case .iPhone16ProMax_A18:
-            return ["Apple A18 Pro GPU", "Apple A18 Pro GPU (6-core)", "Apple A18 Pro Metal GPU"][idx]
-        case .iPhone16_A18:
-            return ["Apple A18 GPU", "Apple A18 GPU (5-core)", "Apple A18 Metal GPU"][idx]
-        case .iPhone15ProMax_A17:
-            return ["Apple A17 Pro GPU", "Apple A17 Pro GPU (6-core)", "Apple A17 Pro Metal GPU"][idx]
-        case .iPhone14_A15:
-            return ["Apple A15 GPU", "Apple A15 Bionic GPU (5-core)", "Apple A15 Metal GPU"][idx]
-        case .macBookProM4Max_16:
-            return ["Apple M4 Max", "Apple M4 Max (40-core GPU)", "Apple M4 Pro"][idx]
-        case .macBookAirM3_13:
-            return ["Apple M3", "Apple M3 (10-core GPU)", "Apple M3 (8-core GPU)"][idx]
-        case .custom, .nativeHost:
-            return ["Apple M4", "Apple M3", "Apple M2"][idx]
-        }
+        return "Apple GPU"
     }
 
     public var screenWidth: Int {

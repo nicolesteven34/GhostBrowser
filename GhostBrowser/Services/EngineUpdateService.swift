@@ -20,8 +20,8 @@ public final class EngineUpdateService: ObservableObject {
     @Published public var upstreamVersion: String = "18.7"
     @Published public var installedWebKitVersion: String = "605.1.15"
     @Published public var latestSafariVersion: String = "18.7"
-    @Published public var stealthCoreVersion: String = "3.6.2-evergreen"
-    @Published public var statusMessage: String = "Evergreen WebKit & Stealth Core v3.6.2 — Up to Date"
+    @Published public var stealthCoreVersion: String = "3.6.7-evergreen"
+    @Published public var statusMessage: String = "Evergreen WebKit & Stealth Core v3.6.7 — Up to Date"
     @Published public var lastCheckTimestamp: String = {
         let fmt = DateFormatter()
         fmt.dateFormat = "HH:mm:ss"
