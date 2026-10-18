@@ -545,6 +545,44 @@ public final class ProxyService {
         })
     }
 
+    public static func inferTimezone(country: String, region: String, city: String, username: String = "") -> String {
+        let hint = "\(country) \(region) \(city) \(username)".lowercased()
+        if hint.range(of: #"\b(ca|california|los[\s_-]*angeles|san[\s_-]*jose|san[\s_-]*francisco|seattle|wa|washington|or|oregon|portland|nv|nevada|las[\s_-]*vegas)\b"#, options: .regularExpression) != nil {
+            return "America/Los_Angeles"
+        }
+        if hint.range(of: #"\b(az|arizona|phoenix)\b"#, options: .regularExpression) != nil {
+            return "America/Phoenix"
+        }
+        if hint.range(of: #"\b(co|colorado|denver|ut|utah|salt[\s_-]*lake|nm|new[\s_-]*mexico|mt|montana|id|idaho|wy|wyoming)\b"#, options: .regularExpression) != nil {
+            return "America/Denver"
+        }
+        if hint.range(of: #"\b(tx|texas|dallas|houston|austin|san[\s_-]*antonio|il|illinois|chicago|wi|wisconsin|milwaukee|mn|minnesota|minneapolis|mo|missouri|st[\s_-]*louis|kansas[\s_-]*city|tn|tennessee|nashville|la|louisiana|al|alabama|ok|oklahoma|ks|kansas|ne|nebraska|ia|iowa|ar|arkansas|ms|mississippi)\b"#, options: .regularExpression) != nil {
+            return "America/Chicago"
+        }
+        if hint.range(of: #"\b(gb|uk|united[\s_-]*kingdom|london|england)\b"#, options: .regularExpression) != nil {
+            return "Europe/London"
+        }
+        if hint.range(of: #"\b(de|germany|frankfurt|berlin|munich)\b"#, options: .regularExpression) != nil {
+            return "Europe/Berlin"
+        }
+        if hint.range(of: #"\b(fr|france|paris)\b"#, options: .regularExpression) != nil {
+            return "Europe/Paris"
+        }
+        if hint.range(of: #"\b(nl|netherlands|amsterdam)\b"#, options: .regularExpression) != nil {
+            return "Europe/Amsterdam"
+        }
+        if hint.range(of: #"\b(jp|japan|tokyo)\b"#, options: .regularExpression) != nil {
+            return "Asia/Tokyo"
+        }
+        if hint.range(of: #"\b(sg|singapore)\b"#, options: .regularExpression) != nil {
+            return "Asia/Singapore"
+        }
+        if hint.range(of: #"\b(au|australia|sydney|melbourne)\b"#, options: .regularExpression) != nil {
+            return "Australia/Sydney"
+        }
+        return "America/New_York"
+    }
+
     private func readAllHttpResponse(
         conn: NWConnection,
         accumulated: Data,
@@ -567,11 +605,20 @@ public final class ProxyService {
                 let jsonStr = String(text[braceStart...braceEnd])
                 if let jsonData = jsonStr.data(using: .utf8),
                    let obj = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                    // Reject rate-limited or failed GeoIP responses so testProxyAsync falls back to the next provider
+                    if let status = (obj["status"] as? String)?.lowercased(), status == "fail" {
+                        finish(ProxyTestResult(success: false, errorMessage: "GeoIP endpoint returned status=fail."))
+                        return
+                    }
+                    if let ok = obj["success"] as? Bool, ok == false {
+                        finish(ProxyTestResult(success: false, errorMessage: "GeoIP endpoint returned success=false."))
+                        return
+                    }
                     // Support both ip-api.com ("query") and ipwho.is ("ip")
                     let queryIp = (obj["query"] as? String) ?? (obj["ip"] as? String) ?? ""
                     if !queryIp.isEmpty {
                         let city = (obj["city"] as? String) ?? ""
-                        let regionCode = (obj["region"] as? String) ?? (obj["region_code"] as? String) ?? (obj["countryCode"] as? String) ?? (obj["country_code"] as? String) ?? ""
+                        let regionCode = (obj["region"] as? String) ?? (obj["region_code"] as? String) ?? (obj["regionName"] as? String) ?? (obj["countryCode"] as? String) ?? (obj["country_code"] as? String) ?? ""
                         let country = (obj["country"] as? String) ?? ""
 
                         let connDict = obj["connection"] as? [String: Any]
@@ -589,9 +636,13 @@ public final class ProxyService {
                         }()
                         let isMobile = (obj["mobile"] as? Bool) ?? false
                         let isHosting = (obj["hosting"] as? Bool) ?? false
-                        let tz = (obj["timezone"] as? String)
+                        let rawTz = (obj["timezone"] as? String)
                             ?? (tzDict?["id"] as? String)
-                            ?? "America/Los_Angeles"
+                            ?? (obj["time_zone"] as? String)
+                            ?? ""
+                        let tz = (!rawTz.isEmpty && rawTz.contains("/"))
+                            ? rawTz
+                            : Self.inferTimezone(country: country, region: regionCode, city: city)
                         let lat = (obj["lat"] as? Double) ?? (obj["latitude"] as? Double) ?? 37.7749
                         let lon = (obj["lon"] as? Double) ?? (obj["longitude"] as? Double) ?? -122.4194
 

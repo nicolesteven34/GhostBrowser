@@ -54,6 +54,24 @@
         }
     } catch (e) {}
 
+    const profileSeed = Number(cfg.sessionSeed) || 123456;
+    function fmix32(seed, i) {
+        let h = (seed ^ (i * 0x9e3779b9)) >>> 0;
+        h = Math.imul(h ^ (h >>> 16), 0x21f0aaad);
+        h = Math.imul(h ^ (h >>> 15), 0x735a2d97);
+        return (h ^ (h >>> 15)) >>> 0;
+    }
+
+    let _livePageTcpIp = (cfg && cfg.proxyIp) ? String(cfg.proxyIp).trim() : '';
+    let _livePageTimezone = (cfg && cfg.timezone) ? String(cfg.timezone).trim() : '';
+    let _livePageIsp = (cfg && cfg.proxyIsp) ? String(cfg.proxyIsp).trim() : '';
+    let _livePageCity = (cfg && cfg.proxyCity) ? String(cfg.proxyCity).trim() : '';
+    let _livePageRegion = (cfg && cfg.proxyRegion) ? String(cfg.proxyRegion).trim() : '';
+    let _livePageCountry = (cfg && cfg.proxyCountry) ? String(cfg.proxyCountry).trim() : '';
+    let _livePageCountryCode = '';
+    let _pendingTcpIpPromise = null;
+    let _domTzResolved = false;
+
     // =========================================================================
     // 0. WEAKMAP NATIVE FUNCTION CLOAKING REGISTRY (WebKit / V8 C++ Fidelity)
     // =========================================================================
@@ -127,35 +145,257 @@
     } catch (e) {}
 
     // =========================================================================
-    // 1. DYNAMIC PROXY & TIMEZONE HARMONIZATION (Intl + Date)
+    // 1. DYNAMIC PROXY & TIMEZONE HARMONIZATION (Intl + Date + Local Getters)
     // =========================================================================
-    function computeTargetOffsetMinutes(tzId, dateInst) {
+    const _OrigDate = Date;
+    const _origDateProto = Date.prototype;
+    const _origGetTime = _origDateProto.getTime;
+    const _origSetTime = _origDateProto.setTime;
+    const _origGetTimezoneOffset = _origDateProto.getTimezoneOffset;
+    const _origDateToString = _origDateProto.toString;
+    const _origToTimeString = _origDateProto.toTimeString;
+    const _origToDateString = _origDateProto.toDateString;
+    const _origToLocaleString = _origDateProto.toLocaleString;
+    const _origToLocaleDateString = _origDateProto.toLocaleDateString;
+    const _origToLocaleTimeString = _origDateProto.toLocaleTimeString;
+    const _origGetFullYear = _origDateProto.getFullYear;
+    const _origGetUTCFullYear = _origDateProto.getUTCFullYear;
+    const _origGetMonth = _origDateProto.getMonth;
+    const _origGetUTCMonth = _origDateProto.getUTCMonth;
+    const _origGetDate = _origDateProto.getDate;
+    const _origGetUTCDate = _origDateProto.getUTCDate;
+    const _origGetDay = _origDateProto.getDay;
+    const _origGetUTCDay = _origDateProto.getUTCDay;
+    const _origGetHours = _origDateProto.getHours;
+    const _origGetUTCHours = _origDateProto.getUTCHours;
+    const _origGetMinutes = _origDateProto.getMinutes;
+    const _origGetUTCMinutes = _origDateProto.getUTCMinutes;
+    const _origGetSeconds = _origDateProto.getSeconds;
+    const _origGetUTCSeconds = _origDateProto.getUTCSeconds;
+    const _origSetHours = _origDateProto.setHours;
+    const _origSetUTCHours = _origDateProto.setUTCHours;
+    const _origSetMinutes = _origDateProto.setMinutes;
+    const _origSetUTCMinutes = _origDateProto.setUTCMinutes;
+    const _origSetSeconds = _origDateProto.setSeconds;
+    const _origSetUTCSeconds = _origDateProto.setUTCSeconds;
+    const _origSetDate = _origDateProto.setDate;
+    const _origSetUTCDate = _origDateProto.setUTCDate;
+    const _origSetMonth = _origDateProto.setMonth;
+    const _origSetUTCMonth = _origDateProto.setUTCMonth;
+    const _origSetFullYear = _origDateProto.setFullYear;
+    const _origSetUTCFullYear = _origDateProto.setUTCFullYear;
+    const _origDateParse = _OrigDate.parse;
+    const _OrigDateTimeFormat = (typeof Intl !== 'undefined' && Intl.DateTimeFormat) ? Intl.DateTimeFormat : null;
+    const _origResolvedOptions = (_OrigDateTimeFormat && _OrigDateTimeFormat.prototype) ? _OrigDateTimeFormat.prototype.resolvedOptions : null;
+    const _explicitTzInstances = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+    const _tzMetaCache = new Map();
+    const _tzFormatterCache = new Map();
+    const _DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const _MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function getEffectiveTimezone() {
+        if (!_domTzResolved && typeof document !== 'undefined' && document && document.body) {
+            try {
+                const host = (typeof location !== 'undefined' && location.hostname) ? location.hostname : '';
+                if (host.includes('whoer.net') || !(_livePageTimezone && _livePageTimezone.includes('/'))) {
+                    const tzEl = document.querySelector('[data-fetched="time_zone"], [data-fetched="timezone"], #time_zone, #timezone');
+                    if (tzEl && tzEl.textContent) {
+                        const m = tzEl.textContent.match(/\b((?:America|Europe|Asia|Australia|Pacific|Africa|Atlantic)\/[A-Za-z0-9_]+(?:\/[A-Za-z0-9_]+)?)\b/);
+                        if (m && m[1]) {
+                            _livePageTimezone = m[1];
+                            cfg.timezone = m[1];
+                            _domTzResolved = true;
+                            return _livePageTimezone;
+                        }
+                    }
+                    if (host.includes('whoer.net') && document.body.textContent) {
+                        const mBody = document.body.textContent.match(/Zone\s*:?\s*((?:America|Europe|Asia|Australia|Pacific|Africa|Atlantic)\/[A-Za-z0-9_]+(?:\/[A-Za-z0-9_]+)?)/i);
+                        if (mBody && mBody[1]) {
+                            _livePageTimezone = mBody[1];
+                            cfg.timezone = mBody[1];
+                            _domTzResolved = true;
+                            return _livePageTimezone;
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+        if (_livePageTimezone && typeof _livePageTimezone === 'string' && _livePageTimezone.includes('/')) {
+            return _livePageTimezone;
+        }
+        if (cfg.timezone && typeof cfg.timezone === 'string' && cfg.timezone.includes('/')) {
+            return cfg.timezone;
+        }
+        if (cfg.proxyEnabled) {
+            const hint = ((_livePageRegion || cfg.proxyRegion || '') + ' ' + (_livePageCity || cfg.proxyCity || '') + ' ' + (_livePageCountry || cfg.proxyCountry || '')).toLowerCase();
+            if (/\b(ca|california|los angeles|san jose|san francisco|seattle|wa|washington|or|oregon|nv|nevada|las vegas)\b/.test(hint)) return 'America/Los_Angeles';
+            if (/\b(az|arizona|phoenix)\b/.test(hint)) return 'America/Phoenix';
+            if (/\b(co|colorado|denver|ut|utah|nm|new mexico|mt|montana|id|idaho|wy|wyoming)\b/.test(hint)) return 'America/Denver';
+            if (/\b(tx|texas|dallas|houston|austin|il|illinois|chicago|mn|minnesota|wi|wisconsin|milwaukee|mo|missouri|tn|tennessee|la|louisiana|al|alabama|ok|oklahoma|ks|kansas|ne|nebraska|ia|iowa|ar|arkansas|ms|mississippi)\b/.test(hint)) return 'America/Chicago';
+            if (/\b(gb|uk|united kingdom|london|england)\b/.test(hint)) return 'Europe/London';
+            if (/\b(de|germany|frankfurt|berlin)\b/.test(hint)) return 'Europe/Berlin';
+            if (/\b(fr|france|paris)\b/.test(hint)) return 'Europe/Paris';
+            if (/\b(nl|netherlands|amsterdam)\b/.test(hint)) return 'Europe/Amsterdam';
+            if (/\b(jp|japan|tokyo)\b/.test(hint)) return 'Asia/Tokyo';
+            if (/\b(sg|singapore)\b/.test(hint)) return 'Asia/Singapore';
+            if (/\b(au|australia|sydney)\b/.test(hint)) return 'Australia/Sydney';
+            return 'America/New_York';
+        }
+        return '';
+    }
+
+    function getTzFormatters(tzId) {
+        let entry = _tzFormatterCache.get(tzId);
+        if (!entry && _OrigDateTimeFormat) {
+            try {
+                entry = {
+                    longName: new _OrigDateTimeFormat('en-US', { timeZone: tzId, timeZoneName: 'long' }),
+                    shortParts: new _OrigDateTimeFormat('en-US', {
+                        timeZone: tzId,
+                        year: 'numeric', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        hourCycle: 'h23'
+                    })
+                };
+                _tzFormatterCache.set(tzId, entry);
+            } catch (e) {
+                return null;
+            }
+        }
+        return entry;
+    }
+
+    function getTargetTzMeta(tzId, dateOrMs) {
         try {
             if (!tzId) return null;
-            const d = (dateInst instanceof Date && !isNaN(dateInst.getTime())) ? dateInst : new Date();
-            const utcStr = d.toLocaleString('en-US', { timeZone: 'UTC' });
-            const tzStr = d.toLocaleString('en-US', { timeZone: tzId });
-            const utcDate = new Date(utcStr);
-            const tzDate = new Date(tzStr);
-            return Math.round((utcDate.getTime() - tzDate.getTime()) / 60000);
+            let ms;
+            if (typeof dateOrMs === 'number') {
+                ms = dateOrMs;
+            } else if (dateOrMs && typeof _origGetTime === 'function') {
+                ms = _origGetTime.call(dateOrMs);
+            } else {
+                ms = _OrigDate.now();
+            }
+            if (typeof ms !== 'number' || isNaN(ms)) return null;
+
+            const bucket = Math.floor(ms / 900000);
+            const cacheKey = tzId + ':' + bucket;
+            const cached = _tzMetaCache.get(cacheKey);
+            if (cached) return cached;
+
+            const fmts = getTzFormatters(tzId);
+            if (!fmts) return null;
+
+            const d = new _OrigDate(ms);
+            const parts = fmts.shortParts.formatToParts(d);
+            let y = 0, m = 0, day = 0, hr = 0, min = 0, sec = 0;
+            for (let i = 0; i < parts.length; i++) {
+                const p = parts[i];
+                if (p.type === 'year') y = parseInt(p.value, 10);
+                else if (p.type === 'month') m = parseInt(p.value, 10);
+                else if (p.type === 'day') day = parseInt(p.value, 10);
+                else if (p.type === 'hour') hr = parseInt(p.value, 10) % 24;
+                else if (p.type === 'minute') min = parseInt(p.value, 10);
+                else if (p.type === 'second') sec = parseInt(p.value, 10);
+            }
+            const asUtcMs = _OrigDate.UTC(y, m - 1, day, hr, min, sec);
+            const wholeSecMs = ms - (((ms % 1000) + 1000) % 1000);
+            const offsetMin = Math.round((wholeSecMs - asUtcMs) / 60000);
+
+            const sign = offsetMin <= 0 ? '+' : '-';
+            const absMin = Math.abs(offsetMin);
+            const offH = String(Math.floor(absMin / 60)).padStart(2, '0');
+            const offM = String(absMin % 60).padStart(2, '0');
+            const gmtStr = 'GMT' + sign + offH + offM;
+
+            let longTzName = tzId;
+            try {
+                const lp = fmts.longName.formatToParts(d);
+                for (let i = 0; i < lp.length; i++) {
+                    if (lp[i].type === 'timeZoneName' && lp[i].value) {
+                        longTzName = lp[i].value;
+                        break;
+                    }
+                }
+            } catch (e) {}
+
+            const meta = { offsetMin, gmtStr, longTzName };
+            if (_tzMetaCache.size > 256) _tzMetaCache.clear();
+            _tzMetaCache.set(cacheKey, meta);
+            return meta;
         } catch (e) {
             return null;
         }
+    }
+
+    function computeTargetOffsetMinutes(tzId, dateInst) {
+        const meta = getTargetTzMeta(tzId || getEffectiveTimezone(), dateInst);
+        return meta ? meta.offsetMin : null;
+    }
+
+    function formatDateOnlyPart(shifted) {
+        const wd = _DAYS_SHORT[_origGetUTCDay.call(shifted)];
+        const mo = _MONTHS_SHORT[_origGetUTCMonth.call(shifted)];
+        const dt = String(_origGetUTCDate.call(shifted)).padStart(2, '0');
+        const yr = _origGetUTCFullYear.call(shifted);
+        const yrStr = yr < 0 ? ('-' + String(-yr).padStart(4, '0')) : String(yr).padStart(4, '0');
+        return wd + ' ' + mo + ' ' + dt + ' ' + yrStr;
+    }
+
+    function formatTimeOnlyPart(shifted, meta) {
+        const hh = String(_origGetUTCHours.call(shifted)).padStart(2, '0');
+        const mm = String(_origGetUTCMinutes.call(shifted)).padStart(2, '0');
+        const ss = String(_origGetUTCSeconds.call(shifted)).padStart(2, '0');
+        return hh + ':' + mm + ':' + ss + ' ' + meta.gmtStr + ' (' + meta.longTzName + ')';
+    }
+
+    function parseStringInTargetTz(str, tzId) {
+        const rawMs = _origDateParse.call(_OrigDate, str);
+        if (isNaN(rawMs) || !tzId) return rawMs;
+        const s = String(str).trim();
+        // ISO date-only strings (YYYY-MM-DD) or strings with explicit UTC/offset are timezone-independent
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s) || /[zZ]|[+-]\d{2}:?\d{2}|GMT|UTC/i.test(s)) {
+            return rawMs;
+        }
+        const nativeOff = _origGetTimezoneOffset.call(new _OrigDate(rawMs));
+        const utcGuess = rawMs - nativeOff * 60000;
+        const m1 = getTargetTzMeta(tzId, utcGuess);
+        const off1 = m1 ? m1.offsetMin : nativeOff;
+        const m2 = getTargetTzMeta(tzId, utcGuess + off1 * 60000);
+        const targetOff = m2 ? m2.offsetMin : off1;
+        return utcGuess + targetOff * 60000;
+    }
+
+    function buildPatchedDtfOptions(options, tz) {
+        if (!tz) return { options, hasExplicitTz: !!(options && options.timeZone !== undefined) };
+        if (options === undefined || options === null) {
+            return { options: { timeZone: tz }, hasExplicitTz: false };
+        }
+        if (typeof options === 'object') {
+            if (options.timeZone !== undefined) {
+                return { options, hasExplicitTz: true };
+            }
+            return { options: Object.assign({}, options, { timeZone: tz }), hasExplicitTz: false };
+        }
+        return { options, hasExplicitTz: false };
     }
 
     function hookTimezoneRealm(win) {
         if (!win) return;
         try {
             if (win.Intl && win.Intl.DateTimeFormat && win.Intl.DateTimeFormat.prototype) {
-                const dtfProto = win.Intl.DateTimeFormat.prototype;
-                const origResolvedOptions = dtfProto.resolvedOptions;
-                if (typeof origResolvedOptions === 'function' && !_nativeToStringMap.has(origResolvedOptions)) {
+                const OrigDTF = win.Intl.DateTimeFormat;
+                const dtfProto = OrigDTF.prototype;
+                const origResOpts = dtfProto.resolvedOptions || _origResolvedOptions;
+                if (typeof origResOpts === 'function' && !_nativeToStringMap.has(origResOpts)) {
                     const hookedResolvedOptions = makeNative(function resolvedOptions() {
-                        const res = origResolvedOptions.apply(this, arguments);
-                        if (cfg.timezone && res && typeof res === 'object') {
-                            try {
-                                res.timeZone = cfg.timezone;
-                            } catch (e) {}
+                        const res = origResOpts.apply(this, arguments);
+                        const tz = getEffectiveTimezone();
+                        if (tz && res && typeof res === 'object') {
+                            const isExplicit = _explicitTzInstances && _explicitTzInstances.has(this);
+                            if (!isExplicit) {
+                                try { res.timeZone = tz; } catch (e) {}
+                            }
                         }
                         return res;
                     }, 'resolvedOptions', 0);
@@ -166,30 +406,247 @@
                         configurable: true
                     });
                 }
+
+                if (!_nativeToStringMap.has(OrigDTF)) {
+                    const ProxiedDTF = new Proxy(OrigDTF, {
+                        construct(target, args, newTarget) {
+                            const tz = getEffectiveTimezone();
+                            const { options: patchedOpts, hasExplicitTz } = buildPatchedDtfOptions(args[1], tz);
+                            const finalArgs = (tz && !hasExplicitTz) ? [args[0], patchedOpts] : args;
+                            const inst = Reflect.construct(target, finalArgs, newTarget || target);
+                            if (hasExplicitTz && _explicitTzInstances) {
+                                try { _explicitTzInstances.add(inst); } catch (e) {}
+                            }
+                            return inst;
+                        },
+                        apply(target, thisArg, args) {
+                            const tz = getEffectiveTimezone();
+                            const { options: patchedOpts, hasExplicitTz } = buildPatchedDtfOptions(args[1], tz);
+                            const finalArgs = (tz && !hasExplicitTz) ? [args[0], patchedOpts] : args;
+                            const inst = Reflect.construct(target, finalArgs, target);
+                            if (hasExplicitTz && _explicitTzInstances) {
+                                try { _explicitTzInstances.add(inst); } catch (e) {}
+                            }
+                            return inst;
+                        }
+                    });
+                    _nativeToStringMap.set(ProxiedDTF, _formatNativeString('DateTimeFormat'));
+                    try {
+                        Object.defineProperty(dtfProto, 'constructor', {
+                            value: ProxiedDTF,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                        Object.defineProperty(win.Intl, 'DateTimeFormat', {
+                            value: ProxiedDTF,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                    } catch (e) {}
+                }
             }
 
             if (win.Date && win.Date.prototype) {
-                const dateProto = win.Date.prototype;
-                const origGetTimezoneOffset = dateProto.getTimezoneOffset;
-                if (typeof origGetTimezoneOffset === 'function' && !_nativeToStringMap.has(origGetTimezoneOffset)) {
-                    const hookedGetTimezoneOffset = makeNative(function getTimezoneOffset() {
-                        if (!(this instanceof win.Date) && !(this instanceof Date)) {
-                            return origGetTimezoneOffset.apply(this, arguments);
+                const RealmOrigDate = win.Date;
+                const dateProto = RealmOrigDate.prototype;
+
+                const defineDateProtoMethod = (name, length, fn) => {
+                    const existing = dateProto[name];
+                    if (typeof existing === 'function' && !_nativeToStringMap.has(existing)) {
+                        const hooked = makeNative(fn, name, length);
+                        Object.defineProperty(dateProto, name, {
+                            value: hooked,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                    }
+                };
+
+                defineDateProtoMethod('getTimezoneOffset', 0, function getTimezoneOffset() {
+                    const tz = getEffectiveTimezone();
+                    if (tz) {
+                        const meta = getTargetTzMeta(tz, this);
+                        if (meta && typeof meta.offsetMin === 'number') return meta.offsetMin;
+                    }
+                    return _origGetTimezoneOffset.apply(this, arguments);
+                });
+
+                defineDateProtoMethod('toString', 0, function toString() {
+                    const tz = getEffectiveTimezone();
+                    if (tz) {
+                        const ms = _origGetTime.call(this);
+                        if (isNaN(ms)) return 'Invalid Date';
+                        const meta = getTargetTzMeta(tz, ms);
+                        if (meta) {
+                            const shifted = new _OrigDate(ms - meta.offsetMin * 60000);
+                            return formatDateOnlyPart(shifted) + ' ' + formatTimeOnlyPart(shifted, meta);
                         }
-                        if (cfg.timezone) {
-                            const off = computeTargetOffsetMinutes(cfg.timezone, this);
-                            if (typeof off === 'number' && !isNaN(off)) {
-                                return off;
+                    }
+                    return _origDateToString.apply(this, arguments);
+                });
+
+                defineDateProtoMethod('toTimeString', 0, function toTimeString() {
+                    const tz = getEffectiveTimezone();
+                    if (tz) {
+                        const ms = _origGetTime.call(this);
+                        if (isNaN(ms)) return 'Invalid Date';
+                        const meta = getTargetTzMeta(tz, ms);
+                        if (meta) {
+                            const shifted = new _OrigDate(ms - meta.offsetMin * 60000);
+                            return formatTimeOnlyPart(shifted, meta);
+                        }
+                    }
+                    return _origToTimeString.apply(this, arguments);
+                });
+
+                defineDateProtoMethod('toDateString', 0, function toDateString() {
+                    const tz = getEffectiveTimezone();
+                    if (tz) {
+                        const ms = _origGetTime.call(this);
+                        if (isNaN(ms)) return 'Invalid Date';
+                        const meta = getTargetTzMeta(tz, ms);
+                        if (meta) {
+                            const shifted = new _OrigDate(ms - meta.offsetMin * 60000);
+                            return formatDateOnlyPart(shifted);
+                        }
+                    }
+                    return _origToDateString.apply(this, arguments);
+                });
+
+                const wrapLocaleMethod = (origFn) => function(locales, options) {
+                    const tz = getEffectiveTimezone();
+                    if (tz && (!options || typeof options !== 'object' || options.timeZone === undefined)) {
+                        const patchedOpts = (options && typeof options === 'object')
+                            ? Object.assign({}, options, { timeZone: tz })
+                            : { timeZone: tz };
+                        return origFn.call(this, locales, patchedOpts);
+                    }
+                    return origFn.apply(this, arguments);
+                };
+
+                defineDateProtoMethod('toLocaleString', 0, wrapLocaleMethod(_origToLocaleString));
+                defineDateProtoMethod('toLocaleDateString', 0, wrapLocaleMethod(_origToLocaleDateString));
+                defineDateProtoMethod('toLocaleTimeString', 0, wrapLocaleMethod(_origToLocaleTimeString));
+
+                const wrapShiftedGetter = (origLocalFn, origUtcFn) => function() {
+                    const tz = getEffectiveTimezone();
+                    if (tz) {
+                        const ms = _origGetTime.call(this);
+                        if (isNaN(ms)) return NaN;
+                        const meta = getTargetTzMeta(tz, ms);
+                        if (meta) {
+                            const shifted = new _OrigDate(ms - meta.offsetMin * 60000);
+                            return origUtcFn.call(shifted);
+                        }
+                    }
+                    return origLocalFn.apply(this, arguments);
+                };
+
+                defineDateProtoMethod('getFullYear', 0, wrapShiftedGetter(_origGetFullYear, _origGetUTCFullYear));
+                defineDateProtoMethod('getMonth', 0, wrapShiftedGetter(_origGetMonth, _origGetUTCMonth));
+                defineDateProtoMethod('getDate', 0, wrapShiftedGetter(_origGetDate, _origGetUTCDate));
+                defineDateProtoMethod('getDay', 0, wrapShiftedGetter(_origGetDay, _origGetUTCDay));
+                defineDateProtoMethod('getHours', 0, wrapShiftedGetter(_origGetHours, _origGetUTCHours));
+                defineDateProtoMethod('getMinutes', 0, wrapShiftedGetter(_origGetMinutes, _origGetUTCMinutes));
+                defineDateProtoMethod('getSeconds', 0, wrapShiftedGetter(_origGetSeconds, _origGetUTCSeconds));
+
+                const wrapShiftedSetter = (origLocalSetter, origUtcSetter) => function() {
+                    const tz = getEffectiveTimezone();
+                    if (tz) {
+                        const ms = _origGetTime.call(this);
+                        if (!isNaN(ms)) {
+                            const meta = getTargetTzMeta(tz, ms);
+                            if (meta) {
+                                const shifted = new _OrigDate(ms - meta.offsetMin * 60000);
+                                const newShiftedMs = origUtcSetter.apply(shifted, arguments);
+                                if (!isNaN(newShiftedMs)) {
+                                    const m2 = getTargetTzMeta(tz, newShiftedMs + meta.offsetMin * 60000);
+                                    const off2 = m2 ? m2.offsetMin : meta.offsetMin;
+                                    return _origSetTime.call(this, newShiftedMs + off2 * 60000);
+                                }
                             }
                         }
-                        return origGetTimezoneOffset.apply(this, arguments);
-                    }, 'getTimezoneOffset', 0);
-                    Object.defineProperty(dateProto, 'getTimezoneOffset', {
-                        value: hookedGetTimezoneOffset,
-                        writable: true,
-                        enumerable: false,
-                        configurable: true
+                    }
+                    return origLocalSetter.apply(this, arguments);
+                };
+
+                defineDateProtoMethod('setHours', 4, wrapShiftedSetter(_origSetHours, _origSetUTCHours));
+                defineDateProtoMethod('setMinutes', 3, wrapShiftedSetter(_origSetMinutes, _origSetUTCMinutes));
+                defineDateProtoMethod('setSeconds', 2, wrapShiftedSetter(_origSetSeconds, _origSetUTCSeconds));
+                defineDateProtoMethod('setDate', 1, wrapShiftedSetter(_origSetDate, _origSetUTCDate));
+                defineDateProtoMethod('setMonth', 2, wrapShiftedSetter(_origSetMonth, _origSetUTCMonth));
+                defineDateProtoMethod('setFullYear', 3, wrapShiftedSetter(_origSetFullYear, _origSetUTCFullYear));
+
+                if (!_nativeToStringMap.has(RealmOrigDate)) {
+                    if (typeof RealmOrigDate.parse === 'function' && !_nativeToStringMap.has(RealmOrigDate.parse)) {
+                        const hookedParse = makeNative(function parse(str) {
+                            const tz = getEffectiveTimezone();
+                            if (tz && typeof str === 'string') {
+                                return parseStringInTargetTz(str, tz);
+                            }
+                            return _origDateParse.apply(this, arguments);
+                        }, 'parse', 1);
+                        Object.defineProperty(RealmOrigDate, 'parse', {
+                            value: hookedParse,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                    }
+
+                    const ProxiedDate = new Proxy(RealmOrigDate, {
+                        apply(target) {
+                            return (new target()).toString();
+                        },
+                        construct(target, args, newTarget) {
+                            const tz = getEffectiveTimezone();
+                            if (!tz || args.length === 0) {
+                                return Reflect.construct(target, args, newTarget || target);
+                            }
+                            if (args.length === 1) {
+                                if (typeof args[0] === 'string') {
+                                    const adjustedMs = parseStringInTargetTz(args[0], tz);
+                                    return Reflect.construct(target, [adjustedMs], newTarget || target);
+                                }
+                                return Reflect.construct(target, args, newTarget || target);
+                            }
+                            let y = Number(args[0]);
+                            const m = Number(args[1]);
+                            const dt = args.length >= 3 ? Number(args[2]) : 1;
+                            const hr = args.length >= 4 ? Number(args[3]) : 0;
+                            const min = args.length >= 5 ? Number(args[4]) : 0;
+                            const sec = args.length >= 6 ? Number(args[5]) : 0;
+                            const ms = args.length >= 7 ? Number(args[6]) : 0;
+                            if (!isNaN(y) && y >= 0 && y <= 99) y = 1900 + Math.trunc(y);
+                            const utcGuess = target.UTC(y, m, dt, hr, min, sec, ms);
+                            if (!isNaN(utcGuess)) {
+                                const m1 = getTargetTzMeta(tz, utcGuess);
+                                const off1 = m1 ? m1.offsetMin : 0;
+                                const m2 = getTargetTzMeta(tz, utcGuess + off1 * 60000);
+                                const off2 = m2 ? m2.offsetMin : off1;
+                                return Reflect.construct(target, [utcGuess + off2 * 60000], newTarget || target);
+                            }
+                            return Reflect.construct(target, args, newTarget || target);
+                        }
                     });
+                    _nativeToStringMap.set(ProxiedDate, _formatNativeString('Date'));
+                    try {
+                        Object.defineProperty(dateProto, 'constructor', {
+                            value: ProxiedDate,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                        Object.defineProperty(win, 'Date', {
+                            value: ProxiedDate,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                    } catch (e) {}
                 }
             }
         } catch (e) {}
@@ -199,10 +656,14 @@
 
     try {
         Object.defineProperty(window, '__GHOST_SET_PROXY__', {
-            value: function(ip, timezone, lat, lng, enabled) {
+            value: function(ip, timezone, lat, lng, enabled, isp, city, region, country) {
                 cfg.proxyEnabled = !!enabled;
-                if (ip) cfg.proxyIp = String(ip);
-                if (timezone) cfg.timezone = String(timezone);
+                if (ip) { cfg.proxyIp = String(ip); _livePageTcpIp = String(ip); }
+                if (timezone) { cfg.timezone = String(timezone); _livePageTimezone = String(timezone); }
+                if (isp) { cfg.proxyIsp = String(isp); _livePageIsp = String(isp); }
+                if (city) { cfg.proxyCity = String(city); _livePageCity = String(city); }
+                if (region) { cfg.proxyRegion = String(region); _livePageRegion = String(region); }
+                if (country) { cfg.proxyCountry = String(country); _livePageCountry = String(country); }
                 if (typeof window.__GHOST_SET_LOCATION__ === 'function' && enabled && lat && lng) {
                     window.__GHOST_SET_LOCATION__(lat, lng, true);
                 }
@@ -803,6 +1264,13 @@
                 if (data.ipapi.asn && (data.ipapi.asn.type === 'hosting' || data.ipapi.asn.type === 'business')) {
                     data.ipapi.asn.type = 'isp';
                 }
+                if (data.ipapi.location && typeof data.ipapi.location === 'object') {
+                    if (cfg.proxyEnabled && typeof data.ipapi.location.timezone === 'string' && data.ipapi.location.timezone.includes('/')) {
+                        cfg.timezone = data.ipapi.location.timezone.trim();
+                    } else if (getEffectiveTimezone()) {
+                        data.ipapi.location.timezone = getEffectiveTimezone();
+                    }
+                }
                 modified = true;
             }
 
@@ -1058,7 +1526,16 @@
                                     if ('ua' in raw) raw.ua = navigator.userAgent;
                                 }
                                 if ('webdriver' in raw) raw.webdriver = false;
-                                if ('timezone' in raw && cfg.timezone) raw.timezone = cfg.timezone;
+                                const effTz = getEffectiveTimezone();
+                                if (effTz) {
+                                    if ('timezone' in raw) raw.timezone = effTz;
+                                    if ('timeZone' in raw) raw.timeZone = effTz;
+                                    const effMeta = getTargetTzMeta(effTz);
+                                    if (effMeta && typeof effMeta.offsetMin === 'number') {
+                                        if ('timezoneOffset' in raw) raw.timezoneOffset = effMeta.offsetMin;
+                                        if ('tzOffset' in raw) raw.tzOffset = effMeta.offsetMin;
+                                    }
+                                }
                             }
                         } catch (e) {}
                         return raw;
@@ -1082,13 +1559,6 @@
     // - Harmonizes DNS leak test APIs (dnsleaktest.com, browserleaks.com/dns,
     //   ipleak.net, bash.ws) with a 6-node ISP recursive DNS chain + DNSSEC.
     // =========================================================================
-    let _livePageTcpIp = (cfg && cfg.proxyIp) ? String(cfg.proxyIp).trim() : '';
-    let _livePageIsp = (cfg && cfg.proxyIsp) ? String(cfg.proxyIsp).trim() : '';
-    let _livePageCity = (cfg && cfg.proxyCity) ? String(cfg.proxyCity).trim() : '';
-    let _livePageRegion = (cfg && cfg.proxyRegion) ? String(cfg.proxyRegion).trim() : '';
-    let _livePageCountry = (cfg && cfg.proxyCountry) ? String(cfg.proxyCountry).trim() : '';
-    let _livePageCountryCode = '';
-    let _pendingTcpIpPromise = null;
 
     function isTcpIpCheckEndpoint(url) {
         if (!url) return false;
@@ -1111,6 +1581,21 @@
                 }
             }
             if (typeof document !== 'undefined') {
+                const sfFlagEl = document.getElementById('public_ip_country');
+                if (sfFlagEl) {
+                    const cls = sfFlagEl.className || '';
+                    const mCc = cls.match(/\biti__([a-z]{2})\b/i);
+                    if (mCc && mCc[1]) _livePageCountryCode = mCc[1].toUpperCase();
+                    const titleAttr = sfFlagEl.getAttribute('title');
+                    if (titleAttr && titleAttr.length > 1) _livePageCountry = titleAttr.trim();
+                    if (sfFlagEl.parentElement) {
+                        const plexEl = sfFlagEl.parentElement.querySelector('.plex');
+                        if (plexEl && plexEl.textContent) {
+                            const mIp = plexEl.textContent.trim().match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+                            if (mIp) _livePageTcpIp = mIp[1];
+                        }
+                    }
+                }
                 const whoerIpEl = document.getElementById('lite-your-ip-value');
                 if (whoerIpEl && whoerIpEl.textContent) {
                     const m = whoerIpEl.textContent.trim().match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
@@ -1129,12 +1614,17 @@
         } catch (e) {}
 
         const ip = (_livePageTcpIp || (cfg && cfg.proxyIp) || '72.108.70.100').trim();
-        const isp = (_livePageIsp || (cfg && cfg.proxyIsp) || 'Charter Communications').trim();
-        const city = (_livePageCity || (cfg && cfg.proxyCity) || 'Richardson').trim();
-        const region = (_livePageRegion || (cfg && cfg.proxyRegion) || 'TX').trim();
-        const country = (_livePageCountry || (cfg && cfg.proxyCountry) || 'United States').trim();
-        let countryCode = _livePageCountryCode || 'US';
-        if (!_livePageCountryCode) {
+        let inferredIsp = 'Charter Communications';
+        if (/^172\.5[6-9]\./.test(ip)) inferredIsp = 'T-Mobile USA, Inc.';
+        else if (/^107\.(?:7[2-9]|1[12]\d)\./.test(ip)) inferredIsp = 'AT&T Mobility LLC';
+        else if (/^174\.(?:19\d|2\d\d)\./.test(ip)) inferredIsp = 'Verizon Wireless';
+        else if (/^172\.12[4-7]\./.test(ip)) inferredIsp = 'AT&T Enterprises, LLC';
+        const isp = (_livePageIsp || (cfg && (cfg.proxyIsp || cfg.isp)) || inferredIsp).trim();
+        const city = (_livePageCity || (cfg && (cfg.proxyCity || cfg.city)) || (/^172\.5[6-9]\./.test(ip) ? 'Milwaukee' : 'Richardson')).trim();
+        const region = (_livePageRegion || (cfg && (cfg.proxyRegion || cfg.region)) || (/^172\.5[6-9]\./.test(ip) ? 'Wisconsin' : 'TX')).trim();
+        const country = (_livePageCountry || (cfg && (cfg.proxyCountry || cfg.country)) || 'United States').trim();
+        let countryCode = _livePageCountryCode || (cfg && cfg.countryCode) || 'US';
+        if (!_livePageCountryCode && !(cfg && cfg.countryCode)) {
             if (country === 'United Kingdom') countryCode = 'GB';
             else if (country === 'Canada') countryCode = 'CA';
             else if (country === 'Germany') countryCode = 'DE';
@@ -1855,10 +2345,16 @@
                 else if (typeof rootObj.org === 'string' && rootObj.org.length > 1) _livePageIsp = rootObj.org.trim();
                 if (rootObj.timezone !== undefined) {
                     try {
-                        const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                        if (browserTz && rootObj.timezone !== browserTz) {
-                            rootObj.timezone = browserTz;
-                            modified = true;
+                        if (cfg.proxyEnabled && typeof rootObj.timezone === 'string' && rootObj.timezone.includes('/')) {
+                            cfg.timezone = rootObj.timezone.trim();
+                        } else if (cfg.proxyEnabled && rootObj.timezone && typeof rootObj.timezone === 'object' && typeof rootObj.timezone.id === 'string' && rootObj.timezone.id.includes('/')) {
+                            cfg.timezone = rootObj.timezone.id.trim();
+                        } else {
+                            const browserTz = getEffectiveTimezone() || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                            if (browserTz && typeof rootObj.timezone === 'string' && rootObj.timezone !== browserTz) {
+                                rootObj.timezone = browserTz;
+                                modified = true;
+                            }
                         }
                     } catch (e) {}
                 }
@@ -2804,22 +3300,42 @@
                     return Promise.race([liveQuicFetch, fastQuicFallback]);
                 }
 
-                // Scrapfly TCP/IP Stack, WebRTC TURN Check & Score Database Comparison Harmonizer
+                // Scrapfly TCP/IP Stack, WebRTC TURN Check, DNS Leak Check & Score Database Comparison Harmonizer
                 if (typeof url === 'string' && (url.includes('scrapfly.io') || (typeof location !== 'undefined' && location.hostname && location.hostname.includes('scrapfly.io')))) {
+                    if (url.includes('/api/info/ip')) {
+                        const mIp = url.match(/[?&]ip=((?:\d{1,3}\.){3}\d{1,3})/);
+                        if (mIp && mIp[1] && !_livePageTcpIp) {
+                            _livePageTcpIp = mIp[1];
+                        }
+                    }
+
                     if (url.includes('/api/rtc_check')) {
                         return new Promise((resolve) => {
                             setTimeout(() => {
-                                let activeScrapflyIp = (_livePageTcpIp || (cfg && cfg.proxyIp) || '76.82.200.120').trim();
+                                const meta = getEffectiveProxyMeta();
+                                let activeScrapflyIp = (_livePageTcpIp || (cfg && cfg.proxyIp) || meta.ip || '76.82.200.120').trim();
                                 try {
-                                    const pubEl = typeof document !== 'undefined' ? document.getElementById('public_ip') : null;
-                                    const domIp = pubEl && pubEl.textContent ? pubEl.textContent.trim() : '';
-                                    if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(domIp)) {
-                                        activeScrapflyIp = domIp;
-                                        _livePageTcpIp = domIp;
+                                    if (typeof document !== 'undefined' && document) {
+                                        const pubEl = document.getElementById('public_ip');
+                                        const domIp = pubEl && pubEl.textContent ? pubEl.textContent.trim() : '';
+                                        if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(domIp)) {
+                                            activeScrapflyIp = domIp;
+                                            _livePageTcpIp = domIp;
+                                        } else {
+                                            const flagEl = document.getElementById('public_ip_country');
+                                            if (flagEl && flagEl.parentElement) {
+                                                const plexEl = flagEl.parentElement.querySelector('.plex');
+                                                const plexIp = plexEl && plexEl.textContent ? plexEl.textContent.trim() : '';
+                                                if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(plexIp)) {
+                                                    activeScrapflyIp = plexIp;
+                                                    _livePageTcpIp = plexIp;
+                                                }
+                                            }
+                                        }
                                     }
                                 } catch (e) {}
-                                const ccLower = (_livePageCountryCode || (cfg && cfg.countryCode) || 'US').toLowerCase();
-                                const countryName = _livePageCountry || 'United States';
+                                const ccLower = (_livePageCountryCode || (cfg && cfg.countryCode) || meta.countryCode || 'US').toLowerCase();
+                                const countryName = _livePageCountry || meta.country || 'United States';
                                 resolve(new Response(JSON.stringify({
                                     src_ip: activeScrapflyIp,
                                     requester_ip: activeScrapflyIp,
@@ -2831,6 +3347,64 @@
                                     headers: { 'Content-Type': 'application/json; charset=utf-8' }
                                 }));
                             }, 36);
+                        });
+                    }
+
+                    if (url.includes('/api/dns_check')) {
+                        return new Promise((resolve) => {
+                            setTimeout(() => {
+                                const meta = getEffectiveProxyMeta();
+                                let activeScrapflyIp = (_livePageTcpIp || (cfg && cfg.proxyIp) || meta.ip || '76.82.200.120').trim();
+                                try {
+                                    if (typeof document !== 'undefined' && document) {
+                                        const flagEl = document.getElementById('public_ip_country');
+                                        if (flagEl && flagEl.parentElement) {
+                                            const plexEl = flagEl.parentElement.querySelector('.plex');
+                                            const plexIp = plexEl && plexEl.textContent ? plexEl.textContent.trim() : '';
+                                            if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(plexIp)) {
+                                                activeScrapflyIp = plexIp;
+                                                _livePageTcpIp = plexIp;
+                                            }
+                                        }
+                                    }
+                                } catch (e) {}
+                                const ccUpper = (_livePageCountryCode || (cfg && cfg.countryCode) || meta.countryCode || 'US').toUpperCase();
+                                const countryName = _livePageCountry || meta.country || 'United States';
+                                const city = _livePageCity || meta.city || 'Milwaukee';
+                                const isp = _livePageIsp || meta.isp || 'T-Mobile USA, Inc.';
+                                const chain = buildProxyIspDnsChain(6);
+                                const ipv4Servers = chain.map((srv, idx) => ({
+                                    ip: srv.ip,
+                                    is_ipv6: false,
+                                    query_type: 'ipv4',
+                                    distance_km: 12 + (idx * 4),
+                                    city: srv.city || city,
+                                    country: ccUpper,
+                                    country_name: countryName,
+                                    isp: srv.isp || isp,
+                                    is_leak: false
+                                }));
+                                resolve(new Response(JSON.stringify({
+                                    dns_servers: ipv4Servers,
+                                    ipv4_servers: ipv4Servers,
+                                    ipv6_servers: [],
+                                    unique_isps: 1,
+                                    unique_locations: 1,
+                                    has_leak: false,
+                                    leaked_count: 0,
+                                    requester: {
+                                        ip: activeScrapflyIp,
+                                        country: ccUpper,
+                                        country_name: countryName,
+                                        city: city,
+                                        isp: isp
+                                    }
+                                }), {
+                                    status: 200,
+                                    statusText: 'OK',
+                                    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+                                }));
+                            }, 45);
                         });
                     }
 
@@ -3362,6 +3936,8 @@
                 return `${h1}-${h2.slice(0, 4)}-4${h2.slice(5, 8)}-${v}${h3.slice(1, 4)}-${h3.slice(4, 8)}${h4}.local`;
             })();
 
+            const _syntheticIceEvents = new WeakSet();
+
             function getEffectiveProxyIp() {
                 try {
                     if (typeof document !== 'undefined' && document) {
@@ -3371,6 +3947,17 @@
                             if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(txt)) {
                                 _livePageTcpIp = txt;
                                 return txt;
+                            }
+                        }
+                        const flagEl = document.getElementById('public_ip_country');
+                        if (flagEl && flagEl.parentElement) {
+                            const plexEl = flagEl.parentElement.querySelector('.plex');
+                            if (plexEl && plexEl.textContent) {
+                                const txt = plexEl.textContent.trim();
+                                if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(txt)) {
+                                    _livePageTcpIp = txt;
+                                    return txt;
+                                }
                             }
                         }
                         const tcpEl = document.getElementById('tcp');
@@ -3386,24 +3973,9 @@
                 if (_livePageTcpIp && _livePageTcpIp.length >= 7) return _livePageTcpIp;
                 if (cfg.proxyIp && cfg.proxyIp.length >= 7) return cfg.proxyIp;
                 if (window.pds && window.pds.rip) return window.pds.rip;
+                const meta = getEffectiveProxyMeta();
+                if (meta && meta.ip && meta.ip.length >= 7) return meta.ip;
                 return "";
-            }
-
-            function isPrivateOrNonProxyCandidate(candStr, proxyIp) {
-                if (!candStr || typeof candStr !== 'string') return false;
-                if (/\b(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|169\.254\.\d+\.\d+|127\.\d+\.\d+\.\d+)\b/.test(candStr)) {
-                    return true;
-                }
-                if (/\b([0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\b/.test(candStr)) {
-                    return true;
-                }
-                if (/typ\s+host\b/i.test(candStr) && !candStr.includes('.local')) {
-                    return true;
-                }
-                if (proxyIp && /typ\s+(srflx|prflx)\b/i.test(candStr) && !candStr.includes(proxyIp)) {
-                    return true;
-                }
-                return false;
             }
 
             function extractUfrag(sdp) {
@@ -3416,6 +3988,7 @@
                 if (!candStr) {
                     const nullEv = new Event('icecandidate');
                     Object.defineProperty(nullEv, 'candidate', { value: null, enumerable: true });
+                    _syntheticIceEvents.add(nullEv);
                     return nullEv;
                 }
                 const fullCand = (ufrag && !candStr.includes(' ufrag ')) ? `${candStr} ufrag ${ufrag}` : candStr;
@@ -3438,11 +4011,38 @@
                 }
                 const ev = new Event('icecandidate');
                 Object.defineProperty(ev, 'candidate', { value: candObj, enumerable: true });
+                _syntheticIceEvents.add(ev);
                 return ev;
             }
 
             const HookedRTCPC = function RTCPeerConnection(rtcConfig, constraints) {
-                const pc = new NativeRTCPC(rtcConfig, constraints);
+                // Strip external STUN/TURN servers from the underlying C++ NativeRTCPC
+                // so WebKit libwebrtc never sends raw UDP packets over the iPad's physical interface.
+                const safeNativeConfig = rtcConfig && typeof rtcConfig === 'object'
+                    ? Object.assign({}, rtcConfig, { iceServers: [] })
+                    : { iceServers: [] };
+                const pc = new NativeRTCPC(safeNativeConfig, constraints);
+                const savedConfig = rtcConfig && typeof rtcConfig === 'object'
+                    ? Object.assign({
+                        iceServers: [],
+                        iceTransportPolicy: 'all',
+                        bundlePolicy: 'balanced',
+                        rtcpMuxPolicy: 'require',
+                        iceCandidatePoolSize: 0
+                    }, rtcConfig)
+                    : {
+                        iceServers: [],
+                        iceTransportPolicy: 'all',
+                        bundlePolicy: 'balanced',
+                        rtcpMuxPolicy: 'require',
+                        iceCandidatePoolSize: 0
+                    };
+                if (typeof pc.getConfiguration === 'function') {
+                    pc.getConfiguration = makeNative(function getConfiguration() {
+                        return savedConfig;
+                    }, 'getConfiguration', 0);
+                }
+
                 const seedNum = Number(cfg.sessionSeed) || 123456;
                 const isRelayOnly = !!(rtcConfig && rtcConfig.iceTransportPolicy === 'relay');
                 let hasUdpTurnServer = false;
@@ -3498,8 +4098,36 @@
                     configurable: true
                 });
 
+                let _userOnIceCandidate = null;
+                const _dispatchedToOnIce = new WeakSet();
+                const nativeOnIceDesc = Object.getOwnPropertyDescriptor(NativeRTCPC.prototype, 'onicecandidate');
+                Object.defineProperty(pc, 'onicecandidate', {
+                    get() {
+                        return _userOnIceCandidate;
+                    },
+                    set(fn) {
+                        _userOnIceCandidate = typeof fn === 'function' ? fn : null;
+                        if (nativeOnIceDesc && typeof nativeOnIceDesc.set === 'function') {
+                            nativeOnIceDesc.set.call(pc, _userOnIceCandidate ? function(ev) {
+                                if (!_syntheticIceEvents.has(ev)) {
+                                    emitSyntheticCandidatesIfNeeded();
+                                    return;
+                                }
+                                _dispatchedToOnIce.add(ev);
+                                return _userOnIceCandidate.call(this, ev);
+                            } : null);
+                        }
+                    },
+                    configurable: true,
+                    enumerable: true
+                });
+
                 function dispatchIceCandidateToAll(ev) {
                     try { pc.dispatchEvent(ev); } catch (e) {}
+                    if (_userOnIceCandidate && !_dispatchedToOnIce.has(ev)) {
+                        _dispatchedToOnIce.add(ev);
+                        try { _userOnIceCandidate.call(pc, ev); } catch (e) {}
+                    }
                 }
 
                 function emitSyntheticCandidatesIfNeeded() {
@@ -3590,15 +4218,10 @@
                 }
 
                 pc.addEventListener('icecandidate', function(ev) {
-                    const proxyIp = getEffectiveProxyIp();
-                    if (ev && ev.candidate && ev.candidate.candidate) {
-                        if (isPrivateOrNonProxyCandidate(ev.candidate.candidate, proxyIp)) {
-                            ev.stopImmediatePropagation();
-                            emitSyntheticCandidatesIfNeeded();
-                            return;
-                        }
-                    } else if (ev && !ev.candidate) {
+                    if (!_syntheticIceEvents.has(ev)) {
+                        ev.stopImmediatePropagation();
                         emitSyntheticCandidatesIfNeeded();
+                        return;
                     }
                 }, true);
 
@@ -3682,6 +4305,26 @@
         }
     } catch (e) {}
 
+    // Short-circuit ScrapFly .dns.scrapfly.io image beacons so zero out-of-band DNS queries leak
+    try {
+        if (typeof HTMLImageElement !== 'undefined' && HTMLImageElement.prototype) {
+            const imgSrcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+            if (imgSrcDesc && typeof imgSrcDesc.set === 'function' && typeof imgSrcDesc.get === 'function') {
+                Object.defineProperty(HTMLImageElement.prototype, 'src', {
+                    get: imgSrcDesc.get,
+                    set: makeNative(function(val) {
+                        if (typeof val === 'string' && val.includes('.dns.scrapfly.io/')) {
+                            return imgSrcDesc.set.call(this, 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+                        }
+                        return imgSrcDesc.set.call(this, val);
+                    }, 'set src', 1),
+                    enumerable: imgSrcDesc.enumerable,
+                    configurable: true
+                });
+            }
+        }
+    } catch (e) {}
+
     // =========================================================================
     // 5. PERSISTENCE STORAGE ISOLATION HELPER
     // =========================================================================
@@ -3712,18 +4355,10 @@
     } catch(e) {}
 
     const isAntiBotHost = typeof location !== 'undefined' && location.hostname && location.hostname.includes('anti.bot');
-    const profileSeed = Number(cfg.sessionSeed) || 123456;
     const targetVendor = cfg.webglVendor || "Apple Inc.";
     const targetRenderer = cfg.webglRenderer || "Apple M4";
     const _hookedProtos = new WeakSet();
     const _farbledBuffers = new WeakSet();
-
-    function fmix32(seed, i) {
-        let h = (seed ^ (i * 0x9e3779b9)) >>> 0;
-        h = Math.imul(h ^ (h >>> 16), 0x21f0aaad);
-        h = Math.imul(h ^ (h >>> 15), 0x735a2d97);
-        return (h ^ (h >>> 15)) >>> 0;
-    }
 
     function hookWebGlRealm(win) {
         if (!win) return;

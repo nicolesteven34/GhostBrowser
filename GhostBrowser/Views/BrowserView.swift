@@ -121,11 +121,11 @@ public struct BrowserView: UIViewRepresentable {
         context.coordinator.lastProxyPassword = privacyProfile.proxyPassword
         context.coordinator.lastProxyDetectedIP = privacyProfile.proxyDetectedIP
         context.coordinator.lastProxyDetectedISP = privacyProfile.proxyDetectedISP
-        context.coordinator.lastProxyTimezone = privacyProfile.proxyDetectedTimezone
+        context.coordinator.lastProxyTimezone = privacyProfile.effectiveProxyTimezone
         context.coordinator.lastEnableDnsProxyMatching = privacyProfile.enableDnsProxyMatching
 
         // Auto-resolve proxy exit IP & timezone if enabled and not yet resolved
-        if privacyProfile.proxyEnabled && privacyProfile.proxyDetectedIP.isEmpty && !privacyProfile.proxyHost.isEmpty {
+        if privacyProfile.proxyEnabled && (privacyProfile.proxyDetectedIP.isEmpty || privacyProfile.proxyDetectedTimezone.isEmpty) && !privacyProfile.proxyHost.isEmpty {
             let pType = privacyProfile.proxyType
             let pHost = privacyProfile.proxyHost
             let pPort = privacyProfile.proxyPort
@@ -171,6 +171,7 @@ public struct BrowserView: UIViewRepresentable {
         let profileChanged = context.coordinator.lastProfileDevice != privacyProfile.selectedDevice
         let uaChanged = context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent
         let seedChanged = context.coordinator.lastSessionSeed != privacyProfile.sessionSeed
+        let tzChanged = context.coordinator.lastProxyTimezone != privacyProfile.effectiveProxyTimezone
         let proxyChanged = context.coordinator.lastProxyEnabled != privacyProfile.proxyEnabled
             || context.coordinator.lastProxyType != privacyProfile.proxyType
             || context.coordinator.lastProxyHost != privacyProfile.proxyHost
@@ -179,7 +180,7 @@ public struct BrowserView: UIViewRepresentable {
             || context.coordinator.lastProxyPassword != privacyProfile.proxyPassword
             || context.coordinator.lastProxyDetectedIP != privacyProfile.proxyDetectedIP
             || context.coordinator.lastProxyDetectedISP != privacyProfile.proxyDetectedISP
-            || context.coordinator.lastProxyTimezone != privacyProfile.proxyDetectedTimezone
+            || tzChanged
             || context.coordinator.lastEnableDnsProxyMatching != privacyProfile.enableDnsProxyMatching
 
         if profileChanged || uaChanged || seedChanged || proxyChanged {
@@ -194,18 +195,28 @@ public struct BrowserView: UIViewRepresentable {
             context.coordinator.lastProxyPassword = privacyProfile.proxyPassword
             context.coordinator.lastProxyDetectedIP = privacyProfile.proxyDetectedIP
             context.coordinator.lastProxyDetectedISP = privacyProfile.proxyDetectedISP
-            context.coordinator.lastProxyTimezone = privacyProfile.proxyDetectedTimezone
+            context.coordinator.lastProxyTimezone = privacyProfile.effectiveProxyTimezone
             context.coordinator.lastEnableDnsProxyMatching = privacyProfile.enableDnsProxyMatching
 
             ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: privacyProfile)
             context.coordinator.reconfigurePrivacy(for: webView)
 
             let ipEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedIP.replacingOccurrences(of: "'", with: "") : ""
-            let tzEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedTimezone.replacingOccurrences(of: "'", with: "") : ""
-            let jsProxy = "if (window.__GHOST_SET_PROXY__) window.__GHOST_SET_PROXY__('\(ipEsc)', '\(tzEsc)', \(privacyProfile.mockLatitude), \(privacyProfile.mockLongitude), \(privacyProfile.proxyEnabled));"
+            let tzEsc = privacyProfile.proxyEnabled ? privacyProfile.effectiveProxyTimezone.replacingOccurrences(of: "'", with: "") : ""
+            let ispEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedISP.replacingOccurrences(of: "'", with: "") : ""
+            let cityEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedCity.replacingOccurrences(of: "'", with: "") : ""
+            let regEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedRegion.replacingOccurrences(of: "'", with: "") : ""
+            let ctryEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedCountry.replacingOccurrences(of: "'", with: "") : ""
+            let jsProxy = "if (window.__GHOST_SET_PROXY__) window.__GHOST_SET_PROXY__('\(ipEsc)', '\(tzEsc)', \(privacyProfile.mockLatitude), \(privacyProfile.mockLongitude), \(privacyProfile.proxyEnabled), '\(ispEsc)', '\(cityEsc)', '\(regEsc)', '\(ctryEsc)');"
             webView.evaluateJavaScript(jsProxy) { _, _ in }
 
-            if proxyChanged && privacyProfile.proxyEnabled && privacyProfile.proxyDetectedIP.isEmpty && !privacyProfile.proxyHost.isEmpty {
+            if tzChanged,
+               let loaded = context.coordinator.currentLoadedURL,
+               (loaded.hasPrefix("http://") || loaded.hasPrefix("https://")) {
+                webView.reload()
+            }
+
+            if proxyChanged && privacyProfile.proxyEnabled && (privacyProfile.proxyDetectedIP.isEmpty || privacyProfile.proxyDetectedTimezone.isEmpty) && !privacyProfile.proxyHost.isEmpty {
                 let pType = privacyProfile.proxyType
                 let pHost = privacyProfile.proxyHost
                 let pPort = privacyProfile.proxyPort

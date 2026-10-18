@@ -546,6 +546,20 @@ public class PrivacyProfile: ObservableObject {
         return parts.joined(separator: "-")
     }
 
+    public var effectiveProxyTimezone: String {
+        guard proxyEnabled else { return "" }
+        let trimmed = proxyDetectedTimezone.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty && trimmed.contains("/") {
+            return trimmed
+        }
+        return ProxyService.inferTimezone(
+            country: proxyDetectedCountry,
+            region: proxyDetectedRegion,
+            city: proxyDetectedCity,
+            username: proxyUsername
+        )
+    }
+
     public func generateJSConfig() -> String {
         let escapedVirtualImg = virtualCameraImageBase64
             .replacingOccurrences(of: "\\", with: "\\\\")
@@ -558,7 +572,7 @@ public class PrivacyProfile: ObservableObject {
         let escapedProxyCountry = proxyEnabled ? proxyDetectedCountry.replacingOccurrences(of: "\"", with: "") : ""
         let escapedProxyIsp = proxyEnabled ? proxyDetectedISP.replacingOccurrences(of: "\"", with: "") : ""
         let escapedProxyAsn = proxyEnabled ? proxyDetectedASN.replacingOccurrences(of: "\"", with: "") : ""
-        let escapedTimezone = proxyEnabled ? proxyDetectedTimezone.replacingOccurrences(of: "\"", with: "") : ""
+        let escapedTimezone = proxyEnabled ? effectiveProxyTimezone.replacingOccurrences(of: "\"", with: "") : ""
         let escapedUsageType = proxyUsageType.replacingOccurrences(of: "\"", with: "")
         let escapedConnType = proxyConnectionType.replacingOccurrences(of: "\"", with: "")
 
