@@ -206,9 +206,18 @@ public final class ProxyService {
     private var lastAppliedConfigKey: String = ""
     private weak var lastAppliedProfile: PrivacyProfile?
     private var lastBackgroundTimestamp: Date?
+    private var didExpireInBackground: Bool = false
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     private var lastBridgeRestartTimestamp: Date = .distantPast
     private var sharedDataStores: [String: WKWebsiteDataStore] = [:]
     private var activeDataStores = NSHashTable<WKWebsiteDataStore>.weakObjects()
+
+    private func endBackgroundKeepAliveTask() {
+        if backgroundTaskID != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
+        }
+    }
 
     private func setupAppLifecycleObservers() {
         NotificationCenter.default.addObserver(
@@ -216,17 +225,35 @@ public final class ProxyService {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.lastBackgroundTimestamp = Date()
+            guard let self = self else { return }
+            self.lastBackgroundTimestamp = Date()
+            self.didExpireInBackground = false
+            self.endBackgroundKeepAliveTask()
+            self.backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "GhostBrowserActiveTabKeepAlive") { [weak self] in
+                guard let self = self else { return }
+                self.didExpireInBackground = true
+                self.endBackgroundKeepAliveTask()
+            }
         }
 
         let resumeHandler: (Notification) -> Void = { [weak self] _ in
             guard let self = self else { return }
-            let wasBackgrounded = (self.lastBackgroundTimestamp != nil)
+            self.endBackgroundKeepAliveTask()
+            let bgTimestamp = self.lastBackgroundTimestamp
+            let wasBackgrounded = (bgTimestamp != nil)
+            let bgDuration = bgTimestamp.map { Date().timeIntervalSince($0) } ?? 0
+            let expired = self.didExpireInBackground
             let bridgeDead = (self.activeDnsBridge != nil && self.activeDnsBridge?.isListening == false)
             guard wasBackgrounded || bridgeDead else { return }
             self.lastBackgroundTimestamp = nil
-            if Date().timeIntervalSince(self.lastBridgeRestartTimestamp) > 0.8 || bridgeDead {
-                self.forceRestartBridge(for: self.lastAppliedProfile)
+            self.didExpireInBackground = false
+            // Only tear down and re-bind the local SOCKS5 bridge if the bridge actually stopped listening
+            // or iPadOS suspended the process after background task expiration. Preserving the live bridge
+            // during normal app switches keeps in-flight streams (e.g. packetprobe.com tests) running seamlessly.
+            if bridgeDead || expired || bgDuration > 28.0 {
+                if Date().timeIntervalSince(self.lastBridgeRestartTimestamp) > 0.8 || bridgeDead {
+                    self.forceRestartBridge(for: self.lastAppliedProfile)
+                }
             }
         }
 

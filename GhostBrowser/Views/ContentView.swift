@@ -68,6 +68,10 @@ public struct ContentView: View {
 
                 // 4. Multi-Tab WebKit Canvas (Zero-reload state preservation per profile)
                 ZStack {
+                    Color(UIColor.systemBackground)
+                        .zIndex(5)
+                        .allowsHitTesting(false)
+
                     ForEach(tabs) { tab in
                         BrowserView(
                             privacyProfile: privacyProfile,
@@ -82,7 +86,7 @@ public struct ContentView: View {
                             wipeTrigger: $wipeTrigger
                         )
                         .id("\(tab.id)-\(privacyProfile.sessionDataStoreID)")
-                        .opacity(tab.id == activeTabID ? 1.0 : 0.001)
+                        .opacity(tab.id == activeTabID ? 1.0 : 0.02)
                         .zIndex(tab.id == activeTabID ? 10 : 0)
                         .allowsHitTesting(tab.id == activeTabID)
                     }

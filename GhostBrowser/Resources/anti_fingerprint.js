@@ -3674,8 +3674,8 @@
                     if (typeof data.nonce !== 'string' || !data.nonce.length) {
                         data.nonce = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
                     }
-                    if (!Number.isFinite(data.ts)) {
-                        data.ts = Math.floor(Date.now() / 1000);
+                    if (data.ts === undefined || data.ts === null || String(data.ts).length === 0) {
+                        data.ts = String(Date.now());
                     }
                     if (typeof data.sig !== 'string' || data.sig.length !== 64) {
                         data.sig = '8f4e2a1c9b0d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f';
@@ -5767,9 +5767,6 @@
                         };
                         const fetchPromise = nativeFetch.apply(this, arguments).then(async (response) => {
                             try {
-                                if (response && response.status === 401) {
-                                    return response;
-                                }
                                 const clone = response.clone();
                                 const text = await clone.text();
                                 let data = {};
@@ -5798,13 +5795,13 @@
                             u.includes('/api/canvasfp-challenge') || u.includes('/api/canvasfp-finalize') ||
                             u.includes('/api/canvas-fingerprint') || u.includes('/fp/v7/challenge') ||
                             u.includes('/fp/v7/verify') || u.includes('/api/fpint-v7/status')) {
-                            const raceMs = u.includes('/api/nonce') ? 5500
-                                : ((u.includes('/api/gpu-nonce') || u.includes('/api/cpu-fingerprint')) ? 3500
-                                : (u.includes('/api/gpu-fingerprint') ? 3800
-                                : (u.includes('/api/bfp-finalize') ? 6500
-                                : ((u.includes('/api/monitor-fingerprint') || u.includes('/api/fingerprint') || u.includes('/api/antispoof-results')) ? 4000
-                                : (u.includes('/api/canvas-fingerprint') ? 4000
-                                : (u.includes('/api/canvasfp-challenge') ? 4000 : 4500))))));
+                            const raceMs = u.includes('/api/nonce') ? 1800
+                                : ((u.includes('/api/gpu-nonce') || u.includes('/api/cpu-fingerprint')) ? 2000
+                                : (u.includes('/api/gpu-fingerprint') ? 2200
+                                : (u.includes('/api/bfp-finalize') ? 2500
+                                : ((u.includes('/api/monitor-fingerprint') || u.includes('/api/fingerprint') || u.includes('/api/antispoof-results')) ? 2400
+                                : (u.includes('/api/canvas-fingerprint') ? 2500
+                                : (u.includes('/api/canvasfp-challenge') ? 2400 : 2600))))));
                             return Promise.race([
                                 fetchPromise,
                                 new Promise((resolve) => {
@@ -9805,4 +9802,112 @@
             });
         }
     } catch (e) {}
+
+    // Background-tab & app-switch execution continuity:
+    // Prevents WebKit tab occlusion / app switching from halting active tests (e.g. packetprobe.com)
+    // that rely on document.visibilityState or requestAnimationFrame loops while keeping 100% native
+    // vsync timing whenever the tab is in the foreground.
+    try {
+        if (typeof Document !== 'undefined' && Document.prototype) {
+            const origHiddenDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
+            const origVisDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+            const origHiddenGet = origHiddenDesc && origHiddenDesc.get;
+            const origVisGet = origVisDesc && origVisDesc.get;
+
+            const isActuallyHidden = function() {
+                try {
+                    if (origHiddenGet && typeof document !== 'undefined') {
+                        return Boolean(origHiddenGet.call(document));
+                    }
+                } catch (e) {}
+                return false;
+            };
+
+            if (origHiddenGet) {
+                Object.defineProperty(Document.prototype, 'hidden', {
+                    get: makeNative(function() {
+                        if (!(this instanceof Document)) {
+                            return origHiddenGet.apply(this, arguments);
+                        }
+                        return false;
+                    }, 'get hidden', 0),
+                    set: undefined,
+                    enumerable: origHiddenDesc.enumerable,
+                    configurable: true
+                });
+            }
+
+            if (origVisGet) {
+                Object.defineProperty(Document.prototype, 'visibilityState', {
+                    get: makeNative(function() {
+                        if (!(this instanceof Document)) {
+                            return origVisGet.apply(this, arguments);
+                        }
+                        return 'visible';
+                    }, 'get visibilityState', 0),
+                    set: undefined,
+                    enumerable: origVisDesc.enumerable,
+                    configurable: true
+                });
+            }
+
+            if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+                const blockBgVis = function(ev) {
+                    if (isActuallyHidden() && ev && typeof ev.stopImmediatePropagation === 'function') {
+                        ev.stopImmediatePropagation();
+                    }
+                };
+                window.addEventListener('visibilitychange', blockBgVis, true);
+                window.addEventListener('webkitvisibilitychange', blockBgVis, true);
+                if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+                    document.addEventListener('visibilitychange', blockBgVis, true);
+                    document.addEventListener('webkitvisibilitychange', blockBgVis, true);
+                }
+            }
+
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                const origRAF = window.requestAnimationFrame;
+                const origCAF = window.cancelAnimationFrame;
+                const bgTimers = new Map();
+                let bgRafId = 900000000;
+
+                Object.defineProperty(window, 'requestAnimationFrame', {
+                    value: makeNative(function requestAnimationFrame(callback) {
+                        if (!isActuallyHidden() || typeof callback !== 'function') {
+                            return origRAF.apply(this, arguments);
+                        }
+                        const id = ++bgRafId;
+                        const tid = setTimeout(function() {
+                            bgTimers.delete(id);
+                            try {
+                                callback(typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
+                            } catch (e) {}
+                        }, 16);
+                        bgTimers.set(id, tid);
+                        return id;
+                    }, 'requestAnimationFrame', 1),
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+
+                if (typeof origCAF === 'function') {
+                    Object.defineProperty(window, 'cancelAnimationFrame', {
+                        value: makeNative(function cancelAnimationFrame(handle) {
+                            if (bgTimers.has(handle)) {
+                                clearTimeout(bgTimers.get(handle));
+                                bgTimers.delete(handle);
+                                return undefined;
+                            }
+                            return origCAF.apply(this, arguments);
+                        }, 'cancelAnimationFrame', 1),
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+            }
+        }
+    } catch (e) {}
 })();
+
