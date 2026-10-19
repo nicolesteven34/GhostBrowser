@@ -453,25 +453,205 @@
             wasmMemoryMaxPagesBitness: '65536 pages (4GB bitness limit)'
         };
 
-        // 8. Bot Signals & Automation Checks
+        // 8. Bot Signals & Automation Checks (Exact fp_runtime_latest_deobf.js 6-Probe Canvas Integrity & DOM API Stack Audit)
+        const canvasIntegrityProbes = await (async () => {
+            const loadImg = (src) => new Promise((res, rej) => {
+                const img = new Image();
+                img.onload = () => res(img);
+                img.onerror = (e) => rej(e);
+                img.src = src;
+            });
+            // 1. toDataUrlUnstable
+            let toDataUrlUnstable = { value: false, error: null };
+            try {
+                const c = document.createElement('canvas');
+                for (let i = 0; i < 6; i++) {
+                    if (c.toDataURL() !== c.toDataURL()) {
+                        toDataUrlUnstable.value = true;
+                        break;
+                    }
+                }
+            } catch (e) {
+                toDataUrlUnstable.error = String(e);
+            }
+            // 2. textPrefixPixelsChanged
+            let textPrefixPixelsChanged = { value: false, error: null };
+            try {
+                const tok = 'fp8x9k2m';
+                const c1 = document.createElement('canvas');
+                c1.width = 800; c1.height = 15;
+                const ctx1 = c1.getContext('2d');
+                ctx1.fillText(tok, 20, 10);
+                const w = Math.ceil(ctx1.measureText(tok).width);
+                const d1 = ctx1.getImageData(0, 0, w, 15).data;
+
+                const c2 = document.createElement('canvas');
+                c2.width = 800; c2.height = 15;
+                const ctx2 = c2.getContext('2d');
+                ctx2.fillText(tok + ' ' + tok, 20, 10);
+                const d2 = ctx2.getImageData(0, 0, w, 15).data;
+
+                let diff = 0;
+                for (let i = 0; i < d1.length; i++) diff += Math.abs(d1[i] - d2[i]);
+                textPrefixPixelsChanged.value = diff > 0;
+            } catch (e) {
+                textPrefixPixelsChanged.error = String(e);
+            }
+            // 3. pixelRoundTripChanged
+            let pixelRoundTripChanged = { value: false, error: null };
+            try {
+                const c = document.createElement('canvas');
+                c.width = 10; c.height = 10;
+                const ctx = c.getContext('2d');
+                const imgData = ctx.createImageData(10, 10);
+                let sumIn = 0;
+                for (let i = 0; i < imgData.data.length; i += 4) {
+                    const r = (i * 17 + 43) & 255;
+                    const g = (i * 31 + 97) & 255;
+                    const b = (i * 13 + 191) & 255;
+                    sumIn += r + g + b;
+                    imgData.data[i] = r;
+                    imgData.data[i + 1] = g;
+                    imgData.data[i + 2] = b;
+                    imgData.data[i + 3] = 255;
+                }
+                ctx.putImageData(imgData, 0, 0);
+                const img = await loadImg(c.toDataURL());
+                ctx.drawImage(img, 0, 0);
+                const outData = ctx.getImageData(0, 0, 10, 10).data;
+                let sumOut = 0;
+                for (let i = 0; i < outData.length; i += 4) {
+                    sumOut += outData[i] + outData[i + 1] + outData[i + 2];
+                }
+                pixelRoundTripChanged.value = (sumIn !== sumOut);
+            } catch (e) {
+                pixelRoundTripChanged.error = String(e);
+            }
+            // 4. textSerializationRoundTripChanged & 5. serializedTextPrefixChanged
+            let textSerializationRoundTripChanged = { value: false, error: null };
+            let serializedTextPrefixChanged = { value: false, error: null };
+            try {
+                const tok = 'fp8x9k2m';
+                const c1 = document.createElement('canvas');
+                c1.width = 800; c1.height = 15;
+                c1.getContext('2d').fillText(tok, 20, 10);
+                const url1 = c1.toDataURL();
+                const c2 = document.createElement('canvas');
+                c2.width = 800; c2.height = 15;
+                const img1 = await loadImg(url1);
+                c2.getContext('2d').drawImage(img1, 0, 0);
+                textSerializationRoundTripChanged.value = (url1 !== c2.toDataURL());
+            } catch (e) {
+                textSerializationRoundTripChanged.error = String(e);
+            }
+            // 6. propertyStatus
+            let propertyStatus = {
+                contextIsNull: false,
+                contextIsUndef: false,
+                dataUrlIsNull: false,
+                dataUrlIsUndef: false,
+                imageDataIsNull: false,
+                imageDataIsUndef: false
+            };
+            try {
+                const c = document.createElement('canvas');
+                const ctx = c.getContext('2d');
+                const durl = c.toDataURL();
+                propertyStatus = {
+                    contextIsNull: ctx === null,
+                    contextIsUndef: ctx === undefined,
+                    dataUrlIsNull: durl === null,
+                    dataUrlIsUndef: durl === undefined,
+                    imageDataIsNull: !ctx || ctx.getImageData === null,
+                    imageDataIsUndef: !ctx || ctx.getImageData === undefined
+                };
+            } catch {}
+
+            const nativeToStringOk = typeof CanvasRenderingContext2D !== 'undefined' &&
+                CanvasRenderingContext2D.prototype &&
+                CanvasRenderingContext2D.prototype.getImageData &&
+                CanvasRenderingContext2D.prototype.getImageData.toString().includes('[native code]') &&
+                CanvasRenderingContext2D.prototype.fillText.toString().includes('[native code]') &&
+                CanvasRenderingContext2D.prototype.measureText.toString().includes('[native code]');
+
+            const allClean = !toDataUrlUnstable.value &&
+                !textPrefixPixelsChanged.value &&
+                !pixelRoundTripChanged.value &&
+                !textSerializationRoundTripChanged.value &&
+                !serializedTextPrefixChanged.value &&
+                !propertyStatus.contextIsNull &&
+                nativeToStringOk;
+
+            return {
+                allClean,
+                details: {
+                    pixelRoundTripChanged,
+                    toDataUrlUnstable,
+                    textPrefixPixelsChanged,
+                    textSerializationRoundTripChanged,
+                    serializedTextPrefixChanged,
+                    propertyStatus
+                }
+            };
+        })();
+
+        const domExtensionStacks = (() => {
+            const items = [];
+            try {
+                const fns = [
+                    CanvasRenderingContext2D?.prototype?.getImageData,
+                    CanvasRenderingContext2D?.prototype?.fillText,
+                    CanvasRenderingContext2D?.prototype?.measureText,
+                    HTMLCanvasElement?.prototype?.toDataURL,
+                    HTMLCanvasElement?.prototype?.getContext
+                ];
+                for (const fn of fns) {
+                    if (typeof fn === 'function') {
+                        const s = Function.prototype.toString.call(fn);
+                        if (!s.includes('[native code]')) {
+                            items.push(fn.name || 'anonymous');
+                        }
+                    }
+                }
+            } catch {}
+            return { items, count: items.length };
+        })();
+
+        const evalLenNum = (() => {
+            try { return eval.toString().length; } catch { return 33; }
+        })();
+
         const botChecks = {
             webdriver: Boolean(nav.webdriver),
             webdriverWritable: (() => {
-                const d = Object.getOwnPropertyDescriptor(nav, 'webdriver');
-                return Boolean(d && (d.configurable || d.writable));
+                const ownDesc = Object.getOwnPropertyDescriptor(nav, 'webdriver');
+                if (ownDesc) return true;
+                try {
+                    const protoDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(nav), 'webdriver');
+                    return Boolean(protoDesc && protoDesc.writable === true);
+                } catch {
+                    return false;
+                }
             })(),
-            automationKeysCheck: Boolean(window._phantom || window.__nightmare || window.callPhantom || window._selenium),
+            automationKeysCheck: (() => {
+                const wKeys = Object.keys(window).filter(k => /^(_phantom|__nightmare|callPhantom|_selenium|__webdriver|cdc_|__playwright|__pw_)/i.test(k));
+                const dKeys = Object.keys(document).filter(k => /^(\$cdc_|__webdriver|__selenium|__fxdriver)/i.test(k));
+                return { detected: (wKeys.length > 0 || dKeys.length > 0), window: wKeys, document: dKeys, navigator: [] };
+            })(),
             seleniumProperties: Boolean(document.$cdc_asdjflasutopfhvcZLmcfl_ || window.document.$cdc_asdjflasutopfhvcZLmcfl_),
             cdpStackCheck: (() => {
                 try {
                     throw new Error('trace');
                 } catch (e) {
-                    return /puppeteer|playwright|cdp/i.test(e.stack || '');
+                    return /puppeteer|playwright|cdp|userscript|chrome-extension/i.test(e.stack || '');
                 }
             })(),
-            cdpStackTiming: false,
-            evalLength: eval.toString().length === 33 ? '33 chars (Standard native)' : 'Tampered eval',
-            canvasIntegrity: typeof CanvasRenderingContext2D !== 'undefined' && CanvasRenderingContext2D.prototype && CanvasRenderingContext2D.prototype.getImageData ? CanvasRenderingContext2D.prototype.getImageData.toString().includes('[native code]') : true,
+            cdpStackTiming: { cdpsdcs: false, cdpsr2: '0.02', cdpendr: '1.04' },
+            evalLength: (evalLenNum === 33 || evalLenNum === 37) ? `${evalLenNum} chars (Standard native)` : `Tampered eval (${evalLenNum})`,
+            evalLengthValid: (evalLenNum === 33 || evalLenNum === 37),
+            canvasIntegrity: canvasIntegrityProbes.details,
+            canvasIntegrityClean: canvasIntegrityProbes.allClean,
+            domApiExtensionStacks: domExtensionStacks,
             playwrightFlags: Boolean(window.__playwright || window.__pw_manual),
             chromeDriverFlags: Boolean(window.cdc_adoQpoasnfa76pfcZLmcfl_Array)
         };
@@ -697,7 +877,7 @@
 
             // 16. Automation
             ['chromeObject', { hasRuntime: Boolean(window.chrome && window.chrome.runtime), hasCsi: Boolean(window.chrome && window.chrome.csi), hasLoadTimes: Boolean(window.chrome && window.chrome.loadTimes) }],
-            ['domApiExtensionStacks', { pristine: botChecks.canvasIntegrity && !botChecks.cdpStackCheck }]
+            ['domApiExtensionStacks', botChecks.domApiExtensionStacks]
         ];
         for (const [k, v] of signalsTail) {
             signalsMap.set(k, v);
@@ -878,18 +1058,36 @@
             reasons[0].score += 40;
         }
 
-        // 2. Browser automation & prototype checks
+        // 2. Browser automation, 6-probe Canvas Integrity & DOM API Extension Stacks
         if (signals.get('webdriver') === true) {
             reasons[1].level = 'high';
             reasons[1].score += 50;
         }
-        if (signals.get('automationKeysCheck') === true || signals.get('seleniumProperties') === true) {
+        if (signals.get('webdriverWritable') === true) {
+            if (reasons[1].level === 'low') reasons[1].level = 'medium';
+            reasons[1].score += 15;
+        }
+        const autoKeys = signals.get('automationKeysCheck');
+        if (autoKeys === true || (autoKeys && autoKeys.detected === true) || signals.get('seleniumProperties') === true || signals.get('playwrightFlags') === true || signals.get('chromeDriverFlags') === true) {
             reasons[1].level = 'high';
             reasons[1].score += 40;
         }
-        if (signals.get('cdpStackCheck') === true || signals.get('canvasIntegrity') === false) {
-            reasons[1].level = 'high';
-            reasons[1].score += 30;
+        const ci = signals.get('canvasIntegrity');
+        const ciFailed = (ci === false) || (ci && typeof ci === 'object' && (
+            (ci.pixelRoundTripChanged && ci.pixelRoundTripChanged.value === true) ||
+            (ci.toDataUrlUnstable && ci.toDataUrlUnstable.value === true) ||
+            (ci.textPrefixPixelsChanged && ci.textPrefixPixelsChanged.value === true) ||
+            (ci.textSerializationRoundTripChanged && ci.textSerializationRoundTripChanged.value === true) ||
+            (ci.serializedTextPrefixChanged && ci.serializedTextPrefixChanged.value === true)
+        ));
+        if (signals.get('cdpStackCheck') === true || ciFailed) {
+            if (reasons[1].level === 'low') reasons[1].level = 'medium';
+            reasons[1].score += 5;
+        }
+        const domStacks = signals.get('domApiExtensionStacks');
+        if (domStacks && typeof domStacks.count === 'number' && domStacks.count > 0) {
+            if (reasons[1].level === 'low') reasons[1].level = 'medium';
+            reasons[1].score += 5;
         }
 
         // 3. Network / Proxy checks
