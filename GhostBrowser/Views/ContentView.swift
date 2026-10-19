@@ -164,281 +164,364 @@ public struct ContentView: View {
         }
     }
 
-    // MARK: - Top Safari iPad Toolbar
-    private var topToolbar: some View {
-        HStack(spacing: 10) {
-            // Back & Forward
-            Button(action: {
-                NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewGoBack_\(activeTabID)"), object: nil)
-            }) {
-                Image(systemName: "chevron.backward")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .disabled(activeTab?.canGoBack != true)
-
-            Button(action: {
-                NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewGoForward_\(activeTabID)"), object: nil)
-            }) {
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .disabled(activeTab?.canGoForward != true)
-
-            // Home (Navigate active tab to local start page)
-            Button(action: {
-                if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
-                    tabs[index].urlString = "local://startpage"
-                    tabs[index].title = "Start Page"
-                    inputURLText = ""
-                    showHistoryDropdown = false
-                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
-                }
-            }) {
-                Image(systemName: "house")
-                    .font(.system(size: 15, weight: .medium))
-            }
-
-            // Reload / Stop for active tab
-            Button(action: {
-                NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewReload_\(activeTabID)"), object: nil)
-            }) {
-                Image(systemName: (activeTab?.isLoading ?? false) ? "xmark" : "arrow.clockwise")
-                    .font(.system(size: 15, weight: .medium))
-            }
-
-            // Safari Search & Address Bar with Per-Profile History Dropdown Trigger
-            HStack(spacing: 8) {
-                Image(systemName: "lock.shield.fill")
-                    .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
-                    .font(.system(size: 14))
-
-                TextField("Search or enter website name...", text: $inputURLText)
-                    .font(.system(size: 14))
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .keyboardType(.webSearch)
-                    .focused($isAddressBarFocused)
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            showHistoryDropdown = true
-                        }
-                    }
-                    .onSubmit {
-                        isAddressBarFocused = false
-                        showHistoryDropdown = false
-                        submitNavigation()
-                    }
-
-                if !profileManager.activeProfile.visitedHistory.isEmpty {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            showHistoryDropdown.toggle()
-                        }
-                    }) {
-                        Image(systemName: showHistoryDropdown ? "chevron.up.circle.fill" : "clock.arrow.circlepath")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 13))
-                    }
-                }
-
-                if !inputURLText.isEmpty {
-                    Button(action: { inputURLText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 13))
-                    }
-
-                    Button(action: {
-                        isAddressBarFocused = false
-                        showHistoryDropdown = false
-                        submitNavigation()
-                    }) {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-
-            // Profile Switcher & Session Monitor Indicator Pill (shows IP • ISP • Type • State when Proxy Active)
-            Button(action: {
-                showProfileSheet = true
-            }) {
-                HStack(spacing: 6) {
-                    Image(systemName: profileManager.activeProfile.icon)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
-
-                    Text(profileManager.activeProfile.name)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Text("•")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 9))
-
-                    if privacyProfile.proxyEnabled {
-                        Image(systemName: "lock.shield.fill")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.green)
-                    }
-
-                    Text(privacyProfile.proxyEnabled ? privacyProfile.compactProxyBadge : shortPersonaName(privacyProfile.selectedDevice.rawValue))
-                        .font(.system(size: 11, weight: .semibold, design: privacyProfile.proxyEnabled ? .monospaced : .default))
-                        .foregroundColor(privacyProfile.proxyEnabled ? .green : .secondary)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.35), lineWidth: 1)
-                )
-            }
-            .sheet(isPresented: $showProfileSheet) {
-                ProfileManagerSheet(
-                    profileManager: profileManager,
-                    privacyProfile: privacyProfile,
-                    onProfileSwitched: { newProfile in
-                        switchActiveProfile(newProfile)
-                    },
-                    onLaunchGhostDetect: {
-                        if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
-                            tabs[index].urlString = "ghost://detect"
-                            tabs[index].title = "GhostDetect Lab"
-                            inputURLText = "ghost://detect"
-                            profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
-                        }
-                    }
-                )
-            }
-
-            // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera, Mock GPS & Evergreen Engine Updates)
-            Button(action: {
-                sessionToolsInitialTab = .proxy
-                showSessionToolsSheet = true
-            }) {
-                let isHudActive = privacyProfile.proxyEnabled || privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled
-                HStack(spacing: 4) {
-                    Image(systemName: privacyProfile.proxyEnabled ? "network.badge.shield.half.filled" : (privacyProfile.virtualCameraEnabled ? "camera.viewfinder" : "location.viewfinder"))
-                        .font(.system(size: 14, weight: .semibold))
-                    if isHudActive {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .foregroundColor(isHudActive ? Color(hex: profileManager.activeProfile.themeColorHex) : .secondary)
-                .padding(8)
-                .background(isHudActive ? Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.15) : Color(.systemGray6))
-                .clipShape(Circle())
-            }
-            .sheet(isPresented: $showSessionToolsSheet) {
-                SessionToolsSheet(privacyProfile: privacyProfile, profileManager: profileManager, initialTab: sessionToolsInitialTab)
-            }
-
-            // Evergreen Engine & Stealth Update Center Quick-Launch Button
-            Button(action: {
-                sessionToolsInitialTab = .updates
-                showSessionToolsSheet = true
-            }) {
-                Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.green)
-                    .padding(8)
-                    .background(Color.green.opacity(0.12))
-                    .clipShape(Circle())
-            }
-
-            // Privacy & Signature Settings
-            Button(action: {
-                showSettingsSheet.toggle()
-            }) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .padding(8)
-                    .background(Color(.systemGray6))
-                    .clipShape(Circle())
-            }
-            .popover(isPresented: $showSettingsSheet) {
-                PrivacySettingsView(privacyProfile: privacyProfile)
-                    .frame(minWidth: 480, minHeight: 620)
-            }
-
-            // Quick New Identity (Rotate Seed for Active Profile)
-            Button(action: {
-                profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
-                showIdentityToast("🔄 New Identity (Same Device) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
-            }) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
-                    .padding(8)
-                    .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
-                    .clipShape(Circle())
-            }
-
-            // Regenerate Realistic Device for Active Profile
-            Button(action: {
-                let newDevice = profileManager.regenerateProfileDevice(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
-                showIdentityToast("✨ \(shortPersonaName(newDevice.rawValue)) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
-            }) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.purple)
-                    .padding(8)
-                    .background(Color.purple.opacity(0.12))
-                    .clipShape(Circle())
-            }
-
-            // Quick New Tab Button
-            Button(action: {
-                addNewTab()
-            }) {
-                Image(systemName: "plus")
+    // MARK: - Green-Lit HTTPS URL Display Helper
+    @ViewBuilder
+    private func styledURLOverlayText(for url: String) -> some View {
+        let lower = url.lowercased()
+        if lower.hasPrefix("https://") {
+            let scheme = String(url.prefix(8))
+            let rest = String(url.dropFirst(8))
+            HStack(spacing: 0) {
+                Text(scheme)
                     .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(red: 0.19, green: 0.82, blue: 0.35))
+                    .shadow(color: Color(red: 0.19, green: 0.82, blue: 0.35).opacity(0.45), radius: 3, x: 0, y: 0)
+                Text(rest)
+                    .font(.system(size: 14))
                     .foregroundColor(.primary)
-                    .padding(8)
-                    .background(Color(.systemGray5))
-                    .clipShape(Circle())
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        } else if lower.hasPrefix("ghost://") {
+            let scheme = String(url.prefix(8))
+            let rest = String(url.dropFirst(8))
+            HStack(spacing: 0) {
+                Text(scheme)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(red: 0.19, green: 0.82, blue: 0.35))
+                    .shadow(color: Color(red: 0.19, green: 0.82, blue: 0.35).opacity(0.45), radius: 3, x: 0, y: 0)
+                Text(rest)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        } else if lower.hasPrefix("http://") {
+            let scheme = String(url.prefix(7))
+            let rest = String(url.dropFirst(7))
+            HStack(spacing: 0) {
+                Text(scheme)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.orange)
+                Text(rest)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        } else {
+            Text(url)
+                .font(.system(size: 14))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
+
+    // MARK: - Top Safari iPad Toolbar (2-Row Layout: Row 1 = Nav & URL Bar, Row 2 = SOCKS5 Pill & Controls)
+    private var topToolbar: some View {
+        VStack(spacing: 8) {
+            // ROW 1: Back, Forward, Home, Refresh & Full-Width URL Bar (with Green-Lit https://)
+            HStack(spacing: 10) {
+                // Back & Forward
+                Button(action: {
+                    NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewGoBack_\(activeTabID)"), object: nil)
+                }) {
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .disabled(activeTab?.canGoBack != true)
+
+                Button(action: {
+                    NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewGoForward_\(activeTabID)"), object: nil)
+                }) {
+                    Image(systemName: "chevron.forward")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .disabled(activeTab?.canGoForward != true)
+
+                // Home (Navigate active tab to local start page)
+                Button(action: {
+                    if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
+                        tabs[index].urlString = "local://startpage"
+                        tabs[index].title = "Start Page"
+                        inputURLText = ""
+                        showHistoryDropdown = false
+                        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                    }
+                }) {
+                    Image(systemName: "house")
+                        .font(.system(size: 15, weight: .medium))
+                }
+
+                // Reload / Stop for active tab
+                Button(action: {
+                    NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewReload_\(activeTabID)"), object: nil)
+                }) {
+                    Image(systemName: (activeTab?.isLoading ?? false) ? "xmark" : "arrow.clockwise")
+                        .font(.system(size: 15, weight: .medium))
+                }
+
+                // Safari Search & Address Bar with Green-Lit https:// & Per-Profile History Dropdown Trigger
+                let lowerURL = inputURLText.lowercased()
+                let isEncryptedHTTPS = lowerURL.hasPrefix("https://") || lowerURL.hasPrefix("ghost://")
+                let isUnencryptedHTTP = lowerURL.hasPrefix("http://")
+
+                HStack(spacing: 8) {
+                    Image(systemName: isEncryptedHTTPS ? "lock.fill" : (isUnencryptedHTTP ? "lock.open.fill" : "lock.shield.fill"))
+                        .foregroundColor(
+                            isEncryptedHTTPS
+                                ? Color(red: 0.19, green: 0.82, blue: 0.35)
+                                : (isUnencryptedHTTP ? .orange : Color(hex: profileManager.activeProfile.themeColorHex))
+                        )
+                        .shadow(color: isEncryptedHTTPS ? Color(red: 0.19, green: 0.82, blue: 0.35).opacity(0.45) : .clear, radius: 3, x: 0, y: 0)
+                        .font(.system(size: 14, weight: .semibold))
+
+                    ZStack(alignment: .leading) {
+                        TextField("Search or enter website name...", text: $inputURLText)
+                            .font(.system(size: 14))
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .keyboardType(.webSearch)
+                            .focused($isAddressBarFocused)
+                            .opacity((!isAddressBarFocused && !inputURLText.isEmpty) ? 0.015 : 1.0)
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    showHistoryDropdown = true
+                                }
+                            }
+                            .onSubmit {
+                                isAddressBarFocused = false
+                                showHistoryDropdown = false
+                                submitNavigation()
+                            }
+
+                        if !isAddressBarFocused && !inputURLText.isEmpty {
+                            styledURLOverlayText(for: inputURLText)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if !profileManager.activeProfile.visitedHistory.isEmpty {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                showHistoryDropdown.toggle()
+                            }
+                        }) {
+                            Image(systemName: showHistoryDropdown ? "chevron.up.circle.fill" : "clock.arrow.circlepath")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 13))
+                        }
+                    }
+
+                    if !inputURLText.isEmpty {
+                        Button(action: { inputURLText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 13))
+                        }
+
+                        Button(action: {
+                            isAddressBarFocused = false
+                            showHistoryDropdown = false
+                            submitNavigation()
+                        }) {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
             }
 
-            // Panic Button (Purge all state & reset tabs to start page)
-            Button(action: {
-                showWipeAlert = true
-            }) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.red)
-                    .padding(8)
-                    .background(Color.red.opacity(0.12))
-                    .clipShape(Circle())
-            }
-            .alert("Panic Wipe Session?", isPresented: $showWipeAlert) {
-                Button("Wipe & Return Home", role: .destructive) {
-                    profileManager.clearProfileData(id: profileManager.activeProfileID)
-                    profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
-                    let freshTab = BrowserTab()
-                    tabs = [freshTab]
-                    activeTabID = freshTab.id
-                    inputURLText = ""
-                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
-                    wipeTrigger += 1
+            // ROW 2: Profile & SOCKS5 Status Pill + Session Controls
+            HStack(spacing: 10) {
+                // Profile Switcher & Session Monitor Indicator Pill (shows IP • ISP • Type • State when Proxy Active)
+                Button(action: {
+                    showProfileSheet = true
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: profileManager.activeProfile.icon)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
+
+                        Text(profileManager.activeProfile.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+
+                        Text("•")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 9))
+
+                        if privacyProfile.proxyEnabled {
+                            Image(systemName: "lock.shield.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.green)
+                        }
+
+                        Text(privacyProfile.proxyEnabled ? privacyProfile.compactProxyBadge : shortPersonaName(privacyProfile.selectedDevice.rawValue))
+                            .font(.system(size: 11, weight: .semibold, design: privacyProfile.proxyEnabled ? .monospaced : .default))
+                            .foregroundColor(privacyProfile.proxyEnabled ? .green : .secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.35), lineWidth: 1)
+                    )
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Immediately purges all cookies, in-memory caches, closes all tabs, and resets '\(profileManager.activeProfile.name)' to a clean start page.")
+                .sheet(isPresented: $showProfileSheet) {
+                    ProfileManagerSheet(
+                        profileManager: profileManager,
+                        privacyProfile: privacyProfile,
+                        onProfileSwitched: { newProfile in
+                            switchActiveProfile(newProfile)
+                        },
+                        onLaunchGhostDetect: {
+                            if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
+                                tabs[index].urlString = "ghost://detect"
+                                tabs[index].title = "GhostDetect Lab"
+                                inputURLText = "ghost://detect"
+                                profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                            }
+                        }
+                    )
+                }
+
+                Spacer(minLength: 4)
+
+                // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera, Mock GPS & Evergreen Engine Updates)
+                Button(action: {
+                    sessionToolsInitialTab = .proxy
+                    showSessionToolsSheet = true
+                }) {
+                    let isHudActive = privacyProfile.proxyEnabled || privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled
+                    HStack(spacing: 4) {
+                        Image(systemName: privacyProfile.proxyEnabled ? "network.badge.shield.half.filled" : (privacyProfile.virtualCameraEnabled ? "camera.viewfinder" : "location.viewfinder"))
+                            .font(.system(size: 14, weight: .semibold))
+                        if isHudActive {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .foregroundColor(isHudActive ? Color(hex: profileManager.activeProfile.themeColorHex) : .secondary)
+                    .padding(8)
+                    .background(isHudActive ? Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.15) : Color(.systemGray6))
+                    .clipShape(Circle())
+                }
+                .sheet(isPresented: $showSessionToolsSheet) {
+                    SessionToolsSheet(privacyProfile: privacyProfile, profileManager: profileManager, initialTab: sessionToolsInitialTab)
+                }
+
+                // Evergreen Engine & Stealth Update Center Quick-Launch Button
+                Button(action: {
+                    sessionToolsInitialTab = .updates
+                    showSessionToolsSheet = true
+                }) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.green)
+                        .padding(8)
+                        .background(Color.green.opacity(0.12))
+                        .clipShape(Circle())
+                }
+
+                // Privacy & Signature Settings
+                Button(action: {
+                    showSettingsSheet.toggle()
+                }) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .padding(8)
+                        .background(Color(.systemGray6))
+                        .clipShape(Circle())
+                }
+                .popover(isPresented: $showSettingsSheet) {
+                    PrivacySettingsView(privacyProfile: privacyProfile)
+                        .frame(minWidth: 480, minHeight: 620)
+                }
+
+                // Quick New Identity (Rotate Seed for Active Profile)
+                Button(action: {
+                    profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
+                    showIdentityToast("🔄 New Identity (Same Device) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
+                }) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
+                        .padding(8)
+                        .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
+                        .clipShape(Circle())
+                }
+
+                // Regenerate Realistic Device for Active Profile
+                Button(action: {
+                    let newDevice = profileManager.regenerateProfileDevice(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
+                    showIdentityToast("✨ \(shortPersonaName(newDevice.rawValue)) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
+                }) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.purple)
+                        .padding(8)
+                        .background(Color.purple.opacity(0.12))
+                        .clipShape(Circle())
+                }
+
+                // Quick New Tab Button
+                Button(action: {
+                    addNewTab()
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(8)
+                        .background(Color(.systemGray5))
+                        .clipShape(Circle())
+                }
+
+                // Panic Button (Purge all state & reset tabs to start page)
+                Button(action: {
+                    showWipeAlert = true
+                }) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.red)
+                        .padding(8)
+                        .background(Color.red.opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .alert("Panic Wipe Session?", isPresented: $showWipeAlert) {
+                    Button("Wipe & Return Home", role: .destructive) {
+                        profileManager.clearProfileData(id: profileManager.activeProfileID)
+                        profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
+                        let freshTab = BrowserTab()
+                        tabs = [freshTab]
+                        activeTabID = freshTab.id
+                        inputURLText = ""
+                        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                        wipeTrigger += 1
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Immediately purges all cookies, in-memory caches, closes all tabs, and resets '\(profileManager.activeProfile.name)' to a clean start page.")
+                }
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(Color(.systemBackground))
     }
 
@@ -632,8 +715,9 @@ public struct ContentView: View {
                 .stroke(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.35), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
-        .padding(.horizontal, 140)
-        .padding(.top, 54)
+        .padding(.leading, 130)
+        .padding(.trailing, 14)
+        .padding(.top, 52)
         .zIndex(998)
     }
 
