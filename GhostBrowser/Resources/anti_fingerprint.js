@@ -3816,14 +3816,13 @@
                     const tzName = (_livePageTimezone || (cfg && cfg.timezone) || 'America/New_York').trim();
                     const tzOffMin = new Date().getTimezoneOffset();
                     const tzSign = tzOffMin <= 0 ? '+' : '-';
-                    const tzAbsH = String(Math.floor(Math.abs(tzOffMin) / 60)).padStart(2, '0');
-                    const tzAbsM = String(Math.abs(tzOffMin) % 60).padStart(2, '0');
+                    const tzHoursDec = (Math.abs(tzOffMin) / 60).toFixed(1);
                     const hwcVal = navObj.hardwareConcurrency || cfg.hardwareConcurrency || 8;
                     const dmVal = navObj.deviceMemory || cfg.deviceMemory || 8;
                     const touchPts = (typeof navObj.maxTouchPoints === 'number') ? navObj.maxTouchPoints : (cfg.maxTouchPoints || 0);
                     const glVend = cfg.webglVendor || 'Apple Inc.';
                     const glRend = cfg.webglRenderer || 'Apple GPU';
-                    const langsStr = (Array.isArray(navObj.languages) && navObj.languages.length) ? navObj.languages.join(', ') : (navObj.language || 'en-US, en');
+                    const langsStr = (Array.isArray(navObj.languages) && navObj.languages.length) ? navObj.languages[0] : (navObj.language || 'en-US');
                     const plugCnt = navObj.plugins ? navObj.plugins.length : 5;
                     const mimeCnt = navObj.mimeTypes ? navObj.mimeTypes.length : 2;
                     const seedHex = (fmix32(profileSeed, 1401) >>> 0).toString(16).padStart(8, '0') +
@@ -3837,29 +3836,31 @@
                     const cvsHex = (fmix32(profileSeed, 1411) >>> 0).toString(16).padStart(8, '0') +
                                    (fmix32(profileSeed, 1412) >>> 0).toString(16).padStart(8, '0') +
                                    (fmix32(profileSeed, 1413) >>> 0).toString(16).padStart(8, '0') +
-                                   (fmix32(profileSeed, 1414) >>> 0).toString(16).padStart(8, '0');
+                                   (fmix32(profileSeed, 1414) >>> 0).toString(16).padStart(8, '0') + '...';
                     const audHex = (fmix32(profileSeed, 1421) >>> 0).toString(16).padStart(8, '0') +
-                                   (fmix32(profileSeed, 1422) >>> 0).toString(16).padStart(8, '0') + ' · sum 124.043475';
+                                   (fmix32(profileSeed, 1422) >>> 0).toString(16).padStart(8, '0') +
+                                   (fmix32(profileSeed, 1423) >>> 0).toString(16).padStart(8, '0') +
+                                   (fmix32(profileSeed, 1424) >>> 0).toString(16).padStart(8, '0') + '...';
                     const existingRender = (data.render && typeof data.render === 'object') ? data.render : {};
                     data.render = Object.assign({
                         'bfp-hash': seedHex,
-                        'bfp-entropy': '34.8 bits',
+                        'bfp-entropy': '57 bits (heuristic)',
                         'bfp-ua': uaStr,
-                        'bfp-platform': `${navObj.platform || cfg.platform || 'MacIntel'} · Apple`,
+                        'bfp-platform': String(navObj.platform || cfg.platform || 'MacIntel'),
                         'bfp-langs': langsStr,
-                        'bfp-tz': `${tzName} (UTC${tzSign}${tzAbsH}:${tzAbsM})`,
-                        'bfp-screen': `${wVal}×${hVal} (avail ${awVal}×${ahVal}) @ ${dprVal}x`,
-                        'bfp-display': `24-bit · 24-bit · touch: ${touchPts > 0 ? 'yes (' + touchPts + ')' : 'no'}`,
-                        'bfp-hw': `${hwcVal} cores · ${dmVal} GB RAM`,
+                        'bfp-tz': `${tzName} · UTC${tzSign}${tzHoursDec}h`,
+                        'bfp-screen': `${wVal}x${hVal}@${dprVal} · avail ${awVal}x${ahVal}`,
+                        'bfp-display': `24-bit · 24px · touch=${touchPts > 0 ? 'yes' : 'no'}`,
+                        'bfp-hw': `${hwcVal} cores · ${_isWinPersona ? (dmVal + ' GB') : '— GB'}`,
                         'bfp-gl-vendor': glVend,
                         'bfp-gl-renderer': glRend,
                         'bfp-canvas': cvsHex,
                         'bfp-audio': audHex,
-                        'bfp-fonts': '18 system fonts (Arial, Helvetica, Menlo, Monaco, SF Pro, Times New Roman…)',
-                        'bfp-plugins': `${plugCnt} plugins · ${mimeCnt} MIME types`,
-                        'bfp-battery': 'charging (100%) · 4g (10 Mbps, 50 ms RTT)',
-                        'bfp-perms': 'geolocation: prompt · notifications: prompt · camera: prompt · microphone: prompt',
-                        'bfp-meta': `Signed & verified · ${new Date().toLocaleTimeString()}`
+                        'bfp-fonts': '10 detected: Arial, Times New Roman, Courier New, Verdana, Georgia, Impact, Trebuchet MS, Helvetica...',
+                        'bfp-plugins': `${plugCnt} plugins · ${mimeCnt} MIME`,
+                        'bfp-battery': _isWinPersona ? 'charging (100%) · net 4g' : 'bat n/a · net n/a',
+                        'bfp-perms': 'geolocation=prompt · notifications=prompt · camera=prompt · microphone=prompt',
+                        'bfp-meta': 'engine bfp/v1 · features=20 · hash=SHA-256'
                     }, existingRender);
                     modified = true;
                 }
