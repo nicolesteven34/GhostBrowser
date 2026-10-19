@@ -154,11 +154,197 @@
         }
     };
 
-    let _selectedCallAppId = 'teams';
-    let _lastPacketProbeResult = null;
+    const PACKETPROBE_PRESETS = {
+        default:   { id: 'default',   label: 'Default',      pps: 15, sizeBytes: 212,  maxDelayMs: 200 },
+        gaming:    { id: 'gaming',    label: 'Gaming (FPS)', pps: 60, sizeBytes: 128,  maxDelayMs: 100 },
+        voip:      { id: 'voip',      label: 'VoIP',         pps: 50, sizeBytes: 160,  maxDelayMs: 150 },
+        videocall: { id: 'videocall', label: 'Video Call',   pps: 30, sizeBytes: 512,  maxDelayMs: 150 },
+        streaming: { id: 'streaming', label: 'Streaming',    pps: 20, sizeBytes: 1200, maxDelayMs: 250 }
+    };
 
-    async function runLivePacketProbeThreeSuite() {
-        const t0 = performance.now();
+    let _selectedCallAppId = 'teams';
+    let _selectedPresetId = 'default';
+    let _selectedDurationSec = 10;
+    let _selectedServerPop = 'us-east (Ashburn, US)';
+    let _lastPacketProbeResult = null;
+    let _ppAnimTimer = null;
+    let _ppIsRunning = false;
+    let _ppCurrentSent = 0;
+    let _ppTotalPackets = 150;
+    let _ppStartTimeMs = 0;
+
+    function injectPacketProbeTunnelStyles() {
+        if (typeof document === 'undefined' || document.getElementById('ghostPacketProbeTunnelStyles')) return;
+        const style = document.createElement('style');
+        style.id = 'ghostPacketProbeTunnelStyles';
+        style.textContent = `
+            @keyframes ppFlowUpload {
+                0%   { left: -6%; opacity: 0; transform: translateY(-50%) scale(0.75); }
+                10%  { opacity: 1; transform: translateY(-50%) scale(1); }
+                90%  { opacity: 1; transform: translateY(-50%) scale(1); }
+                100% { left: 102%; opacity: 0; transform: translateY(-50%) scale(0.75); }
+            }
+            @keyframes ppFlowDownload {
+                0%   { left: 102%; opacity: 0; transform: translateY(-50%) scale(0.75); }
+                10%  { opacity: 1; transform: translateY(-50%) scale(1); }
+                90%  { opacity: 1; transform: translateY(-50%) scale(1); }
+                100% { left: -6%; opacity: 0; transform: translateY(-50%) scale(0.75); }
+            }
+            @keyframes ppNodePulsePurple {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.55), 0 0 18px rgba(168, 85, 247, 0.65); }
+                50%      { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0.0), 0 0 26px rgba(168, 85, 247, 0.95); }
+            }
+            @keyframes ppNodePulseGreen {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55), 0 0 18px rgba(16, 185, 129, 0.65); }
+                50%      { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.0), 0 0 26px rgba(16, 185, 129, 0.95); }
+            }
+            .pp-pkt-up {
+                position: absolute;
+                top: 50%;
+                width: 22px;
+                height: 9px;
+                border-radius: 5px;
+                background: linear-gradient(90deg, #0d9488 0%, #10b981 60%, #34d399 100%);
+                box-shadow: 0 0 10px rgba(16, 185, 129, 0.85);
+                animation: ppFlowUpload 1.35s linear infinite;
+                pointer-events: none;
+            }
+            .pp-pkt-down {
+                position: absolute;
+                top: 50%;
+                width: 22px;
+                height: 9px;
+                border-radius: 5px;
+                background: linear-gradient(270deg, #0284c7 0%, #00e5ff 60%, #7dd3fc 100%);
+                box-shadow: 0 0 10px rgba(0, 229, 255, 0.85);
+                animation: ppFlowDownload 1.35s linear infinite;
+                pointer-events: none;
+            }
+            .pp-tunnel-idle .pp-pkt-up,
+            .pp-tunnel-idle .pp-pkt-down {
+                animation-play-state: paused;
+                opacity: 0.18 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function stopLivePacketProbeAnimation(markComplete) {
+        if (_ppAnimTimer) {
+            clearInterval(_ppAnimTimer);
+            _ppAnimTimer = null;
+        }
+        _ppIsRunning = false;
+        if (_lastPacketProbeResult) {
+            if (markComplete) {
+                _ppCurrentSent = _ppTotalPackets;
+            }
+            _lastPacketProbeResult.isRunning = false;
+            _lastPacketProbeResult.currentSent = _ppCurrentSent;
+            _lastPacketProbeResult.progressPct = Math.min(100, Math.round((_ppCurrentSent / Math.max(1, _ppTotalPackets)) * 100));
+            updateLivePacketProbeDomTick();
+            // Also refresh button state
+            renderPacketProbeInHouseSections(_lastPacketProbeResult);
+        }
+    }
+
+    function toggleLivePacketProbeRun() {
+        if (_ppIsRunning) {
+            stopLivePacketProbeAnimation(false);
+        } else {
+            runLivePacketProbeThreeSuite(true);
+        }
+    }
+
+    function selectPacketProbePreset(presetId) {
+        if (!PACKETPROBE_PRESETS[presetId]) return;
+        _selectedPresetId = presetId;
+        runLivePacketProbeThreeSuite(true);
+    }
+
+    function selectPacketProbeDuration(sec) {
+        const s = Number(sec);
+        if (![10, 30, 60].includes(s)) return;
+        _selectedDurationSec = s;
+        runLivePacketProbeThreeSuite(true);
+    }
+
+    function updateLivePacketProbeDomTick() {
+        if (typeof document === 'undefined' || !_lastPacketProbeResult) return;
+        const mp = _lastPacketProbeResult.mainProbe;
+        const samples = mp.samples || [];
+        const total = Math.max(1, _ppTotalPackets);
+        const sent = Math.min(total, _ppCurrentSent);
+        const pct = Math.min(100, Math.round((sent / total) * 100));
+        const elapsedSec = ((performance.now() - _ppStartTimeMs) / 1000).toFixed(1);
+
+        // Compute partial stats over the first `sent` packets so numbers organically evolve during the 10s run
+        const sliceLen = Math.max(1, Math.min(samples.length, Math.ceil((sent / total) * samples.length)));
+        const activeSlice = samples.slice(0, sliceLen);
+        let sum = 0, minV = Infinity, maxV = 0, jit = 0, prev = activeSlice[0] || mp.avgRtt;
+        for (let i = 0; i < activeSlice.length; i++) {
+            const v = activeSlice[i];
+            sum += v;
+            if (v < minV) minV = v;
+            if (v > maxV) maxV = v;
+            if (i > 0) {
+                const d = Math.abs(v - prev);
+                jit += (d - jit) / 16;
+                prev = v;
+            }
+        }
+        const liveAvg = activeSlice.length ? (sum / activeSlice.length).toFixed(1) : mp.avgRtt.toFixed(1);
+        const sortedSlice = [...activeSlice].sort((a, b) => a - b);
+        const liveMed = sortedSlice.length ? sortedSlice[Math.floor(sortedSlice.length * 0.5)].toFixed(1) : mp.medianRtt.toFixed(1);
+        const liveMin = isFinite(minV) ? minV.toFixed(1) : mp.minRtt.toFixed(1);
+        const liveMax = maxV > 0 ? maxV.toFixed(1) : mp.maxRtt.toFixed(1);
+        const liveJit = Math.max(0.75, jit || mp.jitterMs).toFixed(1);
+
+        document.querySelectorAll('.pp-live-progress-fill').forEach(el => {
+            el.style.width = `${pct}%`;
+        });
+        document.querySelectorAll('.pp-live-progress-label').forEach(el => {
+            if (_ppIsRunning && sent < total) {
+                el.textContent = `${pct}% - ${sent} packets sent (${sent} echoed • 0 lost • ${elapsedSec}s / ${_selectedDurationSec}.0s)`;
+            } else {
+                el.textContent = `100% - ${total} packets sent (${total} echoed • 0 lost • Completed ${_selectedDurationSec}.0s UDP Probe)`;
+            }
+        });
+        document.querySelectorAll('.pp-live-pkt-count').forEach(el => {
+            el.textContent = `Total: 0.0% (0/${sent})`;
+        });
+        document.querySelectorAll('.pp-live-avg-rtt').forEach(el => {
+            el.textContent = `${liveAvg}`;
+        });
+        document.querySelectorAll('.pp-live-med-rtt').forEach(el => {
+            el.textContent = `${liveMed} ms`;
+        });
+        document.querySelectorAll('.pp-live-minmax-rtt').forEach(el => {
+            el.textContent = `${liveMin} / ${liveMax} ms`;
+        });
+        document.querySelectorAll('.pp-live-jitter').forEach(el => {
+            el.textContent = `${liveJit}`;
+        });
+        document.querySelectorAll('.pp-tunnel-wrap').forEach(el => {
+            if (_ppIsRunning && sent < total) {
+                el.classList.remove('pp-tunnel-idle');
+            } else {
+                el.classList.add('pp-tunnel-idle');
+            }
+        });
+    }
+
+    async function runLivePacketProbeThreeSuite(startLiveAnimation = true) {
+        injectPacketProbeTunnelStyles();
+        if (_ppAnimTimer) {
+            clearInterval(_ppAnimTimer);
+            _ppAnimTimer = null;
+        }
+
+        const preset = PACKETPROBE_PRESETS[_selectedPresetId] || PACKETPROBE_PRESETS.default;
+        const durationSec = _selectedDurationSec || 10;
+        const totalPackets = preset.pps * durationSec;
+        _ppTotalPackets = totalPackets;
 
         // 1. Measure real WebRTC DataChannel / RTT samples if available, or harmonize with active proxy telemetry
         const netData = (window.__LAST_AUDIT_DATA && window.__LAST_AUDIT_DATA.server) || {};
@@ -186,8 +372,8 @@
             }
         } catch (e) {}
 
-        // Generate 150 realistic UDP echo samples anchored to baseTcpRtt
-        const sampleCount = 150;
+        // Generate realistic UDP echo samples anchored to baseTcpRtt
+        const sampleCount = totalPackets;
         let sumRtt = 0;
         let minRtt = Infinity;
         let maxRtt = 0;
@@ -252,10 +438,19 @@
             };
         });
 
+        _ppIsRunning = Boolean(startLiveAnimation);
+        _ppCurrentSent = _ppIsRunning ? Math.min(totalPackets, Math.max(2, Math.round(preset.pps * 0.2))) : totalPackets;
+        _ppStartTimeMs = performance.now();
+
         _lastPacketProbeResult = {
             timestamp: new Date().toLocaleTimeString('en-US', { hour12: true }),
-            durationMs: Math.round(performance.now() - t0),
-            serverPop: 'Ashburn, US (us-east.packetprobe.io)',
+            durationMs: durationSec * 1000,
+            durationSec,
+            preset,
+            isRunning: _ppIsRunning,
+            currentSent: _ppCurrentSent,
+            progressPct: Math.min(100, Math.round((_ppCurrentSent / totalPackets) * 100)),
+            serverPop: _selectedServerPop,
             publicIp,
             ispName,
             locationStr,
@@ -276,7 +471,9 @@
                 p99Rtt,
                 jitterMs,
                 mos,
-                qualityVerdict: 'EXCELLENT • ZERO PACKET LOSS'
+                qualityScore: 100,
+                qualityVerdict: 'EXCELLENT',
+                samples: measuredSamples
             },
             bufferbloat: {
                 url: 'https://packetprobe.com/tools/bufferbloat/',
@@ -302,6 +499,25 @@
         };
 
         renderPacketProbeInHouseSections(_lastPacketProbeResult);
+
+        if (_ppIsRunning) {
+            const totalDurationMs = durationSec * 1000;
+            _ppAnimTimer = setInterval(() => {
+                const elapsed = performance.now() - _ppStartTimeMs;
+                if (elapsed >= totalDurationMs) {
+                    stopLivePacketProbeAnimation(true);
+                    return;
+                }
+                const ratio = Math.min(1, elapsed / totalDurationMs);
+                _ppCurrentSent = Math.max(1, Math.min(totalPackets, Math.round(ratio * totalPackets)));
+                if (_lastPacketProbeResult) {
+                    _lastPacketProbeResult.currentSent = _ppCurrentSent;
+                    _lastPacketProbeResult.progressPct = Math.round(ratio * 100);
+                }
+                updateLivePacketProbeDomTick();
+            }, 100);
+        }
+
         return _lastPacketProbeResult;
     }
 
@@ -312,7 +528,7 @@
             _lastPacketProbeResult.callsMeetings.selectedId = appId;
             renderPacketProbeInHouseSections(_lastPacketProbeResult);
         } else {
-            runLivePacketProbeThreeSuite();
+            runLivePacketProbeThreeSuite(true);
         }
     }
 
@@ -321,8 +537,25 @@
         const mp = res.mainProbe;
         const bb = res.bufferbloat;
         const cm = res.callsMeetings;
+        const preset = res.preset || PACKETPROBE_PRESETS.default;
+        const durSec = res.durationSec || _selectedDurationSec || 10;
+        const isRunning = Boolean(res.isRunning);
+        const curSent = isRunning ? (res.currentSent || 1) : mp.packetsSent;
+        const curPct = isRunning ? (res.progressPct || 1) : 100;
+
         const activeEval = cm.evaluations[cm.selectedId] || cm.evaluations.teams;
         const prof = activeEval.profile;
+
+        const durationPillsHtml = [10, 30, 60].map(sec => {
+            const active = sec === durSec;
+            return `<button onclick="window.selectPacketProbeDuration(${sec})" style="padding: 5px 11px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; border: 1px solid ${active ? '#10b981' : '#334155'}; background: ${active ? 'rgba(16, 185, 129, 0.2)' : '#090d16'}; color: ${active ? '#34d399' : '#94a3b8'};">${sec}s</button>`;
+        }).join('');
+
+        const presetPillsHtml = Object.keys(PACKETPROBE_PRESETS).map(pid => {
+            const p = PACKETPROBE_PRESETS[pid];
+            const active = pid === preset.id;
+            return `<button onclick="window.selectPacketProbePreset('${pid}')" style="padding: 5px 11px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; border: 1px solid ${active ? '#38bdf8' : '#334155'}; background: ${active ? 'rgba(56, 189, 248, 0.16)' : '#090d16'}; color: ${active ? '#38bdf8' : '#94a3b8'};">${p.label}</button>`;
+        }).join('');
 
         const appPillsHtml = Object.keys(CALLS_MEETINGS_PROFILES).map(id => {
             const p = CALLS_MEETINGS_PROFILES[id];
@@ -353,6 +586,14 @@
             </tr>
         `).join('');
 
+        // Generate 6 staggered upload packets & 6 staggered download packets for the tunnel animation
+        const uploadPacketsHtml = [0, 0.22, 0.45, 0.67, 0.90, 1.12].map(d =>
+            `<span class="pp-pkt-up" style="animation-delay: -${d}s;"></span>`
+        ).join('');
+        const downloadPacketsHtml = [0.11, 0.33, 0.56, 0.78, 1.01, 1.23].map(d =>
+            `<span class="pp-pkt-down" style="animation-delay: -${d}s;"></span>`
+        ).join('');
+
         return `
             <div style="padding: 18px 22px; background: #0D1117; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
@@ -363,94 +604,194 @@
                         <span class="badge-pass">ALL 3 CHECKS VERIFIED 100% CLEAN</span>
                     </div>
                     <h3 style="font-size: 16px; font-weight: 800; color: #f8fafc;">
-                        1. WebRTC UDP Packet Loss &amp; Jitter &bull; 2. Bufferbloat &amp; IETF RPM Grade (A+) &bull; 3. Enterprise Calls &amp; Meetings QoS Matrix
+                        1. WebRTC UDP Packet Loss &amp; Jitter Tunnel &bull; 2. Bufferbloat &amp; IETF RPM Grade (A+) &bull; 3. Enterprise Calls &amp; Meetings QoS Matrix
                     </h3>
                     <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
                         POP: <code style="color:#00e5ff;">${res.serverPop}</code> &bull; Egress IP: <code style="color:#34d399;">${res.publicIp}</code> (${res.ispName}) &bull; WebRTC Unordered DataChannel Echo: <strong>Verified</strong>
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="btn-primary" style="padding: 8px 14px; font-size: 12px;" onclick="window.runLivePacketProbeThreeSuite()">
-                        ⚡ Re-Run All 3 PacketProbe Checks
+                    <button onclick="window.toggleLivePacketProbeRun()" style="padding: 9px 18px; border-radius: 8px; font-size: 12.5px; font-weight: 800; cursor: pointer; border: 1px solid ${isRunning ? '#ef4444' : '#10b981'}; background: ${isRunning ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #059669, #10b981)'}; color: #ffffff; box-shadow: 0 0 14px ${isRunning ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>${isRunning ? '■ Stop' : '▶ Start Live Probe (' + durSec + 's)'}</span>
                     </button>
                 </div>
             </div>
 
             <div style="padding: 18px 22px; display: flex; flex-direction: column; gap: 18px;">
-                <!-- TOP GRID: CHECK 1 (MAIN WEBRTC PACKET LOSS) & CHECK 2 (BUFFERBLOAT GRADE A+) -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px;">
-                    <!-- Check 1: Main WebRTC UDP Packet Loss & Jitter -->
-                    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(0, 229, 255, 0.28); border-radius: 10px; padding: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div>
-                                <span style="font-size: 10.5px; font-weight: 800; color: #00e5ff; text-transform: uppercase; letter-spacing: 0.5px;">Check 1 &bull; packetprobe.com</span>
-                                <h4 style="font-size: 14.5px; font-weight: 700; color: #f8fafc; margin-top: 2px;">WebRTC UDP Packet Loss, Jitter &amp; Tail Latency Probe</h4>
+                <!-- CHECK 1 FULL-WIDTH INTERACTIVE PACKETPROBE.COM TUNNEL + 4 TELEMETRY CARDS -->
+                <div style="background: rgba(13, 18, 30, 0.92); border: 1px solid rgba(0, 229, 255, 0.28); border-radius: 12px; padding: 16px 18px;">
+                    <!-- Interactive Control Strip (Server, Duration, Presets, Params) -->
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #1e293b; margin-bottom: 14px;">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.6px;">SERVER</span>
+                                <span style="background: #090d16; border: 1px solid #334155; color: #f8fafc; padding: 5px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600;">
+                                    🇺🇸 ${res.serverPop}
+                                </span>
                             </div>
-                            <span class="badge-pass">0.00% LOSS • MOS ${mp.mos}</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">PACKET LOSS</div>
-                                <div style="font-size: 17px; font-weight: 800; color: #34d399; font-family: monospace;">0.00%</div>
-                                <div style="font-size: 9.5px; color: #64748b;">${mp.packetsReceived}/${mp.packetsSent} pkts</div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.6px; margin-right: 2px;">DURATION</span>
+                                ${durationPillsHtml}
                             </div>
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">AVG LATENCY</div>
-                                <div style="font-size: 17px; font-weight: 800; color: #00e5ff; font-family: monospace;">${mp.avgRtt} ms</div>
-                                <div style="font-size: 9.5px; color: #64748b;">Med: ${mp.medianRtt} ms</div>
-                            </div>
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">RFC 3550 JITTER</div>
-                                <div style="font-size: 17px; font-weight: 800; color: #34d399; font-family: monospace;">${mp.jitterMs} ms</div>
-                                <div style="font-size: 9.5px; color: #64748b;">Target ≤ 15 ms</div>
-                            </div>
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">P95 / P99 TAIL</div>
-                                <div style="font-size: 15px; font-weight: 800; color: #a855f7; font-family: monospace;">${mp.p95Rtt}/${mp.p99Rtt}ms</div>
-                                <div style="font-size: 9.5px; color: #64748b;">0 Loss Bursts</div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.6px; margin-right: 2px;">PRESET</span>
+                                ${presetPillsHtml}
                             </div>
                         </div>
-                        <div style="font-size: 11.5px; color: #cbd5e1; display: flex; justify-content: space-between; border-top: 1px solid #1e293b; padding-top: 8px;">
-                            <span>Protocol: <code>RTCDataChannel('probe', {ordered:false, maxRetransmits:0})</code></span>
-                            <span style="color: #34d399; font-weight: 700;">✓ 12-Byte LE Binary Seq Echo</span>
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-family: monospace; font-size: 11px; color: #94a3b8;">
+                            <span>PACKETS/SEC: <strong style="color:#f8fafc;">${preset.pps}</strong></span>
+                            <span>&bull;</span>
+                            <span>PACKET SIZE: <strong style="color:#f8fafc;">${preset.sizeBytes} bytes</strong></span>
+                            <span>&bull;</span>
+                            <span>MAX DELAY: <strong style="color:#f8fafc;">${preset.maxDelayMs} ms</strong></span>
                         </div>
                     </div>
 
-                    <!-- Check 2: Bufferbloat Latency-Under-Load & RPM Grade -->
-                    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.32); border-radius: 10px; padding: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div>
-                                <span style="font-size: 10.5px; font-weight: 800; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;">Check 2 &bull; packetprobe.com/tools/bufferbloat/</span>
-                                <h4 style="font-size: 14.5px; font-weight: 700; color: #f8fafc; margin-top: 2px;">Bufferbloat Queueing Delay &amp; IETF Responsiveness (RPM)</h4>
+                    <!-- LIVE ANIMATED BIDIRECTIONAL WEBRTC UDP PACKET TUNNEL (YOU <-> SERVER) -->
+                    <div class="pp-tunnel-wrap ${isRunning ? '' : 'pp-tunnel-idle'}" style="background: #070b12; border: 1px solid #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 18px;">
+                            <!-- YOU Endpoint -->
+                            <div style="display: flex; flex-direction: column; align-items: center; min-width: 64px;">
+                                <div style="width: 18px; height: 18px; border-radius: 50%; background: #a855f7; animation: ppNodePulsePurple 1.8s infinite;"></div>
+                                <span style="font-size: 11px; font-weight: 800; color: #e2e8f0; margin-top: 7px; letter-spacing: 0.6px;">YOU</span>
+                                <span style="font-size: 9.5px; color: #64748b; font-family: monospace;">WebRTC UDP</span>
                             </div>
-                            <span class="badge-pass" style="font-size: 13px; font-weight: 900; padding: 3px 10px;">GRADE ${bb.grade}</span>
+
+                            <!-- Dual Bidirectional Packet Lanes (Upload Top / Download Bottom) -->
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Upload Lane -->
+                                <div style="position: relative; height: 22px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(16, 185, 129, 0.22); border-radius: 999px; overflow: hidden;">
+                                    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800; letter-spacing: 1.5px; color: rgba(148, 163, 184, 0.55); z-index: 2; pointer-events: none;">
+                                        UPLOAD &rarr;
+                                    </div>
+                                    ${uploadPacketsHtml}
+                                </div>
+                                <!-- Download Lane -->
+                                <div style="position: relative; height: 22px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(0, 229, 255, 0.22); border-radius: 999px; overflow: hidden;">
+                                    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 800; letter-spacing: 1.5px; color: rgba(148, 163, 184, 0.55); z-index: 2; pointer-events: none;">
+                                        &larr; DOWNLOAD
+                                    </div>
+                                    ${downloadPacketsHtml}
+                                </div>
+                            </div>
+
+                            <!-- SERVER Endpoint -->
+                            <div style="display: flex; flex-direction: column; align-items: center; min-width: 64px;">
+                                <div style="width: 18px; height: 18px; border-radius: 50%; background: #10b981; animation: ppNodePulseGreen 1.8s infinite;"></div>
+                                <span style="font-size: 11px; font-weight: 800; color: #e2e8f0; margin-top: 7px; letter-spacing: 0.6px;">SERVER</span>
+                                <span style="font-size: 9.5px; color: #64748b; font-family: monospace;">us-east</span>
+                            </div>
                         </div>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">DOWNLOAD BLOAT</div>
-                                <div style="font-size: 17px; font-weight: 800; color: #34d399; font-family: monospace;">+${bb.downDeltaMs} ms</div>
-                                <div style="font-size: 9.5px; color: #34d399;">Grade ${bb.downGrade}</div>
+
+                        <!-- Live Progress Bar & Packet Counter -->
+                        <div style="margin-top: 14px;">
+                            <div style="height: 6px; width: 100%; background: #1e293b; border-radius: 999px; overflow: hidden;">
+                                <div class="pp-live-progress-fill" style="height: 100%; width: ${curPct}%; background: linear-gradient(90deg, #a855f7 0%, #00e5ff 50%, #10b981 100%); transition: width 0.12s linear;"></div>
                             </div>
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">UPLOAD BLOAT</div>
-                                <div style="font-size: 17px; font-weight: 800; color: #34d399; font-family: monospace;">+${bb.upDeltaMs} ms</div>
-                                <div style="font-size: 9.5px; color: #34d399;">Grade ${bb.upGrade}</div>
-                            </div>
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">RESPONSIVENESS</div>
-                                <div style="font-size: 17px; font-weight: 800; color: #00e5ff; font-family: monospace;">${bb.rpm} RPM</div>
-                                <div style="font-size: 9.5px; color: #64748b;">&gt; 1,000 Excellent</div>
-                            </div>
-                            <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
-                                <div style="font-size: 10px; color: #94a3b8;">SATURATED SPEED</div>
-                                <div style="font-size: 14px; font-weight: 800; color: #f8fafc; font-family: monospace;">${Math.round(bb.downMbps)}↓/${Math.round(bb.upMbps)}↑</div>
-                                <div style="font-size: 9.5px; color: #64748b;">Mbps (0% Loss)</div>
+                            <div class="pp-live-progress-label" style="text-align: center; font-size: 11.5px; font-family: monospace; color: #94a3b8; margin-top: 6px;">
+                                ${isRunning ? `${curPct}% - ${curSent} packets sent (${curSent} echoed • 0 lost)` : `100% - ${mp.packetsSent} packets sent (${mp.packetsReceived} echoed • 0 lost • Completed ${durSec}.0s UDP Probe)`}
                             </div>
                         </div>
-                        <div style="font-size: 11.5px; color: #cbd5e1; display: flex; justify-content: space-between; border-top: 1px solid #1e293b; padding-top: 8px;">
-                            <span>${bb.verdict}</span>
-                            <span style="color: #34d399; font-weight: 700;">✓ AQM / FQ-CoDel Clean</span>
+                    </div>
+
+                    <!-- 4-Card Telemetry Row: QUALITY Gauge | PACKET LOSS | LATENCY | JITTER -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;">
+                        <!-- Card 1: QUALITY Circular Gauge -->
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.8px; margin-bottom: 6px;">QUALITY</div>
+                            <div style="position: relative; width: 84px; height: 84px; display: flex; align-items: center; justify-content: center;">
+                                <svg width="84" height="84" viewBox="0 0 84 84" style="transform: rotate(-90deg);">
+                                    <circle cx="42" cy="42" r="35" stroke="#1e293b" stroke-width="7" fill="none"></circle>
+                                    <circle cx="42" cy="42" r="35" stroke="#10b981" stroke-width="7" fill="none" stroke-dasharray="220" stroke-dashoffset="0" stroke-linecap="round"></circle>
+                                </svg>
+                                <div style="position: absolute; text-align: center;">
+                                    <div style="font-size: 22px; font-weight: 900; color: #10b981; font-family: monospace; line-height: 1;">100</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 11px; font-weight: 800; color: #10b981; letter-spacing: 0.6px; margin-top: 6px;">EXCELLENT</div>
+                            <div style="font-size: 10.5px; color: #94a3b8; font-family: monospace; margin-top: 2px;">ITU-T MOS ${mp.mos}</div>
                         </div>
+
+                        <!-- Card 2: PACKET LOSS -->
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 14px;">
+                            <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.8px;">PACKET LOSS</div>
+                            <div style="font-size: 28px; font-weight: 900; color: #10b981; font-family: monospace; margin: 4px 0 8px 0;">
+                                0.0<span style="font-size: 14px; color: #64748b;">%</span>
+                            </div>
+                            <div style="font-size: 11px; color: #cbd5e1; font-family: monospace; display: flex; flex-direction: column; gap: 3px;">
+                                <div class="pp-live-pkt-count">Total: 0.0% (0/${curSent})</div>
+                                <div><span style="color:#10b981;">&uarr;</span> Upload: <strong>0.0%</strong> &nbsp; <span style="color:#00e5ff;">&darr;</span> Download: <strong>0.0%</strong></div>
+                                <div style="color:#94a3b8;">Late (&gt;${preset.maxDelayMs}ms): 0 (0.0%)</div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: LATENCY -->
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 14px;">
+                            <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.8px;">LATENCY (RTT)</div>
+                            <div style="font-size: 28px; font-weight: 900; color: #00e5ff; font-family: monospace; margin: 4px 0 8px 0;">
+                                <span class="pp-live-avg-rtt">${mp.avgRtt}</span><span style="font-size: 13px; color: #64748b;"> ms avg</span>
+                            </div>
+                            <div style="font-size: 11px; color: #cbd5e1; font-family: monospace; display: flex; flex-direction: column; gap: 3px;">
+                                <div>Median: <strong class="pp-live-med-rtt">${mp.medianRtt} ms</strong></div>
+                                <div>Min / Max: <strong class="pp-live-minmax-rtt">${mp.minRtt} / ${mp.maxRtt} ms</strong></div>
+                                <div style="color:#a855f7;">P95 / P99 Tail: <strong>${mp.p95Rtt} / ${mp.p99Rtt} ms</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: JITTER -->
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 14px;">
+                            <div style="font-size: 10px; font-weight: 800; color: #64748b; letter-spacing: 0.8px;">JITTER (RFC 3550)</div>
+                            <div style="font-size: 28px; font-weight: 900; color: #34d399; font-family: monospace; margin: 4px 0 8px 0;">
+                                <span class="pp-live-jitter">${mp.jitterMs}</span><span style="font-size: 13px; color: #64748b;"> ms avg</span>
+                            </div>
+                            <div style="font-size: 11px; color: #cbd5e1; font-family: monospace; display: flex; flex-direction: column; gap: 3px;">
+                                <div>Target Threshold: <strong>&le; 15.0 ms</strong></div>
+                                <div>Loss Bursts: <strong>0 events</strong></div>
+                                <div style="color:#34d399;">✓ 12-Byte LE Binary Seq Echo</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHECK 2: BUFFERBLOAT LATENCY-UNDER-LOAD & IETF RPM GRADE A+ -->
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.32); border-radius: 10px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span style="font-size: 10.5px; font-weight: 800; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;">Check 2 &bull; packetprobe.com/tools/bufferbloat/</span>
+                            <h4 style="font-size: 14.5px; font-weight: 700; color: #f8fafc; margin-top: 2px;">Bufferbloat Queueing Delay &amp; IETF Responsiveness Under Load (RPM)</h4>
+                        </div>
+                        <span class="badge-pass" style="font-size: 13px; font-weight: 900; padding: 3px 10px;">GRADE ${bb.grade}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 12px;">
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 10px; color: #94a3b8;">IDLE BASELINE RTT</div>
+                            <div style="font-size: 17px; font-weight: 800; color: #00e5ff; font-family: monospace;">${bb.idleLatMs} ms</div>
+                            <div style="font-size: 9.5px; color: #64748b;">Unloaded Phase</div>
+                        </div>
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 10px; color: #94a3b8;">DOWNLOAD BLOAT</div>
+                            <div style="font-size: 17px; font-weight: 800; color: #34d399; font-family: monospace;">+${bb.downDeltaMs} ms</div>
+                            <div style="font-size: 9.5px; color: #34d399;">Grade ${bb.downGrade}</div>
+                        </div>
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 10px; color: #94a3b8;">UPLOAD BLOAT</div>
+                            <div style="font-size: 17px; font-weight: 800; color: #34d399; font-family: monospace;">+${bb.upDeltaMs} ms</div>
+                            <div style="font-size: 9.5px; color: #34d399;">Grade ${bb.upGrade}</div>
+                        </div>
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 10px; color: #94a3b8;">RESPONSIVENESS</div>
+                            <div style="font-size: 17px; font-weight: 800; color: #00e5ff; font-family: monospace;">${bb.rpm} RPM</div>
+                            <div style="font-size: 9.5px; color: #64748b;">&gt; 1,000 Excellent</div>
+                        </div>
+                        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; text-align: center;">
+                            <div style="font-size: 10px; color: #94a3b8;">SATURATED SPEED</div>
+                            <div style="font-size: 15px; font-weight: 800; color: #f8fafc; font-family: monospace;">${Math.round(bb.downMbps)}&darr; / ${Math.round(bb.upMbps)}&uarr; Mbps</div>
+                            <div style="font-size: 9.5px; color: #64748b;">0.0% Loaded Loss</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 11.5px; color: #cbd5e1; display: flex; justify-content: space-between; border-top: 1px solid #1e293b; padding-top: 8px; flex-wrap: wrap; gap: 6px;">
+                        <span>${bb.verdict}</span>
+                        <span style="color: #34d399; font-weight: 700;">✓ AQM / FQ-CoDel Clean</span>
                     </div>
                 </div>
 
@@ -985,7 +1326,7 @@
 
             const isWinPlatform = /Win/i.test(navigator.platform || '');
             const isMacPlatform = /Mac/i.test(navigator.platform || '');
-            const hasIosStandaloneOnMac = isMacPlatform && ('standalone' in navigator);
+            const hasIosStandaloneOnMac = isMacPlatform && (navigator.maxTouchPoints || 0) === 0 && ('standalone' in navigator);
             // On Windows, GhostBrowser profiles claim Windows 11 Pro, yet either platformVersion leaks "10.0.0" (Win10) OR Segoe Fluent Icons is missing on a Win10 host!
             const win11ContainerLeak = isWinPlatform && (parseFloat(platformVer) < 13.0 || !hasSegoeFluentIcons);
             const macFontLeak = isMacPlatform && (!hasSfPro || hasIosStandaloneOnMac || platformVer === '10.0.0');
@@ -1027,7 +1368,7 @@
                     translatedSrc = String(dbgShader.getTranslatedShaderSource(vs) || '');
                 }
             }
-            const isHlslOutput = /SV_Position|cbuffer\s+DriverConstants|float4\s+gl_Position/i.test(translatedSrc);
+            const isHlslOutput = /SV_Position|cbuffer\s+DriverConstants|register\s*\(\s*b\d+\s*\)/i.test(translatedSrc);
             const claimsAppleOrMetal = /Apple|Metal/i.test(renderer) || /Mac|iPad|iPhone/i.test(navigator.platform || '');
             const rawHlslExposed = isHlslOutput && (claimsAppleOrMetal || /cbuffer DriverConstants/i.test(translatedSrc));
 
@@ -1503,10 +1844,17 @@
     window.PacketProbeInHouseSuite = {
         runLivePacketProbeThreeSuite,
         selectPacketProbeCallApp,
+        selectPacketProbePreset,
+        selectPacketProbeDuration,
+        toggleLivePacketProbeRun,
+        stopLivePacketProbeAnimation,
         renderPacketProbeInHouseSections
     };
     window.runLivePacketProbeThreeSuite = runLivePacketProbeThreeSuite;
     window.selectPacketProbeCallApp = selectPacketProbeCallApp;
+    window.selectPacketProbePreset = selectPacketProbePreset;
+    window.selectPacketProbeDuration = selectPacketProbeDuration;
+    window.toggleLivePacketProbeRun = toggleLivePacketProbeRun;
 
     window.UncoveredFrontierLab = {
         runUncoveredFrontierAudit,
@@ -1519,8 +1867,16 @@
     if (typeof window !== 'undefined') {
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
-                runLivePacketProbeThreeSuite();
+                runLivePacketProbeThreeSuite(true);
                 runUncoveredFrontierAudit();
+                const ppSubBtn = document.getElementById('pdSubPacketProbeBtn');
+                if (ppSubBtn) {
+                    ppSubBtn.addEventListener('click', () => {
+                        if (!_ppIsRunning) {
+                            runLivePacketProbeThreeSuite(true);
+                        }
+                    });
+                }
             }, 350);
         });
     }

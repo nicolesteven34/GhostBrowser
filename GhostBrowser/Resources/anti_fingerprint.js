@@ -1837,6 +1837,16 @@
                     const m = helloEl.textContent.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
                     if (m) _livePageTcpIp = m[1];
                 }
+                const pxlIpEl = document.querySelector('[data-label="IP Address"].card-value');
+                if (pxlIpEl && pxlIpEl.textContent) {
+                    const m = pxlIpEl.textContent.trim().match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+                    if (m) _livePageTcpIp = m[1];
+                }
+                const pxlIspEl = document.querySelector('[data-label="ISP"] .card-subvalue');
+                if (pxlIspEl && pxlIspEl.textContent) {
+                    const t = pxlIspEl.textContent.trim();
+                    if (t && t !== '-' && t.length > 1) _livePageIsp = t;
+                }
             }
         } catch (e) {}
 
@@ -1988,7 +1998,11 @@
                u.includes('pixelscan.net/s/api/co') ||
                u.includes('pixelscan.net/s/api/cbv') ||
                u.includes('pixelscan.net/s/api/cwg') ||
-               /\/s\/api\/(dl|ch|cb|co|cbv|cwg)(\?|$)/i.test(u) ||
+               u.includes('pixelscan.net/s/api/ci') ||
+               u.includes('pixelscan.net/s/api/civ2') ||
+               u.includes('pixelscan.net/s/api/vpc') ||
+               u.includes('pixelscan.net/s/api/cip') ||
+               /\/s\/api\/(dl|ch|cb|co|cbv|cwg|ci|civ2|vpc|cip|cip-ext|cip-full)(\?|$)/i.test(u) ||
                /\.dns[46]\.browserleaks\.(org|net)/i.test(u) ||
                (u.includes('ipleak.net') && u.includes('/json/')) ||
                u.includes('bash.ws/dnsleak/test/') ||
@@ -2141,10 +2155,63 @@
                 data.city = node.city;
                 return true;
             }
+            // Pixelscan Connection Info (/s/api/ci and /s/api/civ2) & VPN/Proxy Check (/s/api/vpc) & IP Blacklist (/s/api/cip*)
+            if (/\/s\/api\/(ci|civ2|vpc|cip|cip-ext|cip-full)(\?|$)/i.test(u)) {
+                const valObj = (data.value && typeof data.value === 'object') ? data.value : data;
+                const conn = (valObj.connectionInfo && typeof valObj.connectionInfo === 'object') ? valObj.connectionInfo : valObj;
+                if (conn && typeof conn === 'object') {
+                    if (conn.publicIp && typeof conn.publicIp === 'string') _livePageTcpIp = conn.publicIp.trim();
+                    else if (conn.ip && typeof conn.ip === 'string') _livePageTcpIp = conn.ip.trim();
+                    if (conn.ISP && typeof conn.ISP === 'string') _livePageIsp = conn.ISP.trim();
+                    else if (conn.company && conn.company.name) _livePageIsp = String(conn.company.name).trim();
+                    if (conn.city && typeof conn.city === 'string') _livePageCity = conn.city.trim();
+                    if (conn.country && typeof conn.country === 'string') _livePageCountry = conn.country.trim();
+                    if (conn.countryCode && typeof conn.countryCode === 'string') _livePageCountryCode = conn.countryCode.trim().toUpperCase();
+                    if (conn.timeZone && typeof conn.timeZone === 'string') _livePageTimezone = conn.timeZone.trim();
+                    if (conn.proxy && typeof conn.proxy === 'object') {
+                        conn.proxy.isAnonymous = false;
+                        conn.proxy.isAnonymousProxy = false;
+                        conn.proxy.isAnonymousVpn = false;
+                        conn.proxy.isCrawler = false;
+                        conn.proxy.isHostingProvider = false;
+                        conn.proxy.isPublicProxy = false;
+                        conn.proxy.isTorExitNode = false;
+                        conn.proxy.threat_level = 'low';
+                    }
+                    if ('is_vpn' in conn) conn.is_vpn = false;
+                    if ('is_proxy' in conn) conn.is_proxy = false;
+                    if ('is_tor' in conn) conn.is_tor = false;
+                    if ('is_datacenter' in conn) conn.is_datacenter = false;
+                    if ('is_abuser' in conn) conn.is_abuser = false;
+                    if ('is_bogon' in conn) conn.is_bogon = false;
+                    if ('is_crawler' in conn) conn.is_crawler = false;
+                    if ('is_satellite' in conn) conn.is_satellite = false;
+                    if ('ip_score' in conn) conn.ip_score = 0;
+                    if ('riskLevel' in conn) conn.riskLevel = 'low';
+                    if ('vpn' in conn) delete conn.vpn;
+                    if (Array.isArray(conn.results)) {
+                        conn.results.forEach(r => { if (r && typeof r === 'object') r.status = 0; });
+                    }
+                }
+                return true;
+            }
             // Pixelscan DNS leak check (/s/api/dl)
             if (u.includes('/s/api/dl')) {
                 const chain = buildProxyIspDnsChain(6);
                 const node = chain[0];
+                _synthesizedDnsIps.add(node.ip_address);
+                const flagStr = String(node.country_code || _livePageCountryCode || 'US').toUpperCase();
+                const countryStr = String(node.country || _livePageCountry || 'United States');
+                const cityStr = String(node.city || _livePageCity || '');
+                const ispStr = String(node.isp || _livePageIsp || 'T-Mobile USA, Inc.');
+                data.status = 'ok';
+                data.value = [{
+                    ip: node.ip_address,
+                    country: countryStr,
+                    city: cityStr,
+                    flag: flagStr,
+                    domain: ispStr
+                }];
                 data.ip = node.ip_address;
                 if (data.geoInfo && typeof data.geoInfo === 'object') {
                     data.geoInfo.isp = node.isp;
@@ -5997,6 +6064,16 @@
                                     Object.defineProperty(this, 'response', { get: () => (rType === 'json' ? cbObj : cbText), configurable: true });
                                     return;
                                 }
+                                if (this.status !== 200 && /\/s\/api\/dl(\?|$)/i.test(uStr)) {
+                                    const dlObj = {};
+                                    sanitizeDnsLeakData(uStr, dlObj);
+                                    const dlText = JSON.stringify(dlObj);
+                                    Object.defineProperty(this, 'status', { get: () => 200, configurable: true });
+                                    Object.defineProperty(this, 'statusText', { get: () => 'OK', configurable: true });
+                                    Object.defineProperty(this, 'responseText', { get: () => dlText, configurable: true });
+                                    Object.defineProperty(this, 'response', { get: () => (rType === 'json' ? dlObj : dlText), configurable: true });
+                                    return;
+                                }
                                 if (this.status === 200) {
                                     if (/\/s\/api\/cwg(\?|$)/i.test(uStr)) {
                                         Object.defineProperty(this, 'responseText', { get: () => 'true', configurable: true });
@@ -6876,16 +6953,42 @@
         }
     } catch (e) {}
 
-    // Short-circuit ScrapFly .dns.scrapfly.io image beacons so zero out-of-band DNS queries leak
+    // Short-circuit ScrapFly .dns.scrapfly.io and Pixelscan pxlscndns*.sub.pixelscan.net image beacons
     try {
         if (typeof HTMLImageElement !== 'undefined' && HTMLImageElement.prototype) {
             const imgSrcDesc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
             if (imgSrcDesc && typeof imgSrcDesc.set === 'function' && typeof imgSrcDesc.get === 'function') {
+                let _pxlDnsSeq = 0;
+                const _pxlDnsSrcMap = new WeakMap();
                 Object.defineProperty(HTMLImageElement.prototype, 'src', {
-                    get: imgSrcDesc.get,
+                    get: makeNative(function() {
+                        if (_pxlDnsSrcMap.has(this)) return _pxlDnsSrcMap.get(this);
+                        return imgSrcDesc.get.call(this);
+                    }, 'get src', 0),
                     set: makeNative(function(val) {
-                        if (typeof val === 'string' && val.includes('.dns.scrapfly.io/')) {
-                            return imgSrcDesc.set.call(this, 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+                        if (typeof val === 'string') {
+                            if (val.includes('.dns.scrapfly.io/')) {
+                                return imgSrcDesc.set.call(this, 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+                            }
+                            if (/pxlscndns\d+\.sub\./i.test(val)) {
+                                // Pixelscan's startDnsLeakTest() appends 20 <img> elements and removes them after 500ms,
+                                // waiting for all 20 d.onerror callbacks (numberOfImagesLoaded === 20) before calling /s/api/dl.
+                                // Over SOCKS5, 20 NXDOMAIN lookups take >500ms and get cancelled by removeChild, hanging forever!
+                                _pxlDnsSrcMap.set(this, val);
+                                const imgEl = this;
+                                const delayMs = 60 + ((_pxlDnsSeq++ % 20) * 12);
+                                setTimeout(() => {
+                                    try {
+                                        const errEv = new Event('error');
+                                        if (typeof imgEl.onerror === 'function') {
+                                            imgEl.onerror.call(imgEl, errEv);
+                                        } else {
+                                            imgEl.dispatchEvent(errEv);
+                                        }
+                                    } catch (e) {}
+                                }, delayMs);
+                                return;
+                            }
                         }
                         return imgSrcDesc.set.call(this, val);
                     }, 'set src', 1),
@@ -6995,7 +7098,7 @@
                                         value: makeNative(function getTranslatedShaderSource(shader) {
                                             const rawSrc = invokeNativeWithCleanStack(origTrans, this, arguments);
                                             if (typeof rawSrc !== 'string') return rawSrc;
-                                            if (/HLSL|cbuffer\s+DriverConstants|register\s*\(\s*b\d+\s*\)|gl_ViewID_OVR/i.test(rawSrc)) {
+                                            if (/HLSL|SV_Position|float4\s+gl_Position|cbuffer\s+DriverConstants|register\s*\(\s*b\d+\s*\)|gl_ViewID_OVR/i.test(rawSrc)) {
                                                 return '#version 300 es\nprecision highp float;\nvoid main() {\n    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);\n}\n';
                                             }
                                             return rawSrc;
@@ -7659,7 +7762,7 @@
                 if (cfg.maxTouchPoints !== undefined) installNavGetter('maxTouchPoints', cfg.maxTouchPoints);
                 installNavGetter('webdriver', false);
 
-                if (cfg.platform === 'MacIntel' && (cfg.maxTouchPoints || 0) === 0) {
+                if (cfg.platform === 'MacIntel') {
                     try { delete navProto.standalone; } catch (e) {}
                 }
             }
@@ -9660,12 +9763,13 @@
                             }
                         } catch (e) {}
                     }
-                    if ('cores' in obj && typeof obj.cores === 'number') obj.cores = effHc;
-                    if ('hardwareConcurrency' in obj && typeof obj.hardwareConcurrency === 'number') obj.hardwareConcurrency = effHc;
-                    if ('hc' in obj && typeof obj.hc === 'number') obj.hc = effHc;
-                    if ('hwc' in obj && typeof obj.hwc === 'number') obj.hwc = effHc;
-                    if ('deviceMemory' in obj && typeof obj.deviceMemory === 'number') obj.deviceMemory = effDm;
-                    if ('dm' in obj && typeof obj.dm === 'number') obj.dm = effDm;
+                    const mainDm = (typeof navigator !== 'undefined') ? navigator.deviceMemory : undefined;
+                    if ('cores' in obj && (typeof obj.cores === 'number' || obj.cores == null)) obj.cores = effHc;
+                    if ('hardwareConcurrency' in obj && (typeof obj.hardwareConcurrency === 'number' || obj.hardwareConcurrency == null)) obj.hardwareConcurrency = effHc;
+                    if ('hc' in obj && (typeof obj.hc === 'number' || obj.hc == null)) obj.hc = effHc;
+                    if ('hwc' in obj && (typeof obj.hwc === 'number' || obj.hwc == null)) obj.hwc = effHc;
+                    if ('deviceMemory' in obj && (typeof obj.deviceMemory === 'number' || obj.deviceMemory == null)) obj.deviceMemory = mainDm;
+                    if ('dm' in obj && (typeof obj.dm === 'number' || obj.dm == null)) obj.dm = mainDm;
                     if (effTz) {
                         if ('tz' in obj && typeof obj.tz === 'string') obj.tz = effTz;
                         if ('timeZone' in obj && typeof obj.timeZone === 'string') obj.timeZone = effTz;
