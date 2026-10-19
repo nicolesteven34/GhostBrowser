@@ -5767,6 +5767,9 @@
                         };
                         const fetchPromise = nativeFetch.apply(this, arguments).then(async (response) => {
                             try {
+                                if (response && response.status === 401) {
+                                    return response;
+                                }
                                 const clone = response.clone();
                                 const text = await clone.text();
                                 let data = {};
@@ -5795,12 +5798,13 @@
                             u.includes('/api/canvasfp-challenge') || u.includes('/api/canvasfp-finalize') ||
                             u.includes('/api/canvas-fingerprint') || u.includes('/fp/v7/challenge') ||
                             u.includes('/fp/v7/verify') || u.includes('/api/fpint-v7/status')) {
-                            const raceMs = u.includes('/api/nonce') ? 2500
-                                : ((u.includes('/api/gpu-nonce') || u.includes('/api/cpu-fingerprint')) ? 2500
-                                : (u.includes('/api/gpu-fingerprint') ? 2800
-                                : ((u.includes('/api/monitor-fingerprint') || u.includes('/api/fingerprint') || u.includes('/api/bfp-finalize') || u.includes('/api/antispoof-results')) ? 3000
-                                : (u.includes('/api/canvas-fingerprint') ? 3200
-                                : (u.includes('/api/canvasfp-challenge') ? 3200 : 3500)))));
+                            const raceMs = u.includes('/api/nonce') ? 5500
+                                : ((u.includes('/api/gpu-nonce') || u.includes('/api/cpu-fingerprint')) ? 3500
+                                : (u.includes('/api/gpu-fingerprint') ? 3800
+                                : (u.includes('/api/bfp-finalize') ? 6500
+                                : ((u.includes('/api/monitor-fingerprint') || u.includes('/api/fingerprint') || u.includes('/api/antispoof-results')) ? 4000
+                                : (u.includes('/api/canvas-fingerprint') ? 4000
+                                : (u.includes('/api/canvasfp-challenge') ? 4000 : 4500))))));
                             return Promise.race([
                                 fetchPromise,
                                 new Promise((resolve) => {
@@ -9453,24 +9457,33 @@
                                 return mockStatus;
                             });
                         }
+                        const pName = (desc && typeof desc.name === 'string') ? desc.name : '';
+                        const isWebKitStdPerm = (pName === 'notifications' || pName === 'camera' || pName === 'microphone');
                         try {
-                            return origQuery.apply(this, arguments).catch(() => {
+                            const p = origQuery.apply(this, arguments);
+                            if (isWebKitStdPerm && p && typeof p.catch === 'function') {
+                                return p.catch(() => {
+                                    const mockStatus = Object.create(
+                                        (typeof PermissionStatus !== 'undefined' && PermissionStatus.prototype)
+                                            ? PermissionStatus.prototype
+                                            : Object.prototype
+                                    );
+                                    _permStateOverrides.set(mockStatus, 'prompt');
+                                    return mockStatus;
+                                });
+                            }
+                            return p;
+                        } catch (e) {
+                            if (isWebKitStdPerm) {
                                 const mockStatus = Object.create(
                                     (typeof PermissionStatus !== 'undefined' && PermissionStatus.prototype)
                                         ? PermissionStatus.prototype
                                         : Object.prototype
                                 );
                                 _permStateOverrides.set(mockStatus, 'prompt');
-                                return mockStatus;
-                            });
-                        } catch (e) {
-                            const mockStatus = Object.create(
-                                (typeof PermissionStatus !== 'undefined' && PermissionStatus.prototype)
-                                    ? PermissionStatus.prototype
-                                    : Object.prototype
-                            );
-                            _permStateOverrides.set(mockStatus, 'prompt');
-                            return Promise.resolve(mockStatus);
+                                return Promise.resolve(mockStatus);
+                            }
+                            return Promise.reject(e);
                         }
                     }, 'query', 1),
                     writable: true,
