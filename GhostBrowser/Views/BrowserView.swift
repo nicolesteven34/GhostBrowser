@@ -332,6 +332,9 @@ public struct BrowserView: UIViewRepresentable {
         private var forwardObservation: NSKeyValueObservation?
         private var titleObservation: NSKeyValueObservation?
         private var notificationTokens: [NSObjectProtocol] = []
+        var lastNavigationFailed: Bool = false
+        var lastAutoRetryDate: Date = .distantPast
+        var wasLoadingOnBackground: Bool = false
 
         init(_ parent: BrowserView) {
             self.parent = parent
@@ -400,7 +403,7 @@ public struct BrowserView: UIViewRepresentable {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                self?.reloadCurrentPage()
+                self?.reloadCurrentPage(userInitiated: true)
             }
             notificationTokens.append(reloadToken)
             
@@ -425,11 +428,28 @@ public struct BrowserView: UIViewRepresentable {
                 queue: .main
             ) { [weak self] _ in
                 guard let self = self, let wv = self.webView else { return }
+                self.wasLoadingOnBackground = wv.isLoading
                 if !self.parent.privacyProfile.ephemeralRAMMode {
                     ProfileManager.shared.backupCookies(for: self.parent.privacyProfile.sessionDataStoreID, from: wv.configuration.websiteDataStore.httpCookieStore)
                 }
             }
             notificationTokens.append(bgToken)
+
+            let fgToken = NotificationCenter.default.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self = self, let wv = self.webView else { return }
+                let shouldReload = self.wasLoadingOnBackground || self.lastNavigationFailed || (wv.url == nil && self.currentLoadedURL != nil && self.currentLoadedURL != "local://startpage")
+                self.wasLoadingOnBackground = false
+                if shouldReload {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                        self?.reloadCurrentPage(userInitiated: false)
+                    }
+                }
+            }
+            notificationTokens.append(fgToken)
         }
 
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -685,9 +705,22 @@ public struct BrowserView: UIViewRepresentable {
             decisionHandler(.allow, preferences)
         }
 
-        public func reloadCurrentPage() {
+        public func reloadCurrentPage(userInitiated: Bool = false) {
             guard let webView = self.webView else { return }
-            ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: parent.privacyProfile)
+
+            if userInitiated {
+                if webView.isLoading {
+                    webView.stopLoading()
+                }
+                if lastNavigationFailed {
+                    lastNavigationFailed = false
+                    ProxyService.shared.forceRestartBridge(for: parent.privacyProfile)
+                } else {
+                    ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: parent.privacyProfile)
+                }
+            } else {
+                ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: parent.privacyProfile)
+            }
 
             let target = (currentLoadedURL?.isEmpty == false ? currentLoadedURL : parent.currentURLString) ?? ""
             if target == "local://startpage" || target.isEmpty {
@@ -699,7 +732,8 @@ public struct BrowserView: UIViewRepresentable {
                 loadLocalDetectPage()
                 return
             }
-            if let liveUrl = webView.url?.absoluteString,
+            if !userInitiated,
+               let liveUrl = webView.url?.absoluteString,
                !liveUrl.isEmpty,
                liveUrl != "about:blank",
                !liveUrl.contains("startpage.html") {
@@ -734,6 +768,7 @@ public struct BrowserView: UIViewRepresentable {
 
         public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.isLoading = false
+            lastNavigationFailed = false
             if let url = webView.url?.absoluteString {
                 if url.hasPrefix("file://") && (url.contains("DetectionSuite") || url.hasSuffix("/index.html")) {
                     currentLoadedURL = "ghost://detect"
@@ -763,12 +798,34 @@ public struct BrowserView: UIViewRepresentable {
 
         public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             parent.isLoading = false
-            print("[BrowserView] Provisional navigation failed: \(error.localizedDescription)")
+            let nsErr = error as NSError
+            if nsErr.domain == NSURLErrorDomain && nsErr.code == NSURLErrorCancelled {
+                return
+            }
+            lastNavigationFailed = true
+            print("[BrowserView] Provisional navigation failed (\(nsErr.domain) \(nsErr.code)): \(error.localizedDescription)")
+
+            // Auto-heal once if a stale post-background socket or bridge port caused the navigation failure
+            if Date().timeIntervalSince(lastAutoRetryDate) > 6.0 {
+                lastAutoRetryDate = Date()
+                ProxyService.shared.forceRestartBridge(for: parent.privacyProfile)
+                let retryTarget = (currentLoadedURL?.isEmpty == false ? currentLoadedURL : parent.currentURLString) ?? ""
+                if !retryTarget.isEmpty && retryTarget != "local://startpage" {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                        self?.loadURL(retryTarget, forceReload: true)
+                    }
+                }
+            }
         }
 
         public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             parent.isLoading = false
-            print("[BrowserView] Navigation failed: \(error.localizedDescription)")
+            let nsErr = error as NSError
+            if nsErr.domain == NSURLErrorDomain && nsErr.code == NSURLErrorCancelled {
+                return
+            }
+            lastNavigationFailed = true
+            print("[BrowserView] Navigation failed (\(nsErr.domain) \(nsErr.code)): \(error.localizedDescription)")
         }
 
         public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

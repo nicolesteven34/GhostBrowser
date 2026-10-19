@@ -1905,15 +1905,25 @@
             const cleanWord = ispLower.replace(/[^a-z0-9]/g, '').slice(0, 10) || 'isp';
             ispDomain = cleanWord + '.net';
         }
-        // Keep primary DNS resolvers in the EXACT same /24 subnet (o1.o2.o3.x) or adjacent /24
-        // so strict /24 subnet proximity checks (ipfighter.com, browserinsight.net, pixelscan.net)
-        // never flag a subnet mismatch between the client exit IP and the DNS resolver IP!
-        const hostOctets = [11, 12, 53, 54, 21, 22, 41, 42];
+        // Keep primary DNS resolvers in the EXACT same /24 subnet (o1.o2.o3.x)
+        // so strict /24 subnet proximity checks and server-side GeoIP lookups (ipfighter.com,
+        // browserinsight.net, pixelscan.net) resolve to the exact same ISP, ASN, and City,
+        // while seeding host octets per profile + IP so no static octet pattern is reused.
+        const ipIntSeed = ((o1 & 0xff) << 24) | ((o2 & 0xff) << 16) | ((o3 & 0xff) << 8) | (o4 & 0xff);
+        const hostOctets = [];
+        let octSalt = 1;
+        while (hostOctets.length < 8 && octSalt < 64) {
+            const h = Math.abs(fmix32(profileSeed ^ ipIntSeed, 700 + octSalt++));
+            const candidate = 2 + (h % 250); // 2..251
+            if (candidate !== o4 && !hostOctets.includes(candidate)) {
+                hostOctets.push(candidate);
+            }
+        }
         const numServers = Math.max(6, Math.min(8, count || 6));
         const chain = [];
         for (let i = 0; i < numServers; i++) {
-            let hOct = hostOctets[i % hostOctets.length];
-            if (hOct === o4) hOct = (hOct % 250) + 1;
+            let hOct = hostOctets[i % hostOctets.length] || ((11 + i * 7) % 250 + 2);
+            if (hOct === o4) hOct = (hOct % 250) + 2;
             const resolverIp = `${o1}.${o2}.${o3}.${hOct}`;
             const idxStr = String(i + 1).padStart(2, '0');
             const hostname = `dns${idxStr}.${ispDomain}`;
@@ -1923,6 +1933,7 @@
                 hostname: hostname,
                 isp: meta.isp,
                 org: meta.isp,
+                as: (cfg && cfg.proxyAsn) ? `${cfg.proxyAsn} ${meta.isp}` : meta.isp,
                 asn: (cfg && cfg.proxyAsn) ? String(cfg.proxyAsn) : '',
                 city: meta.city,
                 region: meta.region,
@@ -1935,16 +1946,37 @@
         return chain;
     }
 
+    // Clear any stale false-positive residential dynamic-IP DNSBL cache on ipfighter.com
+    try {
+        if (typeof location !== 'undefined' && location.hostname && location.hostname.includes('ipfighter.com') && typeof localStorage !== 'undefined') {
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('dnsbl_')) {
+                    localStorage.removeItem(k);
+                }
+            }
+        }
+    } catch (e) {}
+
+    function isDnsblDoHQuery(u) {
+        if (!u || !u.includes('dns-query')) return false;
+        return /\.(spamhaus\.org|spamcop\.net|barracudacentral\.org|sorbs\.net|uceprotect\.net|abuseat\.org|spamrats\.com)\b/i.test(u);
+    }
+
     function isDnsLeakApi(url) {
         if (!url) return false;
         if (cfg && cfg.enableDnsProxyMatching === false) return false;
         const u = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+        const isBiHost = typeof location !== 'undefined' && location.hostname && location.hostname.includes('browserinsight.net');
         return u.includes('/api/v1/servers-for-result') ||
                u.includes('/api/v1/servers-for-round') ||
                u.includes('/api/v1/dns-leak/result') ||
                u.includes('/api/dns-check') ||
-               (u.includes('browserinsight.net') && u.includes('/api/ip')) ||
+               u.includes('edns.ip-api.com') ||
+               u.includes('/api/ip?ip=') ||
+               ((u.includes('browserinsight.net') || isBiHost) && (u.includes('/api/ip') || u.includes('/api/tls'))) ||
                u.includes('/ip-info/get-ip-data') ||
+               isDnsblDoHQuery(u) ||
                u.includes('sharkdns.com') ||
                u.includes('surfsharkdns.com') ||
                u.includes('pixelscan.net/s/api/dl') ||
@@ -1965,10 +1997,32 @@
     }
 
     let _dnsLeakNodeIdx = 0;
+    const _synthesizedDnsIps = new Set();
     function sanitizeDnsLeakData(url, data) {
         if (!data || typeof data !== 'object') return false;
         const u = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+        const isBiHost = typeof location !== 'undefined' && location.hostname && location.hostname.includes('browserinsight.net');
         try {
+            if (isDnsblDoHQuery(u)) {
+                data.Status = 3; // NXDOMAIN (not listed in spam/dynamic IP blacklist)
+                delete data.Answer;
+                return true;
+            }
+            if (u.includes('edns.ip-api.com')) {
+                const chain = buildProxyIspDnsChain(6);
+                const primary = chain[0];
+                _synthesizedDnsIps.add(primary.ip_address);
+                const geoStr = `${primary.country || 'United States'} - ${primary.isp}`;
+                data.dns = {
+                    ip: primary.ip_address,
+                    geo: geoStr
+                };
+                data.edns = {
+                    ip: primary.ip_address,
+                    geo: geoStr
+                };
+                return true;
+            }
             if (u.includes('/v2/geoip2-isp')) {
                 if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
                 else if (data.organization && typeof data.organization === 'string') _livePageIsp = data.organization.trim();
@@ -1980,9 +2034,34 @@
                 if (data.country_code && typeof data.country_code === 'string') _livePageCountryCode = data.country_code.trim().toUpperCase();
                 return false;
             }
+            // BrowserInsight /api/ip?ip=<dnsIp> resolver lookup endpoint
+            if (u.includes('/api/ip?ip=')) {
+                const chain = buildProxyIspDnsChain(6);
+                const node = chain[0];
+                _synthesizedDnsIps.add(node.ip_address);
+                data.ip = node.ip_address;
+                if (data.query !== undefined) data.query = node.ip_address;
+                data.isp = node.isp;
+                data.org = node.isp;
+                if (data.as !== undefined && !doesResolverMatchProxyIsp(data.as, node.isp)) {
+                    data.as = node.as;
+                }
+                if (data.country !== undefined) data.country = node.country;
+                if (data.countryCode !== undefined) data.countryCode = node.country_code;
+                if (data.city !== undefined) data.city = node.city;
+                if (data.region !== undefined) data.region = node.region;
+                if (data.regionName !== undefined && _livePageRegion) data.regionName = _livePageRegion;
+                data.proxy = false;
+                data.hosting = false;
+                data.vpn = false;
+                data.tor = false;
+                return true;
+            }
             // BrowserInsight /api/ip endpoint (proxy/VPN/hosting flags + live ISP learning)
-            if (u.includes('browserinsight.net') && u.includes('/api/ip')) {
-                if (data.ip && typeof data.ip === 'string') _livePageTcpIp = data.ip.trim();
+            if ((u.includes('browserinsight.net') || isBiHost) && u.includes('/api/ip')) {
+                if (data.ip && typeof data.ip === 'string' && !_synthesizedDnsIps.has(data.ip.trim())) {
+                    _livePageTcpIp = data.ip.trim();
+                }
                 if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
                 else if (data.org && typeof data.org === 'string') _livePageIsp = data.org.trim();
                 if (data.city && typeof data.city === 'string') _livePageCity = data.city.trim();
@@ -2000,6 +2079,7 @@
             if (u.includes('/api/dns-check')) {
                 const chain = buildProxyIspDnsChain(6);
                 const primary = chain[0];
+                _synthesizedDnsIps.add(primary.ip_address);
                 data.dnsDetected = true;
                 data.dnsIp = primary.ip_address;
                 data.dnsCountry = primary.country;
@@ -2008,17 +2088,29 @@
                 data.dnsOrg = primary.isp;
                 return true;
             }
-            // IPFighter /ip-info/get-ip-data endpoint
+            // IPFighter /ip-info/get-ip-data endpoint (called for both client IP and DNS IP)
             if (u.includes('/ip-info/get-ip-data')) {
-                if (data.ip && typeof data.ip === 'string') _livePageTcpIp = data.ip.trim();
-                if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
-                if (data.city && typeof data.city === 'string') _livePageCity = data.city.trim();
-                if (data.region && typeof data.region === 'string') _livePageRegion = data.region.trim();
-                if (data.country && typeof data.country === 'string') _livePageCountry = data.country.trim();
-                if (data.countryCode && typeof data.countryCode === 'string') _livePageCountryCode = data.countryCode.trim().toUpperCase();
-                if (data.timeZone && typeof data.timeZone === 'string') _livePageTimezone = data.timeZone.trim();
+                const respIp = (data.ip && typeof data.ip === 'string') ? data.ip.trim() : '';
+                const isDnsLookup = respIp && _synthesizedDnsIps.has(respIp);
+                if (!isDnsLookup) {
+                    if (respIp) _livePageTcpIp = respIp;
+                    if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
+                    if (data.city && typeof data.city === 'string') _livePageCity = data.city.trim();
+                    if (data.region && typeof data.region === 'string') _livePageRegion = data.region.trim();
+                    if (data.country && typeof data.country === 'string') _livePageCountry = data.country.trim();
+                    if (data.countryCode && typeof data.countryCode === 'string') _livePageCountryCode = data.countryCode.trim().toUpperCase();
+                    if (data.timeZone && typeof data.timeZone === 'string') _livePageTimezone = data.timeZone.trim();
+                } else {
+                    if (_livePageIsp) data.isp = _livePageIsp;
+                    if (_livePageCity) data.city = _livePageCity;
+                    if (_livePageRegion) data.region = _livePageRegion;
+                    if (_livePageCountry) data.country = _livePageCountry;
+                    if (_livePageCountryCode) data.countryCode = _livePageCountryCode;
+                    if (_livePageTimezone) data.timeZone = _livePageTimezone;
+                }
                 const chain = buildProxyIspDnsChain(6);
                 const primary = chain[0];
+                _synthesizedDnsIps.add(primary.ip_address);
                 data.dns = {
                     ip: primary.ip_address,
                     countryCode: (data.countryCode || primary.country_code || 'US').toUpperCase(),
