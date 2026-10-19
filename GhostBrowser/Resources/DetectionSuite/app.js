@@ -198,7 +198,8 @@ function switchTab(tab) {
         { id: 'ecomm3', btn: 'tabECommerce3Btn', view: 'eCommerce3View', title: 'eCommerce 3 Pentad Suite' },
         { id: 'payments', btn: 'tabPaymentsBtn', view: 'paymentsView', title: 'Payment Systems Septet' },
         { id: 'network', btn: 'tabNetworkBtn', view: 'networkView', title: 'Network & Packet Sniffer' },
-        { id: 'behavior', btn: 'tabBehaviorBtn', view: 'behaviorView', title: 'Behavioral Biometrics Lab' }
+        { id: 'behavior', btn: 'tabBehaviorBtn', view: 'behaviorView', title: 'Behavioral Biometrics Lab' },
+        { id: 'uncovered', btn: 'tabUncoveredBtn', view: 'uncoveredView', title: 'Uncovered Frontier & Container Lab' }
     ];
     tabs.forEach(t => {
         const btn = document.getElementById(t.btn);
@@ -214,7 +215,11 @@ function switchTab(tab) {
         }
     });
 
-    if (tab === 'antibot') {
+    if (tab === 'uncovered') {
+        if (typeof window.runUncoveredFrontierAudit === 'function') {
+            window.runUncoveredFrontierAudit();
+        }
+    } else if (tab === 'antibot') {
         if (!window.__LAST_ANTIBOT_DATA) {
             runAntiBotAudit();
         } else {
@@ -3943,6 +3948,7 @@ function switchPdSubTab(tab) {
     const subtabs = [
         { id: 'engine', btn: 'pdSubEngineBtn', pane: 'pdPaneEngine' },
         { id: 'dnssec', btn: 'pdSubDnssecBtn', pane: 'pdPaneDnssec' },
+        { id: 'packetprobe', btn: 'pdSubPacketProbeBtn', pane: 'pdPanePacketProbe' },
         { id: 'tcpip', btn: 'pdSubTcpipBtn', pane: 'pdPaneTcpip' },
         { id: 'tlsrtt', btn: 'pdSubTlsRttBtn', pane: 'pdPaneTlsRtt' },
         { id: 'latency', btn: 'pdSubLatencyBtn', pane: 'pdPaneLatency' },

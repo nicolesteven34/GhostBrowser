@@ -213,23 +213,45 @@
                 </div>
             </div>
 
-            <!-- PART II HEADER & TAB: USER BEHAVIORAL BIOMETRICS & OPERATIONAL PLAYBOOK -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(168, 85, 247, 0.09); border: 1px solid rgba(168, 85, 247, 0.32); border-radius: 8px; margin-top: 6px; margin-bottom: 4px; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="background: #a855f7; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART II &bull; USER BEHAVIOR &amp; ACTIVITY TELEMETRY</span>
-                    <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Live Behavioral Biometrics Benchmark (Fitts's Law, Keystroke Cadence, Click &amp; Scroll Dynamics) &amp; Tier-1 Browsing Guidelines</span>
+            <!-- PART II & PART III SEPARATE COLUMNS: BEHAVIORAL BIOMETRICS (LEFT) & UNCOVERED FRONTIER LAB (RIGHT) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 8px; margin-top: 6px; margin-bottom: 4px;">
+                <!-- Column 1: PART II Behavioral Biometrics -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(168, 85, 247, 0.09); border: 1px solid rgba(168, 85, 247, 0.32); border-radius: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: #a855f7; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART II &bull; USER BEHAVIOR TELEMETRY</span>
+                        <span style="font-size: 11.5px; font-weight: 600; color: #e2e8f0;">Fitts's Law, Keystroke Cadence &amp; Playbook</span>
+                    </div>
+                    <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(168, 85, 247, 0.45); background: rgba(168, 85, 247, 0.14);">
+                        <div class="nav-tab-icon" style="color: #c084fc;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title" style="color: #f3e8ff;">Behavioral Biometrics &amp; Playbook</span>
+                            <span class="nav-tab-sub" style="color: #d8b4fe;">Live Human Benchmark + Rules</span>
+                        </div>
+                    </button>
                 </div>
-                <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(168, 85, 247, 0.45); background: rgba(168, 85, 247, 0.14);">
-                    <div class="nav-tab-icon" style="color: #c084fc;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                        </svg>
+
+                <!-- Column 2: PART III Uncovered Frontier & Zero-Day Container Audit Lab -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.42); border-radius: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: #059669; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART III &bull; UNCOVERED FRONTIER LAB</span>
+                        <span style="font-size: 11.5px; font-weight: 600; color: #d1fae5;">16 Novel JS, Container &amp; DPI Vectors (Phase 2 Hardened • 16/16 PASS)</span>
                     </div>
-                    <div class="nav-tab-content">
-                        <span class="nav-tab-title" style="color: #f3e8ff;">Behavioral Biometrics &amp; Playbook</span>
-                        <span class="nav-tab-sub" style="color: #d8b4fe;">Live Human Benchmark + Operational Rules</span>
-                    </div>
-                </button>
+                    <button class="nav-tab" id="tabUncoveredBtn" onclick="switchTab('uncovered')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(16, 185, 129, 0.55); background: rgba(16, 185, 129, 0.16);">
+                        <div class="nav-tab-icon" style="color: #34d399;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title" style="color: #ecfdf5;">Uncovered Frontier (16 Probes)</span>
+                            <span class="nav-tab-sub" id="tabUncoveredSubLabel" style="color: #6ee7b7;">16/16 Hardened (Edge &amp; Safari)</span>
+                        </div>
+                    </button>
+                </div>
             </div>
         </nav>
 
@@ -926,6 +948,11 @@
             <!-- INDEPENDENT SECTION IN NETWORK SNIFFER: COMPREHENSIVE ISP RECURSIVE DNS & DNSSEC AUDIT -->
             <div id="comprehensiveDnsNetworkSection" class="card" style="padding: 0; overflow: hidden; margin-top: 18px; border: 1px solid rgba(16, 185, 129, 0.38); background: linear-gradient(180deg, rgba(13, 21, 32, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%);">
                 <!-- Populated dynamically by renderComprehensiveDnsSection() -->
+            </div>
+
+            <!-- INDEPENDENT SECTION IN NETWORK SNIFFER: PACKETPROBE.COM 3-SUITE LIVE DIAGNOSTICS (WEBRTC LOSS, BUFFERBLOAT A+, CALLS & MEETINGS QOS) -->
+            <div id="comprehensivePacketProbeNetworkSection" class="card" style="padding: 0; overflow: hidden; margin-top: 18px; border: 1px solid rgba(16, 185, 129, 0.42); background: linear-gradient(180deg, rgba(13, 21, 35, 0.98) 0%, rgba(9, 13, 22, 0.98) 100%);">
+                <!-- Populated dynamically by PacketProbeInHouseSuite -->
             </div>
         </div>
 
@@ -1979,6 +2006,9 @@
                     <button class="pd-subtab-btn" id="pdSubDnssecBtn" onclick="switchPdSubTab('dnssec')">
                         🌐 Comprehensive DNS &amp; DNSSEC
                     </button>
+                    <button class="pd-subtab-btn" id="pdSubPacketProbeBtn" onclick="switchPdSubTab('packetprobe')">
+                        📡 PacketProbe 3-Suite &amp; Calls
+                    </button>
                     <button class="pd-subtab-btn" id="pdSubTcpipBtn" onclick="switchPdSubTab('tcpip')">
                         🧬 TCP/IP Fingerprint
                     </button>
@@ -2091,6 +2121,11 @@
                 <!-- SUB-PANE 1B: COMPREHENSIVE DNS & DNSSEC RESOLUTION -->
                 <div id="pdPaneDnssec" class="pd-pane">
                     <div id="comprehensiveDnsPdSubPaneSection"></div>
+                </div>
+
+                <!-- SUB-PANE 1C: PACKETPROBE 3-SUITE & CALLS/MEETINGS QOS -->
+                <div id="pdPanePacketProbe" class="pd-pane">
+                    <div id="pdPanePacketProbeContent" class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(16, 185, 129, 0.42);"></div>
                 </div>
 
                 <!-- SUB-PANE 2: TCP/IP FINGERPRINT -->
@@ -4124,6 +4159,15 @@
             </div>
         </div>
 
+        <!-- ======================================================== -->
+        <!-- PART III: UNCOVERED FRONTIER & CONTAINER AUDIT LAB        -->
+        <!-- ======================================================== -->
+        <div id="uncoveredView" class="tab-view">
+            <div id="uncoveredFrontierDynamicRoot">
+                <!-- Populated dynamically by UncoveredFrontierLab in uncovered_lab.js -->
+            </div>
+        </div>
+
         <!-- ProxyDetect Test Details Modal (JSON Inspector) -->
         <div id="pdTestDetailsModal" class="pd-modal-overlay" onclick="closePdModals(event)">
             <div class="pd-modal-card" onclick="event.stopPropagation()">
@@ -4558,5 +4602,6 @@
     <script src="ecomm3.js"></script>
     <script src="payments.js"></script>
     <script src="app.js"></script>
+    <script src="uncovered_lab.js"></script>
 </body>
 </html>

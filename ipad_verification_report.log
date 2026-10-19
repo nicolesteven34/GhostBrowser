@@ -1,0 +1,51 @@
+=======================================================================
+   GHOSTBROWSER iPadOS EDITION — LIVE MULTI-PROFILE & SUITE AUDIT      
+=======================================================================
+[Loaded iPadOS Stealth Engine]: C:\Users\Home\Desktop\app\GhostBrowser\Resources\anti_fingerprint.js (119484 bytes)
+[Loaded iPadOS DetectionSuite]: C:\Users\Home\Desktop\app\GhostBrowser\Resources\DetectionSuite
+
+--- iPadOS Profile 1: iPad Pro 13" (M4) (Seed 194821) ---
+  Canvas Text Hash   : 8cf26b66
+  Canvas Geom Hash   : e2e684ea
+  Amex TMX 4-bit Mask: 0 (0 = Clean)
+  Audio DSP Sum      : 172.6716585107
+  WebGL 3D Hash      : 305fde6b
+  WebGL Vendor/GPU   : Apple Inc. | Apple M4
+  Navigator / Screen : Plat=MacIntel, Cores=10, Touch=5, Scr=1024x1366 (avail 1024x1322)
+  Hygiene & Storage  : __GHOST_CONFIG__ Exposed=False, NavOwnKeys=0, PrevToken=NONE
+  ghost://detect 9/9 : DetBot=0, FpsBot=0, FpcSuspect=0, AbRisk=0, WebGL1Surf=True, WebGL2Surf=True, PdProxy=0, Ec1=TRUSTED HUMAN (CHECKOUT APPROVED), Shp=TRUSTED HUMAN (CHECKOUT APPROVED), Pay=TRUSTED HUMAN (PAYMENT SEPTET APPROVED), Ec3=TRUSTED HUMAN (6-SYSTEM + PRE-ACTION APPROVED)
+  Suite VisitorIDs   : Detector=gfp_b619737da0fef1b1fb511d68bccfb262 | FpScan=d4447613eecdb445
+
+--- iPadOS Profile 2: iPad Air 11" (M2) (Seed 384729) ---
+  Canvas Text Hash   : 8af56a94
+  Canvas Geom Hash   : 13e0962d
+  Amex TMX 4-bit Mask: 0 (0 = Clean)
+  Audio DSP Sum      : 172.6716544772
+  WebGL 3D Hash      : 7c68fc6b
+  WebGL Vendor/GPU   : Apple Inc. | Apple M2
+  Navigator / Screen : Plat=MacIntel, Cores=8, Touch=5, Scr=820x1180 (avail 820x1156)
+  Hygiene & Storage  : __GHOST_CONFIG__ Exposed=False, NavOwnKeys=0, PrevToken=NONE
+  ghost://detect 9/9 : DetBot=0, FpsBot=0, FpcSuspect=0, AbRisk=0, WebGL1Surf=True, WebGL2Surf=True, PdProxy=0, Ec1=TRUSTED HUMAN (CHECKOUT APPROVED), Shp=TRUSTED HUMAN (CHECKOUT APPROVED), Pay=TRUSTED HUMAN (PAYMENT SEPTET APPROVED), Ec3=TRUSTED HUMAN (6-SYSTEM + PRE-ACTION APPROVED)
+  Suite VisitorIDs   : Detector=gfp_99363a1348458e0bc9de81a08f3bf826 | FpScan=abdc4646cb501af5
+
+--- iPadOS Profile 3: MacBook Pro 16" (M4 Max) (Seed 839201) ---
+  Canvas Text Hash   : 01fa4e95
+  Canvas Geom Hash   : 0182adbd
+  Amex TMX 4-bit Mask: 0 (0 = Clean)
+  Audio DSP Sum      : 172.6716505237
+  WebGL 3D Hash      : fe77306b
+  WebGL Vendor/GPU   : Apple Inc. | Apple M4 Max
+  Navigator / Screen : Plat=MacIntel, Cores=16, Touch=0, Scr=1728x1117 (avail 1728x1053)
+  Hygiene & Storage  : __GHOST_CONFIG__ Exposed=False, NavOwnKeys=0, PrevToken=NONE
+  ghost://detect 9/9 : DetBot=0, FpsBot=0, FpcSuspect=0, AbRisk=0, WebGL1Surf=True, WebGL2Surf=True, PdProxy=0, Ec1=TRUSTED HUMAN (CHECKOUT APPROVED), Shp=TRUSTED HUMAN (CHECKOUT APPROVED), Pay=TRUSTED HUMAN (PAYMENT SEPTET APPROVED), Ec3=TRUSTED HUMAN (6-SYSTEM + PRE-ACTION APPROVED)
+  Suite VisitorIDs   : Detector=gfp_2b27ee5c999c2400e415284b66c48e89 | FpScan=dba0b3d4cc618c92
+
+=======================================================================
+  Unique Canvas Text Hashes   : 3/3
+  Unique Canvas Geom Hashes   : 3/3
+  Unique Audio DSP Sums       : 3/3
+  Unique WebGL 3D Hashes      : 3/3
+  Unique GPU Renderers        : 3/3
+  Unique Suite Visitor IDs    : 3/3
+  Cross-Restart Determinism   : PASS (100% Identical Hashes & Persistent Storage)
+=======================================================================

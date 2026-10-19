@@ -1,0 +1,259 @@
+    // =========================================================================
+    // 4. FINGERPRINT PRO FETCH & XHR INTERCEPTION
+    // =========================================================================
+    try {
+        if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+            const nativeFetch = window.fetch;
+            const hookedFetch = function(input, init) {
+                const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+
+                // A. Google Docs offline extension probe
+                if (url && url.includes('ghbmnnjooekpmoecnnnilnnbdlolhkhi')) {
+                    return Promise.resolve(new Response('/* offline */', {
+                        status: 200,
+                        statusText: 'OK',
+                        headers: { 'Content-Type': 'application/javascript' }
+                    }));
+                }
+
+                // B. Fingerprint Pro telemetry endpoints
+                const isFpEndpoint = typeof url === 'string' && (
+                    url.includes('r4a0Rd2Xs') ||
+                    url.includes('api.fpjs.io') ||
+                    url.includes('fingerprint.com') ||
+                    url.includes('/v4/') ||
+                    url.includes('/v3/') ||
+                    url.includes('fpnpmcdn.net') ||
+                    url.includes('mediaxpv.com') ||
+                    url.includes('botd.fpapi.io') ||
+                    url.includes('identify')
+                );
+
+                if (isFpEndpoint) {
+                    return nativeFetch.apply(this, arguments).then(async (response) => {
+                        try {
+                            const clone = response.clone();
+                            const text = await clone.text();
+                            if (text && text.trim().startsWith('{')) {
+                                const data = JSON.parse(text);
+                                const modified = sanitizeFpData(data, config.visitorId);
+                                if (modified) {
+                                    return new Response(JSON.stringify(data), {
+                                        status: response.status,
+                                        statusText: response.statusText,
+                                        headers: response.headers
+                                    });
+                                }
+                            }
+                        } catch (err) {}
+                        return response;
+                    });
+                }
+
+                return nativeFetch.apply(this, arguments);
+            };
+
+            window.fetch = makeNative(hookedFetch, 'fetch', 1);
+        }
+    } catch(e) {}
+
+    try {
+        if (typeof window !== 'undefined' && typeof window.XMLHttpRequest === 'function') {
+            const origOpen = XMLHttpRequest.prototype.open;
+            const origSend = XMLHttpRequest.prototype.send;
+
+            XMLHttpRequest.prototype.open = makeNative(function(method, url) {
+                this._ghostUrl = url;
+                return origOpen.apply(this, arguments);
+            }, 'open', 2);
+
+            XMLHttpRequest.prototype.send = makeNative(function(body) {
+                const url = this._ghostUrl || '';
+                const isFpEndpoint = typeof url === 'string' && (
+                    url.includes('r4a0Rd2Xs') ||
+                    url.includes('api.fpjs.io') ||
+                    url.includes('fingerprint.com') ||
+                    url.includes('/v4/') ||
+                    url.includes('/v3/') ||
+                    url.includes('fpnpmcdn.net') ||
+                    url.includes('mediaxpv.com') ||
+                    url.includes('botd.fpapi.io') ||
+                    url.includes('identify')
+                );
+
+                if (isFpEndpoint) {
+                    this.addEventListener('readystatechange', function() {
+                        if (this.readyState === 4 && this.status === 200) {
+                            try {
+                                const text = this.responseText;
+                                if (text && text.trim().startsWith('{')) {
+                                    const data = JSON.parse(text);
+                                    const modified = sanitizeFpData(data, config.visitorId);
+                                    if (modified) {
+                                        const cleanText = JSON.stringify(data);
+                                        Object.defineProperty(this, 'responseText', { value: cleanText, configurable: true });
+                                        Object.defineProperty(this, 'response', { value: cleanText, configurable: true });
+                                    }
+                                }
+                            } catch(e) {}
+                        }
+                    });
+                }
+                return origSend.apply(this, arguments);
+            }, 'send', 0);
+        }
+    } catch(e) {}
+
+    // =========================================================================
+    // 5. DETERMINISTIC MATHEMATICAL AUDIO & CANVAS FARBLING (Unique Physical Identity)
+    // =========================================================================
+    try {
+        if (typeof window !== 'undefined') {
+            // Audio drift
+            if (window.AudioBuffer && window.AudioBuffer.prototype) {
+                const origGetChannelData = window.AudioBuffer.prototype.getChannelData;
+                const origCopyFromChannel = window.AudioBuffer.prototype.copyFromChannel;
+
+                function applyAudioNoise(channelData, seed) {
+                    if (!channelData || channelData.length === 0) return;
+                    let s = (seed * 1103515245 + 12345) >>> 0;
+                    const step = Math.max(1, Math.floor(channelData.length / 80));
+                    for (let i = 0; i < channelData.length; i += step) {
+                        s = (Math.imul(s ^ (i + 1), 1664525) + 1013904223) >>> 0;
+                        const factor = ((s % 2000) - 1000) / 10000000.0;
+                        channelData[i] += factor;
+                    }
+                }
+
+                if (origGetChannelData) {
+                    window.AudioBuffer.prototype.getChannelData = makeNative(function(channel) {
+                        if (!this || !(this instanceof (window.AudioBuffer || Object))) {
+                            throw new TypeError("Failed to execute 'getChannelData' on 'AudioBuffer': Illegal invocation");
+                        }
+                        const data = origGetChannelData.apply(this, arguments);
+                        try { applyAudioNoise(data, profileSeed); } catch(e) {}
+                        return data;
+                    }, 'getChannelData', 1);
+                }
+
+                if (origCopyFromChannel) {
+                    window.AudioBuffer.prototype.copyFromChannel = makeNative(function(destination, channelNumber, startInChannel) {
+                        if (!this || !(this instanceof (window.AudioBuffer || Object))) {
+                            throw new TypeError("Failed to execute 'copyFromChannel' on 'AudioBuffer': Illegal invocation");
+                        }
+                        const res = origCopyFromChannel.apply(this, arguments);
+                        try { applyAudioNoise(destination, profileSeed); } catch(e) {}
+                        return res;
+                    }, 'copyFromChannel', 2);
+                }
+            }
+
+            // Canvas farble with size guard (sw > 20 && sh > 20 and width >= 50 && height >= 30)
+            function applyPixelFarble(data, seed) {
+                if (!data || data.length < 16) return false;
+                const totalPixels = data.length / 4;
+                let s = (seed * 1664525 + 1013904223) >>> 0;
+                let modified = false;
+                const step = Math.max(2, Math.floor(totalPixels / 120));
+                for (let p = 0; p < totalPixels; p += step) {
+                    const idx = p * 4;
+                    if (data[idx + 3] > 10) {
+                        s = (Math.imul(s ^ (p + 1), 1664525) + 1013904223) >>> 0;
+                        const channel = s % 3;
+                        const delta = ((s % 5) - 2);
+                        if (delta !== 0) {
+                            const val = data[idx + channel] + delta;
+                            data[idx + channel] = val < 0 ? 0 : (val > 255 ? 255 : val);
+                            modified = true;
+                        }
+                    }
+                }
+                return modified;
+            }
+
+            if (window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype) {
+                const origGetImageData = window.CanvasRenderingContext2D.prototype.getImageData;
+                if (origGetImageData) {
+                    window.CanvasRenderingContext2D.prototype.getImageData = makeNative(function(sx, sy, sw, sh) {
+                        if (!this || !(this instanceof (window.CanvasRenderingContext2D || Object))) {
+                            throw new TypeError("Failed to execute 'getImageData' on 'CanvasRenderingContext2D': Illegal invocation");
+                        }
+                        const res = origGetImageData.apply(this, arguments);
+                        try {
+                            if (res && res.data && sw > 20 && sh > 20) {
+                                applyPixelFarble(res.data, profileSeed);
+                            }
+                        } catch(e) {}
+                        return res;
+                    }, 'getImageData', 4);
+                }
+            }
+
+            if (window.HTMLCanvasElement && window.HTMLCanvasElement.prototype) {
+                function farbleCanvas(sourceCanvas) {
+                    try {
+                        const width = sourceCanvas.width;
+                        const height = sourceCanvas.height;
+                        if (!width || !height || width < 50 || height < 30) return null;
+                        if (typeof document === 'undefined' || !document.createElement) return null;
+
+                        const clone = document.createElement('canvas');
+                        clone.width = width;
+                        clone.height = height;
+                        const cloneCtx = clone.getContext('2d');
+                        if (!cloneCtx) return null;
+
+                        try { cloneCtx.drawImage(sourceCanvas, 0, 0); } catch(drawErr) { return null; }
+
+                        const imgData = cloneCtx.getImageData(0, 0, width, height);
+                        if (imgData && imgData.data) {
+                            const modified = applyPixelFarble(imgData.data, profileSeed);
+                            if (modified) {
+                                cloneCtx.putImageData(imgData, 0, 0);
+                                return clone;
+                            }
+                        }
+                    } catch(e) {}
+                    return null;
+                }
+
+                if (window.HTMLCanvasElement.prototype.toDataURL) {
+                    const origToDataURL = window.HTMLCanvasElement.prototype.toDataURL;
+                    window.HTMLCanvasElement.prototype.toDataURL = makeNative(function() {
+                        if (!this || !(this instanceof (window.HTMLCanvasElement || Object))) {
+                            throw new TypeError("Failed to execute 'toDataURL' on 'HTMLCanvasElement': Illegal invocation");
+                        }
+                        const farbled = farbleCanvas(this);
+                        if (farbled) return origToDataURL.apply(farbled, arguments);
+                        return origToDataURL.apply(this, arguments);
+                    }, 'toDataURL', 0);
+                }
+
+                if (window.HTMLCanvasElement.prototype.toBlob) {
+                    const origToBlob = window.HTMLCanvasElement.prototype.toBlob;
+                    window.HTMLCanvasElement.prototype.toBlob = makeNative(function(callback) {
+                        if (!this || !(this instanceof (window.HTMLCanvasElement || Object))) {
+                            throw new TypeError("Failed to execute 'toBlob' on 'HTMLCanvasElement': Illegal invocation");
+                        }
+                        const farbled = farbleCanvas(this);
+                        if (farbled) return origToBlob.apply(farbled, arguments);
+                        return origToBlob.apply(this, arguments);
+                    }, 'toBlob', 1);
+                }
+            }
+        }
+    } catch(e) {}
+
+    // =========================================================================
+    // 6. DOCUMENT FOCUS EMULATION (Headless / Bot Check Bypassing)
+    // =========================================================================
+    try {
+        if (typeof Document !== 'undefined' && Document.prototype) {
+            const nativeHasFocus = Document.prototype.hasFocus;
+            if (typeof nativeHasFocus === 'function') {
+                Document.prototype.hasFocus = makeNative(function() {
+                    return true;
+                }, 'hasFocus', 0);
+            }
+        }
+    } catch(e) {}

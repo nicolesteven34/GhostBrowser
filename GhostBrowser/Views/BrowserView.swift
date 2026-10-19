@@ -58,8 +58,10 @@ public struct BrowserView: UIViewRepresentable {
 
         let userContentController = WKUserContentController()
 
-        // 2. Register native script message handler for local start page
-        userContentController.add(context.coordinator, name: "ghostNav")
+        // 2. Do NOT register any WKScriptMessageHandler (such as "ghostNav") on WKUserContentController,
+        // because WebKit C++ unconditionally injects non-configurable window.webkit.messageHandlers
+        // whenever >= 1 message handler is registered, which exposes WKWebView on browserinsight.net/webview-check.
+        // Local startpage navigation uses decidePolicyFor navigationAction (ghost://, ghost-search://, ghost-action://).
 
         // 3. Inject configuration & anti-fingerprint script
         let configScript = WKUserScript(
@@ -201,7 +203,7 @@ public struct BrowserView: UIViewRepresentable {
             let cityEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedCity.replacingOccurrences(of: "'", with: "") : ""
             let regEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedRegion.replacingOccurrences(of: "'", with: "") : ""
             let ctryEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedCountry.replacingOccurrences(of: "'", with: "") : ""
-            let jsProxy = "if (window.__GHOST_SET_PROXY__) window.__GHOST_SET_PROXY__('\(ipEsc)', '\(tzEsc)', \(privacyProfile.mockLatitude), \(privacyProfile.mockLongitude), \(privacyProfile.proxyEnabled), '\(ispEsc)', '\(cityEsc)', '\(regEsc)', '\(ctryEsc)');"
+            let jsProxy = "try { window.dispatchEvent(new CustomEvent('__g_bridge__', { detail: { t: 'proxy', ip: '\(ipEsc)', tz: '\(tzEsc)', lat: \(privacyProfile.mockLatitude), lon: \(privacyProfile.mockLongitude), en: \(privacyProfile.proxyEnabled), isp: '\(ispEsc)', city: '\(cityEsc)', reg: '\(regEsc)', ctry: '\(ctryEsc)' } })); } catch(e) {}"
             webView.evaluateJavaScript(jsProxy) { _, _ in }
 
             if tzChanged,
@@ -250,7 +252,7 @@ public struct BrowserView: UIViewRepresentable {
             context.coordinator.lastMockLatitude = privacyProfile.mockLatitude
             context.coordinator.lastMockLongitude = privacyProfile.mockLongitude
 
-            let js = "if (window.__GHOST_SET_LOCATION__) window.__GHOST_SET_LOCATION__(\(privacyProfile.mockLatitude), \(privacyProfile.mockLongitude), \(privacyProfile.mockLocationEnabled));"
+            let js = "try { window.dispatchEvent(new CustomEvent('__g_bridge__', { detail: { t: 'loc', lat: \(privacyProfile.mockLatitude), lon: \(privacyProfile.mockLongitude), en: \(privacyProfile.mockLocationEnabled) } })); } catch(e) {}"
             webView.evaluateJavaScript(js) { _, _ in }
         }
 
@@ -273,7 +275,7 @@ public struct BrowserView: UIViewRepresentable {
                 .replacingOccurrences(of: "'", with: "\\'")
                 .replacingOccurrences(of: "\n", with: "")
 
-            let js = "if (window.__GHOST_SET_VIRTUAL_FEED__) window.__GHOST_SET_VIRTUAL_FEED__('\(escaped)', \(privacyProfile.virtualCameraPanX), \(privacyProfile.virtualCameraPanY), \(privacyProfile.virtualCameraZoom), \(privacyProfile.virtualCameraEnabled));"
+            let js = "try { window.dispatchEvent(new CustomEvent('__g_bridge__', { detail: { t: 'cam', b64: '\(escaped)', px: \(privacyProfile.virtualCameraPanX), py: \(privacyProfile.virtualCameraPanY), zm: \(privacyProfile.virtualCameraZoom), en: \(privacyProfile.virtualCameraEnabled) } })); } catch(e) {}"
             webView.evaluateJavaScript(js) { _, _ in }
         }
 
@@ -412,7 +414,7 @@ public struct BrowserView: UIViewRepresentable {
                 if tripped {
                     wv.stopLoading()
                 }
-                let js = "try { const sym = Symbol.for('__ghost_ip_kill_switch__'); if (window[sym]) window[sym](\(tripped)); } catch(e) {}"
+                let js = "try { window.dispatchEvent(new CustomEvent('__g_bridge__', { detail: { t: 'kill', tripped: \(tripped) } })); } catch(e) {}"
                 wv.evaluateJavaScript(js, completionHandler: nil)
             }
             notificationTokens.append(killSwitchToken)
@@ -614,6 +616,19 @@ public struct BrowserView: UIViewRepresentable {
                 return
             }
 
+            if url.scheme == "ghost" || url.scheme == "local" {
+                decisionHandler(.cancel, preferences)
+                let fullUrl = url.absoluteString
+                DispatchQueue.main.async {
+                    if fullUrl.contains("detect") || fullUrl.contains("integrity") {
+                        self.loadLocalDetectPage()
+                    } else {
+                        self.loadLocalStartPage()
+                    }
+                }
+                return
+            }
+
             if url.scheme == "ghost-search" {
                 decisionHandler(.cancel, preferences)
                 let query = url.host ?? url.path.replacingOccurrences(of: "/", with: "")
@@ -650,6 +665,12 @@ public struct BrowserView: UIViewRepresentable {
                 if url.absoluteString == "about:blank" && navigationAction.targetFrame?.isMainFrame == true && currentLoadedURL != nil && currentLoadedURL != "local://startpage" {
                     decisionHandler(.cancel, preferences)
                     return
+                }
+                if navigationAction.targetFrame?.isMainFrame == true && currentLoadedURL == "local://startpage" && (url.scheme == "http" || url.scheme == "https") {
+                    self.currentLoadedURL = url.absoluteString
+                    DispatchQueue.main.async {
+                        self.parent.currentURLString = url.absoluteString
+                    }
                 }
                 decisionHandler(.allow, preferences)
                 return

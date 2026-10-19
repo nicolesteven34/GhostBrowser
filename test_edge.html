@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test Edge</title></head>
+<body>
+<div id="res"></div>
+<script>
+    const props = Object.getOwnPropertyNames(window.chrome || {});
+    document.getElementById('res').innerText = JSON.stringify({
+        chromeProps: props,
+        hasApp: typeof window.chrome?.app,
+        hasCsi: typeof window.chrome?.csi,
+        hasLoadTimes: typeof window.chrome?.loadTimes,
+        hasWebview: typeof window.chrome?.webview,
+        webdriver: navigator.webdriver
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,1603 @@
+{
+  "meta": {
+    "generator": "DetectExpert Pro Forensics v1.2.0",
+    "exportTime": "2026-10-13T06:31:17.407Z",
+    "targetDomain": "fingerprint.com",
+    "targetUrl": "https://fingerprint.com/",
+    "pageTitle": "Fingerprint | Identify Every Web Visitor & Mobile Device",
+    "riskScore": 88
+  },
+  "summaryCounters": {
+    "active": 41,
+    "passive": 6,
+    "thirdParty": 0,
+    "cookie": 24,
+    "social": 0,
+    "beacon": 0,
+    "background": 0,
+    "canvas": 5,
+    "webgl": 30,
+    "audio": 2,
+    "webrtc": 6,
+    "hardware": 4,
+    "ports": 0,
+    "antifraud": 1
+  },
+  "identifiedAntiFraudSystems": {
+    "fingerprint_pro": {
+      "id": "fingerprint_pro",
+      "name": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "category": "Device Intelligence & Anti-Fraud",
+      "patterns": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "vectorsChecked": [
+        "Canvas 2D",
+        "WebGL Hardware",
+        "AudioContext",
+        "Fonts",
+        "Client Hints",
+        "Screen Geometry",
+        "Math Precision"
+      ]
+    }
+  },
+  "scriptsInventory": [
+    {
+      "fileName": "webpack-runtime-8b461510389c16a2547e.js",
+      "url": "https://fingerprint.com/webpack-runtime-8b461510389c16a2547e.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "polyfill-23972986c4de81d826ab.js",
+      "url": "https://fingerprint.com/polyfill-23972986c4de81d826ab.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "framework-3a92ac1376e743c98853.js",
+      "url": "https://fingerprint.com/framework-3a92ac1376e743c98853.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "app-d91a47cca7fcb6b46115.js",
+      "url": "https://fingerprint.com/app-d91a47cca7fcb6b46115.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "0d3a5c655c943ce09727e50ec3f0c5a5a1a50d13-f8d2a51c5478050756f2.js",
+      "url": "https://fingerprint.com/0d3a5c655c943ce09727e50ec3f0c5a5a1a50d13-f8d2a51c5478050756f2.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "406daf0a45af53c786d04c6cd7b450463bd09090-4c1fe9591e2dfc68ca3a.js",
+      "url": "https://fingerprint.com/406daf0a45af53c786d04c6cd7b450463bd09090-4c1fe9591e2dfc68ca3a.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "b1502c23458e920327622975cff9b3d176ef2945-03e23672014c579a70ba.js",
+      "url": "https://fingerprint.com/b1502c23458e920327622975cff9b3d176ef2945-03e23672014c579a70ba.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "a5c93d618dcad3fca921decac91db0436c682ddd-2428bfe35445ecd3c475.js",
+      "url": "https://fingerprint.com/a5c93d618dcad3fca921decac91db0436c682ddd-2428bfe35445ecd3c475.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "4a91d5cc64344013ce4c912f22dd1f0f6e2efb33-1ea975a2ac04fcaec762.js",
+      "url": "https://fingerprint.com/4a91d5cc64344013ce4c912f22dd1f0f6e2efb33-1ea975a2ac04fcaec762.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "component---src-templates-home-a-tsx-037214dbbe2a74f98d1f.js",
+      "url": "https://fingerprint.com/component---src-templates-home-a-tsx-037214dbbe2a74f98d1f.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "fileName": "hook.early.js",
+      "url": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 40,
+      "vectors": [
+        "webrtc.createOffer",
+        "audio.offlineAudioContext",
+        "canvas.toDataURL",
+        "webgl.readPixels",
+        "canvas.getImageData",
+        "webgl.getParameter",
+        "webgl.getSupportedExtensions",
+        "webgl.getShaderPrecisionFormat"
+      ]
+    },
+    {
+      "fileName": "4.1.0",
+      "url": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 7,
+      "vectors": [
+        "device.speechSynthesis",
+        "webgpu.requestAdapter",
+        "device.battery",
+        "bot.webdriver",
+        "device.deviceMemory",
+        "device.hardwareConcurrency"
+      ]
+    },
+    {
+      "fileName": "Inline <script>",
+      "url": "inline",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "audio.offlineAudioContext"
+      ]
+    }
+  ],
+  "vectorEvents": [
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853662,
+      "vectorId": "audio.offlineAudioContext",
+      "category": "Audio Fingerprinting",
+      "threat": "HIGH",
+      "api": "OfflineAudioContext rendering complete",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "inline",
+      "lineNumber": 0,
+      "colNumber": 0,
+      "callerFunction": "anonymous",
+      "stack": [],
+      "argsSummary": "rendered buffer: 0.113s",
+      "resultPreview": "sample checksum: 0.185049",
+      "extra": {
+        "duration": 0.11337868480725624,
+        "sampleSum": 0.18504897016100585
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853630,
+      "vectorId": "canvas.toDataURL",
+      "category": "Graphics & Canvas",
+      "threat": "HIGH",
+      "api": "HTMLCanvasElement.prototype.toDataURL",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "HTMLCanvasElement.toDataURL",
+      "stack": [
+        "at HTMLCanvasElement.toDataURL (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at fI (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:87941)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)"
+      ],
+      "argsSummary": "mime: image/png, dimensions: 300x150",
+      "resultPreview": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAACWCAYAAABkW7XSAAAKTElEQVR4AeydCXYaORRFf3pjrawssDLjldG8dGQrGExpnq6O/3FRlKb7yT2qCkr+MbteiboMTna6Anmc...",
+      "extra": {
+        "width": 300,
+        "height": 150,
+        "previewUrl": "data:image/png;base64,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"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853624,
+      "vectorId": "webgl.getSupportedExtensions",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGL2RenderingContext.prototype.getSupportedExtensions",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGL2RenderingContext.getSupportedExtensions",
+      "stack": [
+        "at WebGL2RenderingContext.getSupportedExtensions (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at tf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:65474)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)"
+      ],
+      "argsSummary": "queries supported extension list",
+      "resultPreview": "count: 32 extensions",
+      "extra": {
+        "extensionsCount": 32
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853617,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35633, precisionType: 36341",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35633,
+        "precisionType": 36341
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853617,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35633, precisionType: 36340",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35633,
+        "precisionType": 36340
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853617,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35633, precisionType: 36339",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35633,
+        "precisionType": 36339
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853617,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35633, precisionType: 36338",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35633,
+        "precisionType": 36338
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853617,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35633, precisionType: 36337",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35633,
+        "precisionType": 36337
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853617,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35633, precisionType: 36336",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35633,
+        "precisionType": 36336
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853616,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35632, precisionType: 36341",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35632,
+        "precisionType": 36341
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853616,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35632, precisionType: 36340",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35632,
+        "precisionType": 36340
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853616,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35632, precisionType: 36339",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35632,
+        "precisionType": 36339
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853616,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35632, precisionType: 36338",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35632,
+        "precisionType": 36338
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853616,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35632, precisionType: 36337",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35632,
+        "precisionType": 36337
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853616,
+      "vectorId": "webgl.getShaderPrecisionFormat",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getShaderPrecisionFormat",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getShaderPrecisionFormat",
+      "stack": [
+        "at WebGLRenderingContext.getShaderPrecisionFormat (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at AP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:104749)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62521)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849"
+      ],
+      "argsSummary": "shaderType: 35632, precisionType: 36336",
+      "resultPreview": "[precision format returned]",
+      "extra": {
+        "shaderType": 35632,
+        "precisionType": 36336
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853604,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: MAX_RENDERBUFFER_SIZE (0x84e8)",
+      "resultPreview": "value: \"16384\"",
+      "extra": {
+        "param": 34024,
+        "paramName": "MAX_RENDERBUFFER_SIZE",
+        "value": "16384"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853603,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: MAX_CUBE_MAP_TEXTURE_SIZE (0x851c)",
+      "resultPreview": "value: \"16384\"",
+      "extra": {
+        "param": 34076,
+        "paramName": "MAX_CUBE_MAP_TEXTURE_SIZE",
+        "value": "16384"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853603,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: VERSION (0x1f02)",
+      "resultPreview": "value: \"WebGL 1.0 (OpenGL ES 2.0 Chromium)\"",
+      "extra": {
+        "param": 7938,
+        "paramName": "VERSION",
+        "value": "WebGL 1.0 (OpenGL ES 2.0 Chromium)"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853603,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: RENDERER (0x1f01)",
+      "resultPreview": "value: \"WebKit WebGL\"",
+      "extra": {
+        "param": 7937,
+        "paramName": "RENDERER",
+        "value": "WebKit WebGL"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853603,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: VENDOR (0x1f00)",
+      "resultPreview": "value: \"WebKit\"",
+      "extra": {
+        "param": 7936,
+        "paramName": "VENDOR",
+        "value": "WebKit"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853603,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: SHADING_LANGUAGE_VERSION (0x8b8c)",
+      "resultPreview": "value: \"WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)\"",
+      "extra": {
+        "param": 35724,
+        "paramName": "SHADING_LANGUAGE_VERSION",
+        "value": "WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853602,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62228)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: MAX_TEXTURE_SIZE (0xd33)",
+      "resultPreview": "value: \"16384\"",
+      "extra": {
+        "param": 3379,
+        "paramName": "MAX_TEXTURE_SIZE",
+        "value": "16384"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853598,
+      "vectorId": "webgl.getSupportedExtensions",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getSupportedExtensions",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getSupportedExtensions",
+      "stack": [
+        "at WebGLRenderingContext.getSupportedExtensions (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Of (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:62013)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "queries supported extension list",
+      "resultPreview": "count: 35 extensions",
+      "extra": {
+        "extensionsCount": 35
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853597,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Kf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:61849)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: SHADING_LANGUAGE_VERSION (0x8b8c)",
+      "resultPreview": "value: \"WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)\"",
+      "extra": {
+        "param": 35724,
+        "paramName": "SHADING_LANGUAGE_VERSION",
+        "value": "WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853597,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "HIGH",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Kf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:61737)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: UNMASKED_RENDERER_WEBGL (0x9246)",
+      "resultPreview": "value: \"ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 ps_5_0, D\"",
+      "extra": {
+        "param": 37446,
+        "paramName": "UNMASKED_RENDERER_WEBGL",
+        "value": "ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853597,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Kf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:61643)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: RENDERER (0x1f01)",
+      "resultPreview": "value: \"WebKit WebGL\"",
+      "extra": {
+        "param": 7937,
+        "paramName": "RENDERER",
+        "value": "WebKit WebGL"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853597,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "HIGH",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Kf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:61547)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: UNMASKED_VENDOR_WEBGL (0x9245)",
+      "resultPreview": "value: \"Google Inc. (Intel)\"",
+      "extra": {
+        "param": 37445,
+        "paramName": "UNMASKED_VENDOR_WEBGL",
+        "value": "Google Inc. (Intel)"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853596,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Kf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:61457)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: VENDOR (0x1f00)",
+      "resultPreview": "value: \"WebKit\"",
+      "extra": {
+        "param": 7936,
+        "paramName": "VENDOR",
+        "value": "WebKit"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853596,
+      "vectorId": "webgl.getParameter",
+      "category": "WebGL & WebGPU",
+      "threat": "MEDIUM",
+      "api": "WebGLRenderingContext.prototype.getParameter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGLRenderingContext.getParameter",
+      "stack": [
+        "at WebGLRenderingContext.getParameter (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Kf (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:61375)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "param: VERSION (0x1f02)",
+      "resultPreview": "value: \"WebGL 1.0 (OpenGL ES 2.0 Chromium)\"",
+      "extra": {
+        "param": 7938,
+        "paramName": "VERSION",
+        "value": "WebGL 1.0 (OpenGL ES 2.0 Chromium)"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853577,
+      "vectorId": "canvas.getImageData",
+      "category": "Graphics & Canvas",
+      "threat": "HIGH",
+      "api": "CanvasRenderingContext2D.prototype.getImageData",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "CanvasRenderingContext2D.getImageData",
+      "stack": [
+        "at CanvasRenderingContext2D.getImageData (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at yl (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:176726)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)"
+      ],
+      "argsSummary": "rect: (0,0) 4x4",
+      "resultPreview": "pixels: 64 bytes, checksum: 0x2aea",
+      "extra": {
+        "sx": 0,
+        "sy": 0,
+        "sw": 4,
+        "sh": 4,
+        "checksum": 10986
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853568,
+      "vectorId": "device.hardwareConcurrency",
+      "category": "Hardware & Geometry",
+      "threat": "MEDIUM",
+      "api": "navigator.hardwareConcurrency",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 13956,
+      "callerFunction": "Vz",
+      "stack": [
+        "at Vz (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:13956)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)"
+      ],
+      "argsSummary": "CPU logical cores query",
+      "resultPreview": "12 cores",
+      "extra": {
+        "cores": 12
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853568,
+      "vectorId": "device.deviceMemory",
+      "category": "Hardware & Geometry",
+      "threat": "MEDIUM",
+      "api": "navigator.deviceMemory",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 56967,
+      "callerFunction": "io",
+      "stack": [
+        "at io (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:56967)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)"
+      ],
+      "argsSummary": "Device RAM approximation",
+      "resultPreview": "16 GB",
+      "extra": {
+        "memoryGB": 16
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853567,
+      "vectorId": "bot.webdriver",
+      "category": "Automation Probing",
+      "threat": "HIGH",
+      "api": "navigator.webdriver probe",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 106360,
+      "callerFunction": "PK",
+      "stack": [
+        "at PK (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:106360)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)",
+        "at fV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191816)"
+      ],
+      "argsSummary": "Anti-bot script checked automation flag",
+      "resultPreview": "false (clean)",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853557,
+      "vectorId": "webgl.readPixels",
+      "category": "WebGL & WebGPU",
+      "threat": "HIGH",
+      "api": "WebGL2RenderingContext.prototype.readPixels",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "WebGL2RenderingContext.readPixels",
+      "stack": [
+        "at WebGL2RenderingContext.readPixels (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at c (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:198691)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)"
+      ],
+      "argsSummary": "rect: (0,0) 4x4",
+      "resultPreview": "[3D scene pixel readback]",
+      "extra": {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 4
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853533,
+      "vectorId": "device.battery",
+      "category": "Sensors & Environment",
+      "threat": "HIGH",
+      "api": "navigator.getBattery",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 116055,
+      "callerFunction": "Oy",
+      "stack": [
+        "at Oy (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:116055)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246",
+        "at PV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:193313)",
+        "at fV (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191816)"
+      ],
+      "argsSummary": "querying battery level and charging state",
+      "resultPreview": "[BatteryManager instance returned]",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853532,
+      "vectorId": "webgpu.requestAdapter",
+      "category": "WebGL & WebGPU",
+      "threat": "HIGH",
+      "api": "navigator.gpu.requestAdapter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 38774,
+      "callerFunction": "Jo",
+      "stack": [
+        "at Jo (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:38774)",
+        "at z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:76778)",
+        "at sY (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:76906)",
+        "at z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:109856)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:110151",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)",
+        "at MK.s (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:110049)",
+        "at MK (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:110056)"
+      ],
+      "argsSummary": "default options",
+      "resultPreview": "[WebGPU Adapter requested]",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853526,
+      "vectorId": "webgpu.requestAdapter",
+      "category": "WebGL & WebGPU",
+      "threat": "HIGH",
+      "api": "navigator.gpu.requestAdapter",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 38774,
+      "callerFunction": "Jo",
+      "stack": [
+        "at Jo (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:38774)",
+        "at z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:9520)",
+        "at j$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:10265)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191849",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:192246"
+      ],
+      "argsSummary": "default options",
+      "resultPreview": "[WebGPU Adapter requested]",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853521,
+      "vectorId": "canvas.toDataURL",
+      "category": "Graphics & Canvas",
+      "threat": "HIGH",
+      "api": "HTMLCanvasElement.prototype.toDataURL",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "HTMLCanvasElement.toDataURL",
+      "stack": [
+        "at HTMLCanvasElement.toDataURL (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at wJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141206)",
+        "at N$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:6874)",
+        "at hb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84595)",
+        "at az.geometry (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:110890)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884"
+      ],
+      "argsSummary": "mime: image/png, dimensions: 122x110",
+      "resultPreview": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHoAAABuCAYAAADoHgdpAAAQAElEQVR4AexdCbQcxXW9PX+T/hc+ZjFiNxIIGSQw8CUHMMYIYjiJjAGbgw8kls1iSSYHxwZzwjGHE4Uk...",
+      "extra": {
+        "width": 122,
+        "height": 110,
+        "previewUrl": "data:image/png;base64,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"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853518,
+      "vectorId": "canvas.toDataURL",
+      "category": "Graphics & Canvas",
+      "threat": "HIGH",
+      "api": "HTMLCanvasElement.prototype.toDataURL",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "HTMLCanvasElement.toDataURL",
+      "stack": [
+        "at HTMLCanvasElement.toDataURL (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at wJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141206)",
+        "at N$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:6499)",
+        "at hb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84595)",
+        "at az.geometry (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:110890)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884"
+      ],
+      "argsSummary": "mime: image/png, dimensions: 240x60",
+      "resultPreview": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAAA8CAYAAABYfzddAAAQAElEQVR4Aex8CZRV1Znud84dah6AQkSoAsQBREAKpVRwJdov+lrTrxON6agrkQACZnVMJyRZyVvaqU7y...",
+      "extra": {
+        "width": 240,
+        "height": 60,
+        "previewUrl": "data:image/png;base64,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"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853516,
+      "vectorId": "canvas.toDataURL",
+      "category": "Graphics & Canvas",
+      "threat": "HIGH",
+      "api": "HTMLCanvasElement.prototype.toDataURL",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "HTMLCanvasElement.toDataURL",
+      "stack": [
+        "at HTMLCanvasElement.toDataURL (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at wJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141206)",
+        "at N$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:6486)",
+        "at hb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84595)",
+        "at az.geometry (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:110890)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:191884"
+      ],
+      "argsSummary": "mime: image/png, dimensions: 240x60",
+      "resultPreview": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAAA8CAYAAABYfzddAAAQAElEQVR4Aex8CZRV1Znud84dah6AQkSoAsQBREAKpVRwJdov+lrTrxON6agrkQACZnVMJyRZyVvaqU7y...",
+      "extra": {
+        "width": 240,
+        "height": 60,
+        "previewUrl": "data:image/png;base64,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"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853502,
+      "vectorId": "audio.offlineAudioContext",
+      "category": "Audio Fingerprinting",
+      "threat": "HIGH",
+      "api": "OfflineAudioContext.prototype.startRendering",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1681,
+      "colNumber": 20,
+      "callerFunction": "OfflineAudioContext.startRendering",
+      "stack": [
+        "at OfflineAudioContext.startRendering (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1681:20)",
+        "at O (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:144167)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:144356",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:143994",
+        "at KC (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:144394)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:15482",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)"
+      ],
+      "argsSummary": "length: 5000, sampleRate: 44100, channels: 1",
+      "resultPreview": "[Audio rendering initiated]",
+      "extra": {
+        "length": 5000,
+        "sampleRate": 44100
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853488,
+      "vectorId": "device.speechSynthesis",
+      "category": "Fonts & Geometry",
+      "threat": "HIGH",
+      "api": "speechSynthesis.getVoices()",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0",
+      "lineNumber": 5,
+      "colNumber": 105657,
+      "callerFunction": "o",
+      "stack": [
+        "at o (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:105657)",
+        "at K (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:105932)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:106099",
+        "at new Promise (<anonymous>)",
+        "at https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:105882",
+        "at fK (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:106138)",
+        "at FP (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:99058)",
+        "at D$1 (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:2738)"
+      ],
+      "argsSummary": "queries local OS text-to-speech voice pack",
+      "resultPreview": "22 voices installed",
+      "extra": {
+        "voiceCount": 22
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853455,
+      "vectorId": "webrtc.createOffer",
+      "category": "Network & WebRTC",
+      "threat": "MEDIUM",
+      "api": "RTCPeerConnection.prototype.createOffer",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "RTCPeerConnection.createOffer",
+      "stack": [
+        "at RTCPeerConnection.createOffer (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at _z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:14516)",
+        "at V (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66176)",
+        "at R (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66752)",
+        "at Z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66233)",
+        "at Object.createDataChannelAndOffer (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66940)",
+        "at pb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84184)",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)"
+      ],
+      "argsSummary": "generating local SDP offer",
+      "resultPreview": "[SDP Offer initiated]",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853455,
+      "vectorId": "webrtc.createOffer",
+      "category": "Network & WebRTC",
+      "threat": "MEDIUM",
+      "api": "RTCPeerConnection.prototype.createDataChannel",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "RTCPeerConnection.createDataChannel",
+      "stack": [
+        "at RTCPeerConnection.createDataChannel (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Lz (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:24395)",
+        "at V (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66176)",
+        "at R (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66693)",
+        "at Z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66233)",
+        "at Object.createDataChannelAndOffer (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66940)",
+        "at pb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84184)",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)"
+      ],
+      "argsSummary": "label: \"0.8672408645363836\"",
+      "resultPreview": "[WebRTC DataChannel initialized]",
+      "extra": {
+        "label": "0.8672408645363836"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853453,
+      "vectorId": "webrtc.createOffer",
+      "category": "Network & WebRTC",
+      "threat": "MEDIUM",
+      "api": "RTCPeerConnection.prototype.createOffer",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "RTCPeerConnection.createOffer",
+      "stack": [
+        "at RTCPeerConnection.createOffer (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at _z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:14516)",
+        "at V (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66176)",
+        "at R (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66752)",
+        "at Z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66233)",
+        "at Object.createDataChannelAndOffer (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66940)",
+        "at pb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84184)",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)"
+      ],
+      "argsSummary": "generating local SDP offer",
+      "resultPreview": "[SDP Offer initiated]",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853453,
+      "vectorId": "webrtc.createOffer",
+      "category": "Network & WebRTC",
+      "threat": "MEDIUM",
+      "api": "RTCPeerConnection.prototype.createDataChannel",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "RTCPeerConnection.createDataChannel",
+      "stack": [
+        "at RTCPeerConnection.createDataChannel (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Lz (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:24395)",
+        "at V (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66176)",
+        "at R (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66693)",
+        "at Z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66233)",
+        "at Object.createDataChannelAndOffer (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66940)",
+        "at pb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84184)",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)"
+      ],
+      "argsSummary": "label: \"0.5135262198199051\"",
+      "resultPreview": "[WebRTC DataChannel initialized]",
+      "extra": {
+        "label": "0.5135262198199051"
+      }
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853451,
+      "vectorId": "webrtc.createOffer",
+      "category": "Network & WebRTC",
+      "threat": "MEDIUM",
+      "api": "RTCPeerConnection.prototype.createOffer",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "RTCPeerConnection.createOffer",
+      "stack": [
+        "at RTCPeerConnection.createOffer (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at _z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:14516)",
+        "at V (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66176)",
+        "at R (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66752)",
+        "at Z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66233)",
+        "at Object.createDataChannelAndOffer (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66940)",
+        "at pb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84184)",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)"
+      ],
+      "argsSummary": "generating local SDP offer",
+      "resultPreview": "[SDP Offer initiated]",
+      "extra": {}
+    },
+    {
+      "type": "DETECT_EXPERT_VECTOR_LOG",
+      "timestamp": 1791872853450,
+      "vectorId": "webrtc.createOffer",
+      "category": "Network & WebRTC",
+      "threat": "MEDIUM",
+      "api": "RTCPeerConnection.prototype.createDataChannel",
+      "domain": "fingerprint.com",
+      "href": "https://fingerprint.com/",
+      "callerScript": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "lineNumber": 1619,
+      "colNumber": 20,
+      "callerFunction": "RTCPeerConnection.createDataChannel",
+      "stack": [
+        "at RTCPeerConnection.createDataChannel (chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619:20)",
+        "at Lz (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:24395)",
+        "at V (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66176)",
+        "at R (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66693)",
+        "at Z (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66233)",
+        "at Object.createDataChannelAndOffer (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:66940)",
+        "at pb (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:84184)",
+        "at EJ (https://fingerprint.com/r4a0Rd2Xs/web/v4/b9Y07pv2XnjDfsj5yA4u?ci=jsl/4.1.0:5:141489)"
+      ],
+      "argsSummary": "label: \"0.2604816396408689\"",
+      "resultPreview": "[WebRTC DataChannel initialized]",
+      "extra": {
+        "label": "0.2604816396408689"
+      }
+    }
+  ]
+}

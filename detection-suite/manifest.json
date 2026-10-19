@@ -1,0 +1,590 @@
+{
+  "exportDate": "2026-10-13T10:47:05.338Z",
+  "domain": "www.shopping.com",
+  "totalScripts": 68,
+  "scripts": [
+    {
+      "zipPath": "scripts/01_signin.js",
+      "originalUrl": "https://www.shopping.com/ap/signin?openid.pape.max_auth_age=900&openid.return_to=https%3A%2F%2Fwww.shopping.com%2Fcheckout%2Fentry%2Fbuynow%3FclientName%3DOffersX_OfferDisplay_DetailPage%26ASIN%3DB0D7CKV1J8%26storeID%3D%26qid%3D%26anti-csrftoken-a2z%3DhGAP9%252FKZlRyncpb%252BEl4p440qpj7Bp2ioYphyf%252BFToJmyAAAAAGrOCsg2NDQyZGE4NS01OTZkLTQzODQtYjE0Yy1kZWNiZDc2MDJkZjM%253D%26sellingCustomerID%3D%26sourceCustomerOrgListID%3D%26dropdown-selection-ubb%3Dadd-new%26viewID%3Dglance%26ctaDeviceType%3Ddesktop%26isAddon%3D0%26ref_%3Ddp_start-bbf_1_glance_chw%26dropdown-selection%3Dadd-new%26nodeID%3D%26items%255B0.base%255D%255Bquantity%255D%3D1%26sr%3D%26items%255B0.base%255D%255BcustomerVisiblePrice%255D%255BdisplayString%255D%3DGHS%2526nbsp%253B285.41%26tagActionCode%3D%26usePrimeHandler%3D0%26ctaPageType%3Ddetail%26quantity%3D1%26smokeTestEnabled%3Dfalse%26rsid%3D147-0099296-5118245%26isBuyNow%3D1%26items%255B0.base%255D%255BcustomerVisiblePrice%255D%255Bamount%255D%3D285.407500000000%26pageLoadTimestampUTC%3D2026-10-13T10%253A41%253A12.443636149Z%26isEligibilityLogicDisabled%3D1%26items%255B0.base%255D%255Basin%255D%3DB0D7CKV1J8%26referrer%3Ddetail%26isMerchantExclusive%3D0%26merchantID%3DAKXVBT49GGF3B%26items%255B0.base%255D%255BcustomerVisiblePrice%255D%255BcurrencyCode%255D%3DGHS%26items%255B0.base%255D%255BofferListingId%255D%3DBTIiDS4TgkS1BrL4jdnwGt2GC%25252FVcfnXzkLTJL0gwa8sg3Nj7hKM23qSoVQcbasTa9lNbBaKctVWk%25252B0Op2XQZY0mAvMQH5ljXNU78Y32eQCqnTNiHn6pCxt1HW9GtpncsQLWXeE8DK0b%25252BKj7H8zl8COdN99sfd1udL0k4mlK6g09nfE87gsk%25252FczHzZ1UBRjfM%26sourceCustomerOrgListItemID%3D%26submit.buy-now%3DSubmit%26pipelineType%3DChewbacca%26rebateId%3D%26offerListingID%3DBTIiDS4TgkS1BrL4jdnwGt2GC%25252FVcfnXzkLTJL0gwa8sg3Nj7hKM23qSoVQcbasTa9lNbBaKctVWk%25252B0Op2XQZY0mAvMQH5ljXNU78Y32eQCqnTNiHn6pCxt1HW9GtpncsQLWXeE8DK0b%25252BKj7H8zl8COdN99sfd1udL0k4mlK6g09nfE87gsk%25252FczHzZ1UBRjfM%26session-id%3D147-0099296-5118245%26wlPopCommand%3D%26isUnrec%3D1&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=amazon_checkout_us&openid.mode=checkid_setup&language=en_US&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0",
+      "system": null,
+      "vendor": null,
+      "callCount": 28,
+      "vectors": [
+        "device.hardwareConcurrency",
+        "device.deviceMemory",
+        "bot.webdriver",
+        "bot.automationArtifacts",
+        "network.sendBeacon",
+        "device.speechSynthesis"
+      ]
+    },
+    {
+      "zipPath": "scripts/02_AmazonUIFormControlsJS.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31jdfgcsPAL.js?AUIClients/AmazonUIFormControlsJS",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/03_AuthXClaimCollectionUIAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/51sZqqW1hvL.js?AUIClients/AuthXClaimCollectionUIAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/04_FWCIMAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/81eFQKE60AL.js?AUIClients/FWCIMAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 2,
+      "vectors": [
+        "device.battery"
+      ]
+    },
+    {
+      "zipPath": "scripts/05_IdentityWebAuthnAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/71YOHSc9NjL.js?AUIClients/IdentityWebAuthnAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 3,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/06_IdentityJsCommonAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/51s+BgGxK9L.js?AUIClients/IdentityJsCommonAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 6,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/07_AuthXSharedUIAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/51NbJLAuvoL.js?AUIClients/AuthXSharedUIAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/08_IdentityNavigationNativeAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/61jJKUgNoiL.js?AUIClients/IdentityNavigationNativeAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/09_AmazonUIjQuery.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/61xJcNKKLXL.js?AUIClients/AmazonUIjQuery",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/10_AmazonUI.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/11I0WXrZVoL._RC%7C11Y+5x+kkTL.js,51IrWwn6GEL.js,115zbyk371L.js,11GgN1+C7hL.js,01+z+uIeJ-L.js,01Aie6L4uGL.js,21NadQlXUWL.js,01vRf9id2EL.js,31on-La90vL.js,11a7qqY8xXL.js,11PZSUl3FLL.js,51C4kaFbiAL.js,11FhdH2HZwL.js,11wb9K3sw0L.js,11BrgrMAHUL.js,11dKU9zhD1L.js,21F6z4HaEVL.js,01Svfxfy8OL.js,61lbT4bHNWL.js,01ikBbTAneL.js,31xywoXPfpL.js,01qXJuwGmxL.js,01WlsjNmqIL.js,11F929pmpYL.js,31dUhXzzjYL.js,01rpauTep4L.js,314M2Oak7hL.js,011FfPwYqHL.js,21P5VvHf-XL.js,01pTq+jF06L.js,21kN0q4IA-L.js,0105nvqLd4L.js,11vb6P5C5AL.js,01ZNzO-VJuL.js_.js?AUIClients/AmazonUI",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/11_CardJsRuntimeBuzzCopyBuild.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/516npEhK50L.js?AUIClients/CardJsRuntimeBuzzCopyBuild",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/12_hook.early.js",
+      "originalUrl": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 13,
+      "vectors": [
+        "canvas.toDataURL",
+        "canvas.getImageData",
+        "webgl.getParameter",
+        "webgl.getSupportedExtensions"
+      ]
+    },
+    {
+      "zipPath": "scripts/13_215h87l68bL.js",
+      "originalUrl": "https://images-na.ssl-images-shopping.com/images/I/215h87l68bL.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/14_ref_sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3.js",
+      "originalUrl": "https://www.shopping.com/UGREEN-Bluetooth-aptX-Adaptive-Transmitter-Headphones/dp/B0D7CKV1J8/ref=sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3?_encoding=UTF8&ie=UTF8&psc=1&sp_csd=d2lkZ2V0TmFtZT1zcF9odWNfYmxlbmRlZA%3D%3D&pf_rd_p=8e0abace-560d-4ebc-8138-ae94d1b9690f&pf_rd_r=RTZH5FZGKYP25PXGJZRW&pd_rd_i=B0D7CKV1J8&pd_rd_w=PnS5P&pd_rd_wg=UVFR3&pd_rd_r=c582b04a-dd70-4164-a7ee-c54f2220c43e&content-id=amzn1.sym.8e0abace-560d-4ebc-8138-ae94d1b9690f",
+      "system": null,
+      "vendor": null,
+      "callCount": 2,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/15_ref_sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3.js",
+      "originalUrl": "https://www.shopping.com/UGREEN-Bluetooth-aptX-Adaptive-Transmitter-Headphones/dp/B0D7CKV1J8/ref=sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3?_encoding=UTF8&ie=UTF8&psc=1&spc=MTozMTEwNTc3MDczNDI0NTU3OjE3OTE4ODgwNDE6c3BfaHVjX2JsZW5kZWQ6Ojo6QjBEN0NLVjFKODo%3D&sp_csd=d2lkZ2V0TmFtZT1zcF9odWNfYmxlbmRlZA%3D%3D&pf_rd_p=8e0abace-560d-4ebc-8138-ae94d1b9690f&pf_rd_r=RTZH5FZGKYP25PXGJZRW&pd_rd_i=B0D7CKV1J8&pd_rd_w=PnS5P&pd_rd_wg=UVFR3&pd_rd_r=c582b04a-dd70-4164-a7ee-c54f2220c43e&content-id=amzn1.sym.8e0abace-560d-4ebc-8138-ae94d1b9690f",
+      "system": null,
+      "vendor": null,
+      "callCount": 3,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/16_ref_dp_start-bbf_1_glance.js",
+      "originalUrl": "https://www.shopping.com/cart/add-to-cart/ref=dp_start-bbf_1_glance",
+      "system": null,
+      "vendor": null,
+      "callCount": 4,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/17_147-0099296-5118245.js",
+      "originalUrl": "https://www.shopping.com/Razer-BlackShark-Wireless-Gaming-Headset-PS5/dp/B0FDPJZQNY/ref=pd_rhf_dp_s_ci_mcx_mr__d_sccl_2_14/147-0099296-5118245?pd_rd_w=XzOLK&content-id=amzn1.sym.c2ce25da-4d17-4f37-af20-bde98a9f0bcd:amzn1.symc.d3391730-f670-41da-8b34-61787b3edb82&pf_rd_p=c2ce25da-4d17-4f37-af20-bde98a9f0bcd&pf_rd_r=03P7F9MJAJ6HRWT37F6N&pd_rd_wg=QM9dp&pd_rd_r=2df4f343-01fd-4a72-a281-1d480ad19be9&pd_rd_i=B0FDPJZQNY&psc=1",
+      "system": null,
+      "vendor": null,
+      "callCount": 7,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/18_CDB96030-A7CF-4B56-B70C-67086A740274.js",
+      "originalUrl": "https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto",
+      "system": null,
+      "vendor": null,
+      "callCount": 148,
+      "vectors": [
+        "device.hardwareConcurrency",
+        "device.deviceMemory",
+        "bot.webdriver",
+        "bot.automationArtifacts",
+        "network.sendBeacon",
+        "device.speechSynthesis"
+      ]
+    },
+    {
+      "zipPath": "scripts/19_somjUphasDgLxuA.js",
+      "originalUrl": "at new e (https://m.media-shopping.com/images/S/sash/somjUphasDgLxuA.js?name=vendors",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "device.battery"
+      ]
+    },
+    {
+      "zipPath": "scripts/20_cwr.js",
+      "originalUrl": "https://client.rum.us-east-1.amazonaws.com/1.x/cwr.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/21_AmazonStoresCnubaAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21QTE5zfWuL.js?AUIClients/AmazonStoresCnubaAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/22_BrandFollowKataComponentAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/41fFmJrK7zL._RC%7C01N0G7oHRlL.js_.js?AUIClients/BrandFollowKataComponentAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/23_InContextDetailPageAssets_1442063-T1.1459118-T1.1354819-T1.1463686-T1.1439981-T1.1423113-T1.1313601-T1.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/61-AxLNpw1L._RC%7C01zCndFsf4L.js,019K6hE9zSL.js,01edGJjT5SL.js_.js?AUIClients/InContextDetailPageAssets#1442063-T1.1459118-T1.1354819-T1.1463686-T1.1439981-T1.1423113-T1.1313601-T1",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/24_FollowButtonWidgetAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/51+aVv60wyL.js?AUIClients/FollowButtonWidgetAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/25_81ZH0g5h6nL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 10,
+      "vectors": [
+        "network.sendBeacon"
+      ]
+    },
+    {
+      "zipPath": "scripts/26_41wqhrnDiqL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/41wqhrnDiqL.js?runtime.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/27_61CFWASTZAL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/61CFWASTZAL.js?AAPI-client.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/28_B1R0Vj7gQeL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/B1R0Vj7gQeL.js?vendor.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/29_61vNAXvkqzL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/61vNAXvkqzL.js?Redux-sagas.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/30_NavDesktopUberAsset_desktop.language-en.us.1200978-T1.1354727-T1.1354728-T1.1381529-T1.1354730-T1.1354729-T1.1444135-T1.1253326-T1.1463553-T1.1346270-T1.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/51rG04VN8cL._RC%7C711xEihqxGL.js,41VWJ7fRjuL.js,01QvReFeJyL.js,01kC46b9vjL.js,817-k-6kdXL.js,11C6Xs6tLuL.js,41jBieyCvYL.js,01wXnKULArL.js,01+pnQJuQ0L.js,311S4pZ3B4L.js,51GC3iCVEKL.js,41GvVRH6GqL.js,41LquXcMYDL.js,11lw6J7z8iL.js,31COIUU385L.js,01VYGE8lGhL.js_.js?AUIClients/NavDesktopUberAsset#desktop.language-en.us.1200978-T1.1354727-T1.1354728-T1.1381529-T1.1354730-T1.1354729-T1.1444135-T1.1253326-T1.1463553-T1.1346270-T1",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/31_4118kHqBaxL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/4118kHqBaxL.js?Common-styles.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/32_21-5kiQAEDL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21-5kiQAEDL.js?Common-utils.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/33_21-cO-oJLjL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21-cO-oJLjL.js?Common-BottomSheet.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/34_21gU5AnUjIL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21gU5AnUjIL.js?Common-FollowButton.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/35_21Qy_Dvg1SL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21Qy+Dvg1SL.js?Common-NavAccordionMenu.tsx.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/36_21js6g2i9nL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21js6g2i9nL.js?Common-MobileHeader.tsx.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/37_21FtY4GdivL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21FtY4GdivL.js?Common-SideMenu.tsx.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/38_31M4_b8WGlL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31M4+b8WGlL.js?Common-HeaderV1.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/39_217V9jD4itL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/217V9jD4itL.js?Common-NavItem.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/40_21JfgZswdFL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21JfgZswdFL.js?Common-NavBar.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/41_71e8-lUIe-L.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/71e8-lUIe-L.js?Widgets-Header.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/42_31vUfHrRgGL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31vUfHrRgGL.js?Common-Product.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/43_314hsbuMSDL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/314hsbuMSDL.js?Common-ProductInfo.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/44_81uiyrM2ElL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/81uiyrM2ElL.js?videojs.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/45_31ZZrAIZDML.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31ZZrAIZDML.js?Common-Video.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/46_31_MoVCocsL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31+MoVCocsL.js?Common-Metrics.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/47_41CaC_ZVb8L.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/41CaC+ZVb8L.js?Common-ProductGridItem.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/48_31fFAlZYkaL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31fFAlZYkaL.js?Common-ProductShowcase.tsx.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/49_31yaZyDaZxL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31yaZyDaZxL.js?Common-AddToCart.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/50_31t2BfLhshL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31t2BfLhshL.js?Common-ImageVideoCarousel.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/51_31G3_hEvksL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31G3+hEvksL.js?Common-TopBar.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/52_31M4ZajVlAL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31M4ZajVlAL.js?Common-VariationHandler.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/53_31Y52sUHDyL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31Y52sUHDyL.js?Common-Variations.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/54_21LuR9-ij6L.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21LuR9-ij6L.js?Common-ProductShowcaseActions.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/55_21pxPVs1x7L.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21pxPVs1x7L.js?reactmarkdown.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/56_31wGEG3ZJjL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31wGEG3ZJjL.js?Common-ProductCard.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/57_41FNFfWK2WL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/41FNFfWK2WL.js?Common-EditorialTile.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/58_31wQ0v8KRHL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31wQ0v8KRHL.js?Common-EditorialTileInteractiveImage.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/59_312mrsmLbAL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/312mrsmLbAL.js?Common-EditorialRow.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/60_31OKhSQcTAL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31OKhSQcTAL.js?Common-EditorialTileImage.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/61_31apsuLr5VL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31apsuLr5VL.js?Common-EditorialTileProduct.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/62_31K9CW-DKtL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/31K9CW-DKtL.js?Common-TextTileLayer.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/63_81TCNAiCJHL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/81TCNAiCJHL.js?Widgets-EditorialRow.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/64_ShareWidgetTriggerAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/21pj1OVABnL.js?AUIClients/ShareWidgetTriggerAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/65_somjUphasDgLxuA.js",
+      "originalUrl": "https://m.media-shopping.com/images/S/sash/somjUphasDgLxuA.js?name=vendors",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/66_YMDxzW9D8ifpX2q.js",
+      "originalUrl": "https://m.media-shopping.com/images/S/sash/YMDxzW9D8ifpX2q.js?name=app",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/67_51eiBVHOJBL.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/51eiBVHOJBL.js?stores_core_rendering.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/68_FWCIMAssets.js",
+      "originalUrl": "https://m.media-shopping.com/images/I/81xAPm3uFgL.js?AUIClients/FWCIMAssets",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "device.battery"
+      ]
+    }
+  ]
+}

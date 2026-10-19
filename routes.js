@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-CznXPbDH.js";import{d as t}from"./index-Bd-XByrZ.js";import{t as n}from"./FingerprintDashboard-DKiC-PTf.js";var r=e();function i(){let{debug:e}=t.useLoaderData();return(0,r.jsx)(n,{debug:e})}export{i as component};

@@ -1,0 +1,259 @@
+{
+  "exportDate": "2026-10-13T06:57:27.098Z",
+  "domain": "anti.bot",
+  "totalScripts": 27,
+  "scripts": [
+    {
+      "zipPath": "scripts/01_hook.early.js",
+      "originalUrl": "chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 454,
+      "vectors": [
+        "audio.offlineAudioContext",
+        "canvas.toDataURL",
+        "webgl.getParameter",
+        "webrtc.createOffer",
+        "canvas.getImageData",
+        "webgl.readPixels",
+        "webgl.getShaderPrecisionFormat",
+        "webgl.getSupportedExtensions",
+        "canvas.toBlob",
+        "canvas.measureText"
+      ]
+    },
+    {
+      "zipPath": "scripts/02_fingerprint.min.js",
+      "originalUrl": "https://anti.bot/static/vendor/fingerprintjs/3.4.2/fingerprint.min.js",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 2,
+      "vectors": [
+        "device.deviceMemory",
+        "device.hardwareConcurrency"
+      ]
+    },
+    {
+      "zipPath": "scripts/03_Inline__script_.js",
+      "originalUrl": "inline",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "audio.offlineAudioContext"
+      ]
+    },
+    {
+      "zipPath": "scripts/04_monfp.js",
+      "originalUrl": "https://anti.bot/static/js/monfp.js?v=1328a45ec42b",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 1,
+      "vectors": [
+        "webgpu.requestAdapter"
+      ]
+    },
+    {
+      "zipPath": "scripts/05_gpufp.js",
+      "originalUrl": "https://anti.bot/static/js/gpufp.js?v=1328a45ec42b",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 1,
+      "vectors": [
+        "webgpu.requestAdapter"
+      ]
+    },
+    {
+      "zipPath": "scripts/06_antispoof-detection.js",
+      "originalUrl": "at async AntiSpoofDetection.audioRenderedBufferIntegrity (https://anti.bot/static/js/antispoof-detection.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "audio.offlineAudioContext"
+      ]
+    },
+    {
+      "zipPath": "scripts/07_hwfp.js",
+      "originalUrl": "https://anti.bot/static/js/hwfp.js?v=1328a45ec42b",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 1,
+      "vectors": [
+        "webgpu.requestAdapter"
+      ]
+    },
+    {
+      "zipPath": "scripts/08_fingerprint.js",
+      "originalUrl": "https://anti.bot/static/js/fingerprint.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/09_apisig.js",
+      "originalUrl": "https://anti.bot/static/js/apisig.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/10_antispoof-detection.js",
+      "originalUrl": "https://anti.bot/static/js/antispoof-detection.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/11_d3.min.js",
+      "originalUrl": "https://anti.bot/static/vendor/d3/7.9.0/d3.min.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/12_topojson.min.js",
+      "originalUrl": "https://anti.bot/static/vendor/topojson/3.0.2/topojson.min.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/13_three.min.js",
+      "originalUrl": "https://anti.bot/static/vendor/three/0.155.0/three.min.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/14_globe.gl.min.js",
+      "originalUrl": "https://anti.bot/static/vendor/globe.gl/2.32.4/globe.gl.min.js",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/15_countries.js",
+      "originalUrl": "https://anti.bot/static/js/map/countries.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/16_cyber-globe.js",
+      "originalUrl": "https://anti.bot/static/js/map/cyber-globe.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/17_flag.js",
+      "originalUrl": "https://anti.bot/static/js/flag.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/18_dnsTest.js",
+      "originalUrl": "https://anti.bot/static/js/dnsTest.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/19_fp-scene.js",
+      "originalUrl": "https://anti.bot/fp/v7/fp-scene.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/20_fp-probe.js",
+      "originalUrl": "https://anti.bot/fp/v7/fp-probe.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "webgpu.requestAdapter"
+      ]
+    },
+    {
+      "zipPath": "scripts/21_canvasfp.js",
+      "originalUrl": "https://anti.bot/static/js/canvasfp.js?v=1328a45ec42b",
+      "system": "FingerprintJS / Fingerprint Pro",
+      "vendor": "FingerprintJS, Inc.",
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/22_fpint-v7-client.js",
+      "originalUrl": "https://anti.bot/static/js/fpint-v7-client.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/23_surface-comparison.js",
+      "originalUrl": "https://anti.bot/static/js/surface-comparison.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 0,
+      "vectors": []
+    },
+    {
+      "zipPath": "scripts/24_antispoof-detection.js",
+      "originalUrl": "at async _0x1b1dcd (https://anti.bot/static/js/antispoof-detection.js?v=1328a45ec42b",
+      "system": null,
+      "vendor": null,
+      "callCount": 2,
+      "vectors": [
+        "audio.offlineAudioContext"
+      ]
+    },
+    {
+      "zipPath": "scripts/25_at_async__0x297f4c__https___anti.bot_.js",
+      "originalUrl": "at async _0x297f4c (https://anti.bot/",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "audio.offlineAudioContext"
+      ]
+    },
+    {
+      "zipPath": "scripts/26_https___anti.bot_.js",
+      "originalUrl": "https://anti.bot/",
+      "system": null,
+      "vendor": null,
+      "callCount": 6,
+      "vectors": [
+        "device.battery",
+        "bot.webdriver",
+        "bot.automationArtifacts"
+      ]
+    },
+    {
+      "zipPath": "scripts/27_at_async_getAudioFingerprintHash__https___anti.bot_.js",
+      "originalUrl": "at async getAudioFingerprintHash (https://anti.bot/",
+      "system": null,
+      "vendor": null,
+      "callCount": 1,
+      "vectors": [
+        "audio.offlineAudioContext"
+      ]
+    }
+  ]
+}

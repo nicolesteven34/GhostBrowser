@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DetectExpert Pro Forensic Audit - www.shopping.com</title>
+  <style>
+    :root {
+      --bg: #0b111e;
+      --card-bg: #111a2d;
+      --border: #1c2b45;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --cyan: #00e5ff;
+      --accent: #6366f1;
+      --red: #ef4444;
+      --green: #10b981;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 30px;
+    }
+    .header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title h1 { margin: 0 0 6px 0; color: var(--cyan); font-size: 26px; }
+    .title p { margin: 0; color: var(--text-dim); }
+    .risk-badge {
+      background: #f59e0b;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .card .val { font-size: 28px; font-weight: bold; color: var(--cyan); }
+    .card .lbl { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+    h2 { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 36px; color: var(--text); }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { background: #162238; color: var(--cyan); }
+    tr:hover { background: #162238; }
+    .badge-high { color: var(--red); font-weight: bold; }
+    .badge-med { color: #f59e0b; font-weight: bold; }
+    .badge-info { color: var(--cyan); }
+    code { background: #1c2b45; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    @media print {
+      body { background: #fff; color: #000; padding: 10px; }
+      .card { border: 1px solid #ccc; background: #fafafa; }
+      th { background: #eee; color: #000; }
+      th, td { border-bottom: 1px solid #ddd; }
+      .title h1 { color: #000; }
+      code { background: #eee; color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">
+      <h1>DetectExpert Pro Forensic Audit Report</h1>
+      <p>Target Domain: <strong>www.shopping.com</strong> | URL: https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto | Generated: 10/13/2026, 5:47:04 AM</p>
+    </div>
+    <div class="risk-badge">
+      RISK SCORE: 55/100
+    </div>
+  </div>
+
+  <h2>Summary Metric Counters</h2>
+  <div class="grid">
+    <div class="card"><div class="val">10</div><div class="lbl">Active Identification</div></div>
+    <div class="card"><div class="val">13</div><div class="lbl">Passive Identification</div></div>
+    <div class="card"><div class="val">2</div><div class="lbl">Canvas 2D Access</div></div>
+    <div class="card"><div class="val">11</div><div class="lbl">WebGL / WebGPU Probes</div></div>
+    <div class="card"><div class="val">0</div><div class="lbl">Audio Fingerprinting</div></div>
+    <div class="card"><div class="val">0</div><div class="lbl">WebRTC & IP Checks</div></div>
+    <div class="card"><div class="val">10</div><div class="lbl">Hardware & Geometry</div></div>
+    <div class="card"><div class="val">0</div><div class="lbl">Local Port Probes</div></div>
+    <div class="card"><div class="val">195</div><div class="lbl">Third-Party Trackers</div></div>
+  </div>
+
+  <h2>Detected Anti-Fraud & Identification Systems</h2>
+  <p>No commercial anti-fraud engines flagged on this domain.</p>
+
+  <h2>Scripts Invoking Fingerprinting Checks</h2>
+  <table>
+    <thead><tr><th>Script File</th><th>Full URL</th><th>Identified System</th><th>Calls</th><th>Vectors Touched</th></tr></thead>
+    <tbody>
+      
+        <tr>
+          <td><strong>signin</strong></td>
+          <td><code>https://www.shopping.com/ap/signin?openid.pape.max_auth_age=900&openid.return_to=https%3A%2F%2Fwww.shopping.com%2Fcheckout%2Fentry%2Fbuynow%3FclientName%3DOffersX_OfferDisplay_DetailPage%26ASIN%3DB0D7CKV1J8%26storeID%3D%26qid%3D%26anti-csrftoken-a2z%3DhGAP9%252FKZlRyncpb%252BEl4p440qpj7Bp2ioYphyf%252BFToJmyAAAAAGrOCsg2NDQyZGE4NS01OTZkLTQzODQtYjE0Yy1kZWNiZDc2MDJkZjM%253D%26sellingCustomerID%3D%26sourceCustomerOrgListID%3D%26dropdown-selection-ubb%3Dadd-new%26viewID%3Dglance%26ctaDeviceType%3Ddesktop%26isAddon%3D0%26ref_%3Ddp_start-bbf_1_glance_chw%26dropdown-selection%3Dadd-new%26nodeID%3D%26items%255B0.base%255D%255Bquantity%255D%3D1%26sr%3D%26items%255B0.base%255D%255BcustomerVisiblePrice%255D%255BdisplayString%255D%3DGHS%2526nbsp%253B285.41%26tagActionCode%3D%26usePrimeHandler%3D0%26ctaPageType%3Ddetail%26quantity%3D1%26smokeTestEnabled%3Dfalse%26rsid%3D147-0099296-5118245%26isBuyNow%3D1%26items%255B0.base%255D%255BcustomerVisiblePrice%255D%255Bamount%255D%3D285.407500000000%26pageLoadTimestampUTC%3D2026-10-13T10%253A41%253A12.443636149Z%26isEligibilityLogicDisabled%3D1%26items%255B0.base%255D%255Basin%255D%3DB0D7CKV1J8%26referrer%3Ddetail%26isMerchantExclusive%3D0%26merchantID%3DAKXVBT49GGF3B%26items%255B0.base%255D%255BcustomerVisiblePrice%255D%255BcurrencyCode%255D%3DGHS%26items%255B0.base%255D%255BofferListingId%255D%3DBTIiDS4TgkS1BrL4jdnwGt2GC%25252FVcfnXzkLTJL0gwa8sg3Nj7hKM23qSoVQcbasTa9lNbBaKctVWk%25252B0Op2XQZY0mAvMQH5ljXNU78Y32eQCqnTNiHn6pCxt1HW9GtpncsQLWXeE8DK0b%25252BKj7H8zl8COdN99sfd1udL0k4mlK6g09nfE87gsk%25252FczHzZ1UBRjfM%26sourceCustomerOrgListItemID%3D%26submit.buy-now%3DSubmit%26pipelineType%3DChewbacca%26rebateId%3D%26offerListingID%3DBTIiDS4TgkS1BrL4jdnwGt2GC%25252FVcfnXzkLTJL0gwa8sg3Nj7hKM23qSoVQcbasTa9lNbBaKctVWk%25252B0Op2XQZY0mAvMQH5ljXNU78Y32eQCqnTNiHn6pCxt1HW9GtpncsQLWXeE8DK0b%25252BKj7H8zl8COdN99sfd1udL0k4mlK6g09nfE87gsk%25252FczHzZ1UBRjfM%26session-id%3D147-0099296-5118245%26wlPopCommand%3D%26isUnrec%3D1&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=amazon_checkout_us&openid.mode=checkid_setup&language=en_US&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0</code></td>
+          <td>Standard Page Script</td>
+          <td>28</td>
+          <td><code>device.hardwareConcurrency</code> <code>device.deviceMemory</code> <code>bot.webdriver</code> <code>bot.automationArtifacts</code> <code>network.sendBeacon</code> <code>device.speechSynthesis</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>AmazonUIFormControlsJS</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31jdfgcsPAL.js?AUIClients/AmazonUIFormControlsJS</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>AuthXClaimCollectionUIAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/51sZqqW1hvL.js?AUIClients/AuthXClaimCollectionUIAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>FWCIMAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/81eFQKE60AL.js?AUIClients/FWCIMAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>2</td>
+          <td><code>device.battery</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>IdentityWebAuthnAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/71YOHSc9NjL.js?AUIClients/IdentityWebAuthnAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>3</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>IdentityJsCommonAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/51s+BgGxK9L.js?AUIClients/IdentityJsCommonAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>6</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>AuthXSharedUIAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/51NbJLAuvoL.js?AUIClients/AuthXSharedUIAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>IdentityNavigationNativeAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/61jJKUgNoiL.js?AUIClients/IdentityNavigationNativeAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>AmazonUIjQuery</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/61xJcNKKLXL.js?AUIClients/AmazonUIjQuery</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>AmazonUI</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/11I0WXrZVoL._RC%7C11Y+5x+kkTL.js,51IrWwn6GEL.js,115zbyk371L.js,11GgN1+C7hL.js,01+z+uIeJ-L.js,01Aie6L4uGL.js,21NadQlXUWL.js,01vRf9id2EL.js,31on-La90vL.js,11a7qqY8xXL.js,11PZSUl3FLL.js,51C4kaFbiAL.js,11FhdH2HZwL.js,11wb9K3sw0L.js,11BrgrMAHUL.js,11dKU9zhD1L.js,21F6z4HaEVL.js,01Svfxfy8OL.js,61lbT4bHNWL.js,01ikBbTAneL.js,31xywoXPfpL.js,01qXJuwGmxL.js,01WlsjNmqIL.js,11F929pmpYL.js,31dUhXzzjYL.js,01rpauTep4L.js,314M2Oak7hL.js,011FfPwYqHL.js,21P5VvHf-XL.js,01pTq+jF06L.js,21kN0q4IA-L.js,0105nvqLd4L.js,11vb6P5C5AL.js,01ZNzO-VJuL.js_.js?AUIClients/AmazonUI</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>CardJsRuntimeBuzzCopyBuild</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/516npEhK50L.js?AUIClients/CardJsRuntimeBuzzCopyBuild</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>hook.early.js</strong></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js</code></td>
+          <td>Standard Page Script</td>
+          <td>13</td>
+          <td><code>canvas.toDataURL</code> <code>canvas.getImageData</code> <code>webgl.getParameter</code> <code>webgl.getSupportedExtensions</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>215h87l68bL.js</strong></td>
+          <td><code>https://images-na.ssl-images-shopping.com/images/I/215h87l68bL.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>ref=sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3</strong></td>
+          <td><code>https://www.shopping.com/UGREEN-Bluetooth-aptX-Adaptive-Transmitter-Headphones/dp/B0D7CKV1J8/ref=sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3?_encoding=UTF8&ie=UTF8&psc=1&sp_csd=d2lkZ2V0TmFtZT1zcF9odWNfYmxlbmRlZA%3D%3D&pf_rd_p=8e0abace-560d-4ebc-8138-ae94d1b9690f&pf_rd_r=RTZH5FZGKYP25PXGJZRW&pd_rd_i=B0D7CKV1J8&pd_rd_w=PnS5P&pd_rd_wg=UVFR3&pd_rd_r=c582b04a-dd70-4164-a7ee-c54f2220c43e&content-id=amzn1.sym.8e0abace-560d-4ebc-8138-ae94d1b9690f</code></td>
+          <td>Standard Page Script</td>
+          <td>2</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>ref=sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3</strong></td>
+          <td><code>https://www.shopping.com/UGREEN-Bluetooth-aptX-Adaptive-Transmitter-Headphones/dp/B0D7CKV1J8/ref=sw_img_d_pd_ewc_purchase_sim_hxwSWG_sspa_dk_huc_3?_encoding=UTF8&ie=UTF8&psc=1&spc=MTozMTEwNTc3MDczNDI0NTU3OjE3OTE4ODgwNDE6c3BfaHVjX2JsZW5kZWQ6Ojo6QjBEN0NLVjFKODo%3D&sp_csd=d2lkZ2V0TmFtZT1zcF9odWNfYmxlbmRlZA%3D%3D&pf_rd_p=8e0abace-560d-4ebc-8138-ae94d1b9690f&pf_rd_r=RTZH5FZGKYP25PXGJZRW&pd_rd_i=B0D7CKV1J8&pd_rd_w=PnS5P&pd_rd_wg=UVFR3&pd_rd_r=c582b04a-dd70-4164-a7ee-c54f2220c43e&content-id=amzn1.sym.8e0abace-560d-4ebc-8138-ae94d1b9690f</code></td>
+          <td>Standard Page Script</td>
+          <td>3</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>ref=dp_start-bbf_1_glance</strong></td>
+          <td><code>https://www.shopping.com/cart/add-to-cart/ref=dp_start-bbf_1_glance</code></td>
+          <td>Standard Page Script</td>
+          <td>4</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>147-0099296-5118245</strong></td>
+          <td><code>https://www.shopping.com/Razer-BlackShark-Wireless-Gaming-Headset-PS5/dp/B0FDPJZQNY/ref=pd_rhf_dp_s_ci_mcx_mr__d_sccl_2_14/147-0099296-5118245?pd_rd_w=XzOLK&content-id=amzn1.sym.c2ce25da-4d17-4f37-af20-bde98a9f0bcd:amzn1.symc.d3391730-f670-41da-8b34-61787b3edb82&pf_rd_p=c2ce25da-4d17-4f37-af20-bde98a9f0bcd&pf_rd_r=03P7F9MJAJ6HRWT37F6N&pd_rd_wg=QM9dp&pd_rd_r=2df4f343-01fd-4a72-a281-1d480ad19be9&pd_rd_i=B0FDPJZQNY&psc=1</code></td>
+          <td>Standard Page Script</td>
+          <td>7</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>CDB96030-A7CF-4B56-B70C-67086A740274</strong></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto</code></td>
+          <td>Standard Page Script</td>
+          <td>148</td>
+          <td><code>device.hardwareConcurrency</code> <code>device.deviceMemory</code> <code>bot.webdriver</code> <code>bot.automationArtifacts</code> <code>network.sendBeacon</code> <code>device.speechSynthesis</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>somjUphasDgLxuA.js</strong></td>
+          <td><code>at new e (https://m.media-shopping.com/images/S/sash/somjUphasDgLxuA.js?name=vendors</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>device.battery</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>cwr.js</strong></td>
+          <td><code>https://client.rum.us-east-1.amazonaws.com/1.x/cwr.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>AmazonStoresCnubaAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21QTE5zfWuL.js?AUIClients/AmazonStoresCnubaAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>BrandFollowKataComponentAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/41fFmJrK7zL._RC%7C01N0G7oHRlL.js_.js?AUIClients/BrandFollowKataComponentAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>InContextDetailPageAssets#1442063-T1.1459118-T1.1354819-T1.1463686-T1.1439981-T1.1423113-T1.1313601-T1</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/61-AxLNpw1L._RC%7C01zCndFsf4L.js,019K6hE9zSL.js,01edGJjT5SL.js_.js?AUIClients/InContextDetailPageAssets#1442063-T1.1459118-T1.1354819-T1.1463686-T1.1439981-T1.1423113-T1.1313601-T1</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>FollowButtonWidgetAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/51+aVv60wyL.js?AUIClients/FollowButtonWidgetAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>81ZH0g5h6nL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js</code></td>
+          <td>Standard Page Script</td>
+          <td>10</td>
+          <td><code>network.sendBeacon</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>41wqhrnDiqL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/41wqhrnDiqL.js?runtime.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>61CFWASTZAL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/61CFWASTZAL.js?AAPI-client.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>B1R0Vj7gQeL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/B1R0Vj7gQeL.js?vendor.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>61vNAXvkqzL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/61vNAXvkqzL.js?Redux-sagas.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>NavDesktopUberAsset#desktop.language-en.us.1200978-T1.1354727-T1.1354728-T1.1381529-T1.1354730-T1.1354729-T1.1444135-T1.1253326-T1.1463553-T1.1346270-T1</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/51rG04VN8cL._RC%7C711xEihqxGL.js,41VWJ7fRjuL.js,01QvReFeJyL.js,01kC46b9vjL.js,817-k-6kdXL.js,11C6Xs6tLuL.js,41jBieyCvYL.js,01wXnKULArL.js,01+pnQJuQ0L.js,311S4pZ3B4L.js,51GC3iCVEKL.js,41GvVRH6GqL.js,41LquXcMYDL.js,11lw6J7z8iL.js,31COIUU385L.js,01VYGE8lGhL.js_.js?AUIClients/NavDesktopUberAsset#desktop.language-en.us.1200978-T1.1354727-T1.1354728-T1.1381529-T1.1354730-T1.1354729-T1.1444135-T1.1253326-T1.1463553-T1.1346270-T1</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>4118kHqBaxL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/4118kHqBaxL.js?Common-styles.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21-5kiQAEDL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21-5kiQAEDL.js?Common-utils.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21-cO-oJLjL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21-cO-oJLjL.js?Common-BottomSheet.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21gU5AnUjIL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21gU5AnUjIL.js?Common-FollowButton.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21Qy+Dvg1SL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21Qy+Dvg1SL.js?Common-NavAccordionMenu.tsx.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21js6g2i9nL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21js6g2i9nL.js?Common-MobileHeader.tsx.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21FtY4GdivL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21FtY4GdivL.js?Common-SideMenu.tsx.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31M4+b8WGlL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31M4+b8WGlL.js?Common-HeaderV1.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>217V9jD4itL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/217V9jD4itL.js?Common-NavItem.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21JfgZswdFL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21JfgZswdFL.js?Common-NavBar.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>71e8-lUIe-L.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/71e8-lUIe-L.js?Widgets-Header.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31vUfHrRgGL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31vUfHrRgGL.js?Common-Product.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>314hsbuMSDL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/314hsbuMSDL.js?Common-ProductInfo.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>81uiyrM2ElL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/81uiyrM2ElL.js?videojs.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31ZZrAIZDML.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31ZZrAIZDML.js?Common-Video.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31+MoVCocsL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31+MoVCocsL.js?Common-Metrics.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>41CaC+ZVb8L.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/41CaC+ZVb8L.js?Common-ProductGridItem.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31fFAlZYkaL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31fFAlZYkaL.js?Common-ProductShowcase.tsx.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31yaZyDaZxL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31yaZyDaZxL.js?Common-AddToCart.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31t2BfLhshL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31t2BfLhshL.js?Common-ImageVideoCarousel.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31G3+hEvksL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31G3+hEvksL.js?Common-TopBar.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31M4ZajVlAL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31M4ZajVlAL.js?Common-VariationHandler.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31Y52sUHDyL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31Y52sUHDyL.js?Common-Variations.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21LuR9-ij6L.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21LuR9-ij6L.js?Common-ProductShowcaseActions.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>21pxPVs1x7L.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21pxPVs1x7L.js?reactmarkdown.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31wGEG3ZJjL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31wGEG3ZJjL.js?Common-ProductCard.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>41FNFfWK2WL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/41FNFfWK2WL.js?Common-EditorialTile.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31wQ0v8KRHL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31wQ0v8KRHL.js?Common-EditorialTileInteractiveImage.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>312mrsmLbAL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/312mrsmLbAL.js?Common-EditorialRow.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31OKhSQcTAL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31OKhSQcTAL.js?Common-EditorialTileImage.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31apsuLr5VL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31apsuLr5VL.js?Common-EditorialTileProduct.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>31K9CW-DKtL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/31K9CW-DKtL.js?Common-TextTileLayer.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>81TCNAiCJHL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/81TCNAiCJHL.js?Widgets-EditorialRow.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>ShareWidgetTriggerAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/21pj1OVABnL.js?AUIClients/ShareWidgetTriggerAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>somjUphasDgLxuA.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/S/sash/somjUphasDgLxuA.js?name=vendors</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>YMDxzW9D8ifpX2q.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/S/sash/YMDxzW9D8ifpX2q.js?name=app</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>51eiBVHOJBL.js</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/51eiBVHOJBL.js?stores_core_rendering.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>FWCIMAssets</strong></td>
+          <td><code>https://m.media-shopping.com/images/I/81xAPm3uFgL.js?AUIClients/FWCIMAssets</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>device.battery</code></td>
+        </tr>
+      
+    </tbody>
+  </table>
+
+  <h2>Live Vector Log Feed (228 Interceptions)</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Threat</th><th>Category</th><th>API Method</th><th>Caller Script</th><th>Details</th></tr></thead>
+    <tbody>
+      
+        <tr>
+          <td>5:47:00 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:48 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:47 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"FOCUS","#5":"eventData","#6</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:41 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:36 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:30 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:28 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"BLUR","#5":"eventData","#6"</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:26 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"FOCUS","#5":"eventData","#6</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:24 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:24 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:18 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:15 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"BLUR","#5":"eventData","#6"</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:13 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"FOCUS","#5":"eventData","#6</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:12 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:06 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:46:00 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:48 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:42 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:36 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:30 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:25 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:24 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:24 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"efo","clientData":{"t":"157598","s":"default"},"tim</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:22 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"BLUR","#5":"eventData","#6"</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:21 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"FOCUS","#5":"eventData","#6</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:20 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:18 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:14 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:12 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:09 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:09 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"BLUR","#5":"eventData","#6"</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:08 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"VISIBILITY_CHANGE","#5":"ev</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:07 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"efo","clientData":{"t":"144313","s":"default"},"tim</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:07 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"csa.VideoInteractions.1","timestamp":"2026-10-13T10:45:04.607Z","messageId":"b6v80m-5qkg</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:06 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"VISIBILITY_CHANGE","#5":"ev</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:04 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:45:01 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:55 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:55 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:49 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"eg49jr-n9q4cs-acweic-m05ijw","markers":{"pc":121982,"at":121982},"markerTimestamps":{"p</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:49 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js:1</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.eel.AmazonStoresContentRendering.ne | {"cs":{"dct":{}},"events":[{"data":{"data":{"eventType":"recordEvent","type":"AmazonStoresReactWidgets:AmazonStoresHeade</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:46 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"BLUR","#5":"eventData","#6"</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:44 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"csa.UEData.4","timestamp":"2026-10-13T10:44:44.222Z","producerId":"csa","messageId":"f9r</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:44 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:39 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:39 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"csa.ContentInteraction.2","interaction":"click","interactionData":{"interactionX":"496",</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:37 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js:1</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.eel.AmazonStoresContentRendering.ne | {"cs":{"dct":{}},"events":[{"data":{"data":{"eventType":"recordEvent","type":"AmazonStoresReactWidgets:AmazonStoresEdito</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:34 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"path","#1":"STORE:CDB96030-A7CF-4B56-B70C-67086A740274/PAGE:CDB96030-A7CF-4B56-B70C-67086A740274/WID</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:34 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2567</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.Edglnk.na.prod.clientmetrics | {"events":[{"data":{"additionalData":"5CFNP+itHoB7ly1Pb4A2emHVqSo3svSN8hwz41e1AYpGVlK1gMfn4A/xyGhxaU7cJzsCNFs0Y+tqOEU9nZ</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:33 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:33 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"x1upuvn53m","#2":"widgetType","#3":"Header","#4":"elementLocator","#5":"eventType","</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:31 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:30 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2567</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.Edglnk.na.prod.clientmetrics | {"events":[{"data":{"additionalData":"+CFNP+itHoB7ly1Pb4A2emHVqSo3svSN8hwz41e1AYpGVlK1gMfn4A/xyGp1Z07cJzsCNFs0Y+tqOEU9nZ</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:28 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"path","#1":"STORE:CDB96030-A7CF-4B56-B70C-67086A740274/PAGE:CDB96030-A7CF-4B56-B70C-67086A740274/WID</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:27 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"vpi","clientData":{"t":"99945","h":"703","y":"638.4</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:27 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js:1</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.eel.AmazonStoresContentRendering.ne | {"cs":{"dct":{}},"events":[{"data":{"data":{"eventType":"recordEvent","type":"AmazonStoresReactWidgets:AmazonStoresEdito</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:26 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:26 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2567</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.Edglnk.na.prod.clientmetrics | {"events":[{"data":{"additionalData":"/CFNP+itHoB7ly1Pb4A2emHVqSo3svSN8hwz41e1AYpGVlK1gMfn4A/yyGp6Zk7cJzsCNFs0Y+tqOEU9nZ</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:25 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:24 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:23 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:22 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:22 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"vpi","clientData":{"t":"94813","h":"703","y":"2875.</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:20 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:18 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"path","#1":"STORE:CDB96030-A7CF-4B56-B70C-67086A740274/PAGE:CDB96030-A7CF-4B56-B70C-67086A740274/WID</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:17 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"vpi","clientData":{"t":"89750","h":"703","y":"3102.</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:15 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:14 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:12 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"path","#1":"STORE:CDB96030-A7CF-4B56-B70C-67086A740274/PAGE:CDB96030-A7CF-4B56-B70C-67086A740274/WID</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:12 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js:1</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.eel.AmazonStoresContentRendering.ne | {"cs":{"dct":{}},"events":[{"data":{"data":{"eventType":"recordEvent","type":"AmazonStoresReactWidgets:ProductGrid:Produ</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:11 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"vpi","clientData":{"t":"83969","h":"703","y":"4754.</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:11 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"91d5icz943","#2":"widgetType","#3":"EditorialRow","#4":"elementLocator","#5":"eventT</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:09 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:07 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:06 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"h0oq4a-74vwcq-xh8a2p-xhlcai","schemaId":"csa.ContentInteractionsSummary.2","w":{"lwyw20</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:06 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:05 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:03 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"lpg4j1354e","#2":"widgetType","#3":"ProductGrid","#4":"elementLocator","#5":"eventTy</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:02 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js:1</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.eel.AmazonStoresContentRendering.ne | {"cs":{"dct":{}},"events":[{"data":{"data":{"eventType":"recordEvent","type":"AmazonStoresReactWidgets:EditorialRow:IMPR</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:02 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:01 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"Event:stores.Sto</td>
+        </tr>
+      
+        <tr>
+          <td>5:44:00 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:59 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:58 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:57 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"robotdetection.RdCSI.1","eventType":"vpi","clientData":{"t":"68795","h":"703","y":"747.2</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:52 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"widgetType","#2":"elementLocator","#3":"eventType","#4":"SCROLL","#5":"eventData","#</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:51 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.cbb.prod | {"events":[{"data":{"rid":"HW3VFEAGRFK31G9XRKT1","sid":"147-0099296-5118245","mid":"ATVPDKIKX0DER","sn":"www.shopping.com"</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:51 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"messageId":"ietdbr-emrwz7-lsctmz-ggcl6i","schemaId":"csa.InternalCounters.3","c":{"amazonLiveSushiL</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:51 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://m.media-shopping.com/images/I/81ZH0g5h6nL.js?main.js:1</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.eel.AmazonStoresContentRendering.ne | {"cs":{"dct":{}},"events":[{"data":{"data":{"eventType":"recordEvent","type":"AmazonStoresReactWidgets:desktopFlexBanner</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:46 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"LiveVideoBanner","#2":"widgetType","#3":"elementLocator","#4":"eventType","#5":"CLIC</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:46 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2567</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.Edglnk.na.prod.clientmetrics | {"events":[{"data":{"additionalData":"FCFNP+itHoB7ly1Pb4A2emHVqSo3svSN8hwz41e1DZ1ZVkWsltbirFamuTomKhWbIyM6CEQtZeV9OEU5gp</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:46 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:435</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.csa.prod | {"events":[{"data":{"schemaId":"csa.ContentView.4","timeToViewed":50734,"pageFirstPaintToElementViewed":59255,"timestamp</td>
+        </tr>
+      
+        <tr>
+          <td>5:43:43 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Beacon & Tracking</td>
+          <td><code>navigator.sendBeacon</code></td>
+          <td><code>https://www.shopping.com/stores/Razer/page/CDB96030-A7CF-4B56-B70C-67086A740274?lp_asin=B0FDPJZQNY&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto:2488</code></td>
+          <td>target: https://unagi.shopping.com/1/events/com.amazon.csm.nexusclient.prod | {"cs":{"dct":{"#0":"widgetId","#1":"LiveVideoBanner","#2":"widgetType","#3":"elementLocator","#4":"eventType","#5":"IMPR</td>
+        </tr>
+      
+    </tbody>
+  </table>
+</body>
+</html>

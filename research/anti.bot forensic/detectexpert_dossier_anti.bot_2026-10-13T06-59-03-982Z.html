@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DetectExpert Pro Forensic Audit - anti.bot</title>
+  <style>
+    :root {
+      --bg: #0b111e;
+      --card-bg: #111a2d;
+      --border: #1c2b45;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --cyan: #00e5ff;
+      --accent: #6366f1;
+      --red: #ef4444;
+      --green: #10b981;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 30px;
+    }
+    .header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title h1 { margin: 0 0 6px 0; color: var(--cyan); font-size: 26px; }
+    .title p { margin: 0; color: var(--text-dim); }
+    .risk-badge {
+      background: var(--red);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .card .val { font-size: 28px; font-weight: bold; color: var(--cyan); }
+    .card .lbl { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+    h2 { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 36px; color: var(--text); }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { background: #162238; color: var(--cyan); }
+    tr:hover { background: #162238; }
+    .badge-high { color: var(--red); font-weight: bold; }
+    .badge-med { color: #f59e0b; font-weight: bold; }
+    .badge-info { color: var(--cyan); }
+    code { background: #1c2b45; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    @media print {
+      body { background: #fff; color: #000; padding: 10px; }
+      .card { border: 1px solid #ccc; background: #fafafa; }
+      th { background: #eee; color: #000; }
+      th, td { border-bottom: 1px solid #ddd; }
+      .title h1 { color: #000; }
+      code { background: #eee; color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">
+      <h1>DetectExpert Pro Forensic Audit Report</h1>
+      <p>Target Domain: <strong>anti.bot</strong> | URL: https://anti.bot/ | Generated: 10/13/2026, 1:59:03 AM</p>
+    </div>
+    <div class="risk-badge">
+      RISK SCORE: 88/100
+    </div>
+  </div>
+
+  <h2>Summary Metric Counters</h2>
+  <div class="grid">
+    <div class="card"><div class="val">448</div><div class="lbl">Active Identification</div></div>
+    <div class="card"><div class="val">19</div><div class="lbl">Passive Identification</div></div>
+    <div class="card"><div class="val">112</div><div class="lbl">Canvas 2D Access</div></div>
+    <div class="card"><div class="val">280</div><div class="lbl">WebGL / WebGPU Probes</div></div>
+    <div class="card"><div class="val">12</div><div class="lbl">Audio Fingerprinting</div></div>
+    <div class="card"><div class="val">60</div><div class="lbl">WebRTC & IP Checks</div></div>
+    <div class="card"><div class="val">3</div><div class="lbl">Hardware & Geometry</div></div>
+    <div class="card"><div class="val">0</div><div class="lbl">Local Port Probes</div></div>
+    <div class="card"><div class="val">0</div><div class="lbl">Third-Party Trackers</div></div>
+  </div>
+
+  <h2>Detected Anti-Fraud & Identification Systems</h2>
+  
+  <table>
+    <thead><tr><th>System Name</th><th>Vendor</th><th>Category</th><th>Vectors Monitored</th></tr></thead>
+    <tbody>
+      
+        <tr>
+          <td><strong>FingerprintJS / Fingerprint Pro</strong></td>
+          <td>FingerprintJS, Inc.</td>
+          <td>Device Intelligence & Anti-Fraud</td>
+          <td>Canvas 2D, WebGL Hardware, AudioContext, Fonts, Client Hints, Screen Geometry, Math Precision</td>
+        </tr>
+      
+    </tbody>
+  </table>
+
+  <h2>Scripts Invoking Fingerprinting Checks</h2>
+  <table>
+    <thead><tr><th>Script File</th><th>Full URL</th><th>Identified System</th><th>Calls</th><th>Vectors Touched</th></tr></thead>
+    <tbody>
+      
+        <tr>
+          <td><strong>hook.early.js</strong></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js</code></td>
+          <td>Standard Page Script</td>
+          <td>454</td>
+          <td><code>audio.offlineAudioContext</code> <code>canvas.toDataURL</code> <code>webgl.getParameter</code> <code>webrtc.createOffer</code> <code>canvas.getImageData</code> <code>webgl.readPixels</code> <code>webgl.getShaderPrecisionFormat</code> <code>webgl.getSupportedExtensions</code> <code>canvas.toBlob</code> <code>canvas.measureText</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>fingerprint.min.js</strong></td>
+          <td><code>https://anti.bot/static/vendor/fingerprintjs/3.4.2/fingerprint.min.js</code></td>
+          <td>FingerprintJS / Fingerprint Pro</td>
+          <td>2</td>
+          <td><code>device.deviceMemory</code> <code>device.hardwareConcurrency</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>Inline <script></strong></td>
+          <td><code>inline</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>audio.offlineAudioContext</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>monfp.js</strong></td>
+          <td><code>https://anti.bot/static/js/monfp.js?v=1328a45ec42b</code></td>
+          <td>FingerprintJS / Fingerprint Pro</td>
+          <td>1</td>
+          <td><code>webgpu.requestAdapter</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>gpufp.js</strong></td>
+          <td><code>https://anti.bot/static/js/gpufp.js?v=1328a45ec42b</code></td>
+          <td>FingerprintJS / Fingerprint Pro</td>
+          <td>1</td>
+          <td><code>webgpu.requestAdapter</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>antispoof-detection.js</strong></td>
+          <td><code>at async AntiSpoofDetection.audioRenderedBufferIntegrity (https://anti.bot/static/js/antispoof-detection.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>audio.offlineAudioContext</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>hwfp.js</strong></td>
+          <td><code>https://anti.bot/static/js/hwfp.js?v=1328a45ec42b</code></td>
+          <td>FingerprintJS / Fingerprint Pro</td>
+          <td>1</td>
+          <td><code>webgpu.requestAdapter</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>fingerprint.js</strong></td>
+          <td><code>https://anti.bot/static/js/fingerprint.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>apisig.js</strong></td>
+          <td><code>https://anti.bot/static/js/apisig.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>antispoof-detection.js</strong></td>
+          <td><code>https://anti.bot/static/js/antispoof-detection.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>d3.min.js</strong></td>
+          <td><code>https://anti.bot/static/vendor/d3/7.9.0/d3.min.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>topojson.min.js</strong></td>
+          <td><code>https://anti.bot/static/vendor/topojson/3.0.2/topojson.min.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>three.min.js</strong></td>
+          <td><code>https://anti.bot/static/vendor/three/0.155.0/three.min.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>globe.gl.min.js</strong></td>
+          <td><code>https://anti.bot/static/vendor/globe.gl/2.32.4/globe.gl.min.js</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>countries.js</strong></td>
+          <td><code>https://anti.bot/static/js/map/countries.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>cyber-globe.js</strong></td>
+          <td><code>https://anti.bot/static/js/map/cyber-globe.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>flag.js</strong></td>
+          <td><code>https://anti.bot/static/js/flag.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>dnsTest.js</strong></td>
+          <td><code>https://anti.bot/static/js/dnsTest.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>fp-scene.js</strong></td>
+          <td><code>https://anti.bot/fp/v7/fp-scene.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>fp-probe.js</strong></td>
+          <td><code>https://anti.bot/fp/v7/fp-probe.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>webgpu.requestAdapter</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>canvasfp.js</strong></td>
+          <td><code>https://anti.bot/static/js/canvasfp.js?v=1328a45ec42b</code></td>
+          <td>FingerprintJS / Fingerprint Pro</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>fpint-v7-client.js</strong></td>
+          <td><code>https://anti.bot/static/js/fpint-v7-client.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>surface-comparison.js</strong></td>
+          <td><code>https://anti.bot/static/js/surface-comparison.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>0</td>
+          <td></td>
+        </tr>
+      
+        <tr>
+          <td><strong>antispoof-detection.js</strong></td>
+          <td><code>at async _0x1b1dcd (https://anti.bot/static/js/antispoof-detection.js?v=1328a45ec42b</code></td>
+          <td>Standard Page Script</td>
+          <td>2</td>
+          <td><code>audio.offlineAudioContext</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>at async _0x297f4c (https://anti.bot/</strong></td>
+          <td><code>at async _0x297f4c (https://anti.bot/</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>audio.offlineAudioContext</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>https://anti.bot/</strong></td>
+          <td><code>https://anti.bot/</code></td>
+          <td>Standard Page Script</td>
+          <td>6</td>
+          <td><code>device.battery</code> <code>bot.webdriver</code> <code>bot.automationArtifacts</code></td>
+        </tr>
+      
+        <tr>
+          <td><strong>at async getAudioFingerprintHash (https://anti.bot/</strong></td>
+          <td><code>at async getAudioFingerprintHash (https://anti.bot/</code></td>
+          <td>Standard Page Script</td>
+          <td>1</td>
+          <td><code>audio.offlineAudioContext</code></td>
+        </tr>
+      
+    </tbody>
+  </table>
+
+  <h2>Live Vector Log Feed (472 Interceptions)</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Threat</th><th>Category</th><th>API Method</th><th>Caller Script</th><th>Details</th></tr></thead>
+    <tbody>
+      
+        <tr>
+          <td>1:57:11 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:11 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:11 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:11 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "anti-bot-v5-turn" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:57:10 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "anti-bot-v5-direct" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:55 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:55 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "anti-bot-v5-turn" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:53:54 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "anti-bot-v5-direct" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "anti-bot-v5-turn" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "anti-bot-v5-direct" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>navigator.gpu.requestAdapter</code></td>
+          <td><code>https://anti.bot/fp/v7/fp-probe.js?v=1328a45ec42b:764</code></td>
+          <td>default options | [WebGPU Adapter requested]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 64x64 | pixels: 16384 bytes, checksum: 0x204b</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.readPixels</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 64x64 | [3D scene pixel readback]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.readPixels</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 64x64 | [3D scene pixel readback]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.readPixels</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 64x64 | [3D scene pixel readback]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36338 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: UNMASKED_RENDERER_WEBGL (0x9246) | value: "ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 ps_5_0, D"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: UNMASKED_VENDOR_WEBGL (0x9245) | value: "Google Inc. (Intel)"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getSupportedExtensions</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>queries supported extension list | count: 32 extensions</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36341 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36340 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36339 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36338 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36337 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36336 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36341 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36340 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36339 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36338 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36337 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36336 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_RENDERBUFFER_SIZE (0x84e8) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_CUBE_MAP_TEXTURE_SIZE (0x851c) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_TEXTURE_SIZE (0xd33) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: RENDERER (0x1f01) | value: "WebKit WebGL"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: VENDOR (0x1f00) | value: "WebKit"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: SHADING_LANGUAGE_VERSION (0x8b8c) | value: "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: VERSION (0x1f02) | value: "WebGL 2.0 (OpenGL ES 3.0 Chromium)"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: UNMASKED_RENDERER_WEBGL (0x9246) | value: "ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 ps_5_0, D"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: UNMASKED_VENDOR_WEBGL (0x9245) | value: "Google Inc. (Intel)"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getSupportedExtensions</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>queries supported extension list | count: 35 extensions</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36341 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36340 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36339 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36338 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36337 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35632, precisionType: 36336 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36341 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36340 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36339 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36338 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36337 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getShaderPrecisionFormat</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>shaderType: 35633, precisionType: 36336 | [precision format returned]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_RENDERBUFFER_SIZE (0x84e8) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_CUBE_MAP_TEXTURE_SIZE (0x851c) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_TEXTURE_SIZE (0xd33) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: RENDERER (0x1f01) | value: "WebKit WebGL"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: VENDOR (0x1f00) | value: "WebKit"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: SHADING_LANGUAGE_VERSION (0x8b8c) | value: "WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:56 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGLRenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: VERSION (0x1f02) | value: "WebGL 1.0 (OpenGL ES 2.0 Chromium)"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:55 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createOffer</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>generating local SDP offer | [SDP Offer initiated]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:55 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Network & WebRTC</td>
+          <td><code>RTCPeerConnection.prototype.createDataChannel</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>label: "probe" | [WebRTC DataChannel initialized]</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:55 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>HTMLCanvasElement.prototype.toDataURL</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>mime: image/png, dimensions: 280x60 | data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARgAAAA8CAYAAAC9xKUYAAAQAElEQVR4AexdC3xUxb3+zoYEBOQRNREBQShC5WEVhIar4hXRQvRq0foEr0UgoAhcL7XcnwJRqL/a+ysq...</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:55 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 9x8 | pixels: 288 bytes, checksum: 0xd34</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:54 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 9x8 | pixels: 288 bytes, checksum: 0xd34</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:54 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (3,3) 1x1 | pixels: 4 bytes, checksum: 0x249</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:54 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,3) 1x1 | pixels: 4 bytes, checksum: 0x1ef</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:54 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (3,0) 1x1 | pixels: 4 bytes, checksum: 0x195</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:54 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 1x1 | pixels: 4 bytes, checksum: 0x1ef</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Fonts & Geometry</td>
+          <td><code>CanvasRenderingContext2D.prototype.measureText</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>font: "44px monospace", text: "Ýþ{}[]|\/@#$%" | call #7</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Fonts & Geometry</td>
+          <td><code>CanvasRenderingContext2D.prototype.measureText</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>font: "40px sans-serif", text: "mmMwWLliI0O&1" | call #6</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Fonts & Geometry</td>
+          <td><code>CanvasRenderingContext2D.prototype.measureText</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>font: "48px serif", text: "Cwm fjordbank glyphs" | call #5</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 480x240 | pixels: 460800 bytes, checksum: 0x2786</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: MAX_TEXTURE_SIZE (0xd33) | value: "16384"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>WebGL & WebGPU</td>
+          <td><code>WebGL2RenderingContext.prototype.getParameter</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>param: UNMASKED_RENDERER_WEBGL (0x9246) | value: "ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 ps_5_0, D"</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 448x288 | pixels: 516096 bytes, checksum: 0xbf4</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 448x288 | pixels: 516096 bytes, checksum: 0x1c80</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 900x140 | pixels: 504000 bytes, checksum: 0x31ce</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Fonts & Geometry</td>
+          <td><code>CanvasRenderingContext2D.prototype.measureText</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>font: "44px monospace", text: "Ýþ{}[]|\/@#$%" | call #4</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 900x140 | pixels: 504000 bytes, checksum: 0x30cf</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-med">MEDIUM</td>
+          <td>Fonts & Geometry</td>
+          <td><code>CanvasRenderingContext2D.prototype.measureText</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>font: "40px sans-serif", text: "mmMwWLliI0O&1" | call #3</td>
+        </tr>
+      
+        <tr>
+          <td>1:50:53 AM</td>
+          <td class="badge-high">HIGH</td>
+          <td>Graphics & Canvas</td>
+          <td><code>CanvasRenderingContext2D.prototype.getImageData</code></td>
+          <td><code>chrome-extension://obbkkjmpgaajcggbhajpdeeadkkchbeo/hook.early.js:1619</code></td>
+          <td>rect: (0,0) 900x140 | pixels: 504000 bytes, checksum: 0x2dd2</td>
+        </tr>
+      
+    </tbody>
+  </table>
+</body>
+</html>

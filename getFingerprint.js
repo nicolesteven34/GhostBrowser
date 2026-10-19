@@ -1,0 +1,1 @@
+import{a as e,t}from"./createServerFn-1lycsFFt.js";var n=t({method:`GET`}).handler(e(`8a3a61752f4b7f782580f8b44c8b82d71850f206cf9d9ac5150792eac820737c`));export{n as t};
