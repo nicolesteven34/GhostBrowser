@@ -454,44 +454,6 @@ public struct ContentView: View {
                         .frame(minWidth: 480, minHeight: 620)
                 }
 
-                // Quick New Identity (Rotate Seed for Active Profile)
-                Button(action: {
-                    profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
-                    showIdentityToast("🔄 New Identity (Same Device) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
-                }) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color(hex: profileManager.activeProfile.themeColorHex))
-                        .padding(8)
-                        .background(Color(hex: profileManager.activeProfile.themeColorHex).opacity(0.12))
-                        .clipShape(Circle())
-                }
-
-                // Regenerate Realistic Device for Active Profile
-                Button(action: {
-                    let newDevice = profileManager.regenerateProfileDevice(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
-                    showIdentityToast("✨ \(shortPersonaName(newDevice.rawValue)) • ID: \(String(privacyProfile.visitorID.prefix(8)))...")
-                }) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.purple)
-                        .padding(8)
-                        .background(Color.purple.opacity(0.12))
-                        .clipShape(Circle())
-                }
-
-                // Quick New Tab Button
-                Button(action: {
-                    addNewTab()
-                }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.primary)
-                        .padding(8)
-                        .background(Color(.systemGray5))
-                        .clipShape(Circle())
-                }
-
                 // Panic Button (Purge all state & reset tabs to start page)
                 Button(action: {
                     showWipeAlert = true
