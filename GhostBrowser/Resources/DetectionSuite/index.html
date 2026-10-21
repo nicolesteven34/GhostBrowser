@@ -57,7 +57,7 @@
             </div>
         </header>
 
-        <!-- Unified Navigation Deck (All Sections Visible On Same Page; Click Any Button To Smooth-Scroll) -->
+        <!-- Unified Navigation Deck (Tabbed Views: Click Any Tab To Switch View) -->
         <nav class="nav-tabs nav-tabs-deck">
             <!-- PART 0: BOTLENS ACTIVE EDGE & RUNTIME FORENSICS -->
             <div class="nav-tier" style="border-color: rgba(0, 229, 255, 0.38); background: linear-gradient(90deg, rgba(0, 229, 255, 0.09) 0%, rgba(15, 23, 42, 0.85) 100%); margin-bottom: 6px;">
@@ -66,7 +66,7 @@
                         <span class="nav-tier-dot dot-cyan"></span>
                         <span class="nav-tier-tag" style="color: #00e5ff;">ACTIVE SERVER SENSORS &amp; BOTLENS FORENSICS &bull; DIRECT TLS :4443 + AUTH DNS :53 + STUN :3478 + 95 CHECKS</span>
                     </div>
-                    <span class="nav-tier-count">ALL PANELS EXPANDED BELOW &bull; CLICK TO JUMP</span>
+                    <span class="nav-tier-count">UNIFIED ON BOTLENS VIEW &bull; SUB-TABS ENABLED</span>
                 </div>
                 <div class="nav-tier-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
                     <button class="nav-tab active" id="tabBotlensDeepBtn" onclick="switchTab('botlensdeep')">
@@ -103,7 +103,7 @@
                     <span style="background: #00e5ff; color: #090d16; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART I &bull; DEVICE &amp; ENVIRONMENT VALIDATION</span>
                     <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Hardware, OS, Browser, GPU, Audio, Workers, TLS &amp; Proxy Egress Integrity</span>
                 </div>
-                <span style="font-size: 11px; color: #34d399; font-weight: 700;">✓ All Sections Rendered Visible On This Page</span>
+                <span style="font-size: 11px; color: #34d399; font-weight: 700;">✓ Click Any Tab Below To View Its Dedicated Results</span>
             </div>
 
             <!-- Tier 1: Browser Identity & Bot Detection Labs -->
@@ -389,14 +389,14 @@
         </div>
 
         <!-- ======================================================== -->
-        <!-- SECTION A: BOTLENS DEEP INVESTIGATION (ALL PANELS VISIBLE) -->
+        <!-- SECTION A + B: UNIFIED BOTLENS VIEW (DEEP + OVERVIEW)    -->
         <!-- ======================================================== -->
         <div id="botlensDeepView" class="tab-view active">
             <div class="botlens-section-banner">
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                         <span style="background: #00e5ff; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">ACTIVE SERVER &amp; DEEP CLIENT FORENSICS</span>
-                        <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ All 6 Deep Investigation Sub-Panels Rendered Open Below</span>
+                        <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ Sub-Tabs + Overview Unified On Same BotLens View</span>
                     </div>
                     <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Deep Investigation &bull; Direct Edge TLS/H2/TCP (:4443), Authoritative DNS (:53), First-Party STUN (:3478) &amp; Hardware Forensics</h2>
                 </div>
@@ -441,6 +441,7 @@
                 <button class="tab" data-tab="device">Device &amp; OS Forensics <i data-count="device"></i></button>
                 <button class="tab" data-tab="behavior">Behavioural Biometrics <i data-count="behavior"></i></button>
                 <button class="tab" data-tab="challenge">Challenges, PoW &amp; Reputation <i data-count="challenge"></i></button>
+                <button class="tab" data-tab="all">All Sub-Tabs</button>
             </nav>
 
             <!-- SUMMARY -->
@@ -521,85 +522,85 @@
             </section>
 
             <details class="card raw"><summary>Raw Deep Investigation Data (JSON)</summary><pre id="raw"></pre></details>
-        </div>
 
-        <!-- ======================================================== -->
-        <!-- SECTION B: BOTLENS OVERVIEW & LIVE RUNTIME MONITOR        -->
-        <!-- ======================================================== -->
-        <div id="botlensOverviewView" class="tab-view">
-            <div class="botlens-section-banner">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="background: #38bdf8; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">BOTLENS OVERVIEW &amp; 95+ STATIC / RUNTIME CHECKS</span>
-                        <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ All 7 Category Cards &amp; Behavior Lab Expanded Below</span>
+            <!-- ======================================================== -->
+            <!-- BOTLENS OVERVIEW & LIVE RUNTIME MONITOR (ON SAME PAGE)   -->
+            <!-- ======================================================== -->
+            <div id="botlensOverviewView" style="display: flex; flex-direction: column; gap: 18px; margin-top: 10px; padding-top: 18px; border-top: 1px solid rgba(56, 189, 248, 0.22);">
+                <div class="botlens-section-banner">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span style="background: #38bdf8; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">BOTLENS OVERVIEW &amp; 95+ STATIC / RUNTIME CHECKS</span>
+                            <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ 7 Category Cards &amp; Behavior Lab On Same BotLens Page</span>
+                        </div>
+                        <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Overview Scanner &bull; Automation Frameworks, Headless, Tampering, Consistency, iOS/WKWebView &amp; Live Traps</h2>
                     </div>
-                    <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Overview Scanner &bull; Automation Frameworks, Headless, Tampering, Consistency, iOS/WKWebView &amp; Live Traps</h2>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button id="ov-btn-rescan" class="btn">↻ Rescan Overview</button>
+                        <button id="ov-btn-copy" class="btn ghost">Copy Overview JSON</button>
+                        <button id="ov-btn-download" class="btn ghost">Download Overview JSON</button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button id="ov-btn-rescan" class="btn">↻ Rescan Overview</button>
-                    <button id="ov-btn-copy" class="btn ghost">Copy Overview JSON</button>
-                    <button id="ov-btn-download" class="btn ghost">Download Overview JSON</button>
+
+                <section class="card hero">
+                    <div class="gauge" id="ov-gauge" data-verdict="scanning">
+                        <svg viewBox="0 0 120 120" aria-hidden="true">
+                            <circle class="track" cx="60" cy="60" r="52"/>
+                            <circle class="bar" id="ov-gauge-bar" cx="60" cy="60" r="52"/>
+                        </svg>
+                        <div class="gauge-label">
+                            <span id="ov-score">··</span>
+                            <small>risk score</small>
+                        </div>
+                    </div>
+                    <div class="verdict">
+                        <div class="verdict-title" id="ov-verdict-title">Scanning…</div>
+                        <p class="verdict-sub" id="ov-verdict-sub">Running automation, headless, tampering, consistency and iOS checks.</p>
+                        <div class="counts">
+                            <span class="count fail"><b id="ov-n-fail">0</b> failed</span>
+                            <span class="count warn"><b id="ov-n-warn">0</b> warnings</span>
+                            <span class="count pass"><b id="ov-n-pass">0</b> passed</span>
+                        </div>
+                        <div class="chips" id="ov-chips"></div>
+                    </div>
+                </section>
+
+                <section class="grid2">
+                    <div class="card">
+                        <h2>Fingerprint Summary</h2>
+                        <dl class="fp" id="fp"><dt>…</dt><dd>collecting</dd></dl>
+                    </div>
+
+                    <div class="card lab">
+                        <h2>Behavior Lab <span class="hint">feed the live behavior checks</span></h2>
+                        <div class="lab-zone" id="lab-zone">
+                            <span>Move your mouse, scroll or swipe here</span>
+                        </div>
+                        <div class="lab-row">
+                            <input id="lab-input" type="text" placeholder="Type a sentence…" autocomplete="off" autocapitalize="off" spellcheck="false">
+                            <button id="lab-btn" class="btn">Click me</button>
+                        </div>
+                        <div class="lab-stats" id="lab-stats"></div>
+                        <button id="lab-selftest" class="btn ghost small">Self-test: dispatch a synthetic click (will flag you)</button>
+                    </div>
+                </section>
+
+                <div class="toolbar">
+                    <label class="switch">
+                        <input type="checkbox" id="issues-only">
+                        <span class="slider"></span>
+                        Show issues only
+                    </label>
+                    <span class="meta" id="scan-meta"></span>
                 </div>
+
+                <section id="categories" class="cats"></section>
             </div>
-
-            <section class="card hero">
-                <div class="gauge" id="ov-gauge" data-verdict="scanning">
-                    <svg viewBox="0 0 120 120" aria-hidden="true">
-                        <circle class="track" cx="60" cy="60" r="52"/>
-                        <circle class="bar" id="ov-gauge-bar" cx="60" cy="60" r="52"/>
-                    </svg>
-                    <div class="gauge-label">
-                        <span id="ov-score">··</span>
-                        <small>risk score</small>
-                    </div>
-                </div>
-                <div class="verdict">
-                    <div class="verdict-title" id="ov-verdict-title">Scanning…</div>
-                    <p class="verdict-sub" id="ov-verdict-sub">Running automation, headless, tampering, consistency and iOS checks.</p>
-                    <div class="counts">
-                        <span class="count fail"><b id="ov-n-fail">0</b> failed</span>
-                        <span class="count warn"><b id="ov-n-warn">0</b> warnings</span>
-                        <span class="count pass"><b id="ov-n-pass">0</b> passed</span>
-                    </div>
-                    <div class="chips" id="ov-chips"></div>
-                </div>
-            </section>
-
-            <section class="grid2">
-                <div class="card">
-                    <h2>Fingerprint Summary</h2>
-                    <dl class="fp" id="fp"><dt>…</dt><dd>collecting</dd></dl>
-                </div>
-
-                <div class="card lab">
-                    <h2>Behavior Lab <span class="hint">feed the live behavior checks</span></h2>
-                    <div class="lab-zone" id="lab-zone">
-                        <span>Move your mouse, scroll or swipe here</span>
-                    </div>
-                    <div class="lab-row">
-                        <input id="lab-input" type="text" placeholder="Type a sentence…" autocomplete="off" autocapitalize="off" spellcheck="false">
-                        <button id="lab-btn" class="btn">Click me</button>
-                    </div>
-                    <div class="lab-stats" id="lab-stats"></div>
-                    <button id="lab-selftest" class="btn ghost small">Self-test: dispatch a synthetic click (will flag you)</button>
-                </div>
-            </section>
-
-            <div class="toolbar">
-                <label class="switch">
-                    <input type="checkbox" id="issues-only">
-                    <span class="slider"></span>
-                    Show issues only
-                </label>
-                <span class="meta" id="scan-meta"></span>
-            </div>
-
-            <section id="categories" class="cats"></section>
         </div>
 
         <!-- TAB 1: FINGERPRINT & BROWSER INTEGRITY LAB              -->
         <!-- ======================================================== -->
-        <div id="fingerprintView" class="tab-view active">
+        <div id="fingerprintView" class="tab-view">
             <!-- Dual-Part Distinction Banner -->
             <div style="background: linear-gradient(90deg, rgba(0,229,255,0.08) 0%, rgba(168,85,247,0.08) 100%); border: 1px solid rgba(148,163,184,0.22); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div style="display: flex; flex-direction: column; gap: 4px;">

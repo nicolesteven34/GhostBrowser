@@ -232,9 +232,10 @@ function completeVisualAudit(suiteTitle, durationMs, summaryText) {
 }
 
 function switchTab(tab, skipScroll = false) {
+    const isBotlensOverviewJump = (tab === 'botlensoverview');
+    const effectiveViewTab = isBotlensOverviewJump ? 'botlensdeep' : tab;
     const tabs = [
         { id: 'botlensdeep', btn: 'tabBotlensDeepBtn', view: 'botlensDeepView', title: 'BotLens Deep Investigation & Active Network' },
-        { id: 'botlensoverview', btn: 'tabBotlensOverviewBtn', view: 'botlensOverviewView', title: 'BotLens Overview & Live Monitor' },
         { id: 'fingerprint', btn: 'tabFingerprintBtn', view: 'fingerprintView', title: 'GhostDetect Native Lab' },
         { id: 'fingerprintcom', btn: 'tabFingerprintComBtn', view: 'fingerprintComView', title: 'Fingerprint.com Pro v4' },
         { id: 'antibot', btn: 'tabAntiBotBtn', view: 'antiBotView', title: 'Anti.Bot Vector T13 Suite' },
@@ -248,24 +249,34 @@ function switchTab(tab, skipScroll = false) {
         { id: 'behavior', btn: 'tabBehaviorBtn', view: 'behaviorView', title: 'Behavioral Biometrics Lab' },
         { id: 'uncovered', btn: 'tabUncoveredBtn', view: 'uncoveredView', title: 'Uncovered Frontier & Container Lab' }
     ];
-    let targetViewEl = null;
     tabs.forEach(t => {
         const btn = document.getElementById(t.btn);
         const view = document.getElementById(t.view);
-        if (btn && view) {
-            if (t.id === tab) {
-                btn.classList.add('active');
+        if (view) {
+            if (t.id === effectiveViewTab) {
                 view.classList.add('active');
-                targetViewEl = view;
             } else {
-                btn.classList.remove('active');
                 view.classList.remove('active');
             }
         }
+        if (btn) {
+            if (t.id === tab) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
     });
+    const ovBtn = document.getElementById('tabBotlensOverviewBtn');
+    if (ovBtn) {
+        ovBtn.classList.toggle('active', isBotlensOverviewJump);
+    }
 
-    if (!skipScroll && targetViewEl && typeof targetViewEl.scrollIntoView === 'function') {
-        targetViewEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!skipScroll && isBotlensOverviewJump) {
+        const ovEl = document.getElementById('botlensOverviewView');
+        if (ovEl && typeof ovEl.scrollIntoView === 'function') {
+            ovEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     if (tab === 'uncovered') {
@@ -2770,9 +2781,6 @@ function switchAntiBotSubTab(tabName) {
     if (tabName === 'surface' && window.__LAST_ANTIBOT_DATA) {
         drawAntiBotCanvases();
     }
-    if (targetPane && typeof targetPane.scrollIntoView === 'function') {
-        targetPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
 }
 
 async function drawAntiBotCanvases() {
@@ -4069,10 +4077,6 @@ function switchPdSubTab(tab) {
             }
         }
     });
-
-    if (targetPane && typeof targetPane.scrollIntoView === 'function') {
-        targetPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
 }
 
 let pdDetailsExpanded = true;

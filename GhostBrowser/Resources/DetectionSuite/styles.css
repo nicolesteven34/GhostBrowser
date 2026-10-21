@@ -39,30 +39,11 @@ html[data-theme="cream-dusk"] {
 }
 
 /* =====================================================================
-   UNIFIED SINGLE-PAGE VISIBILITY OVERRIDES (ALL SECTIONS & SUB-PANES VISIBLE)
+   TABBED VIEW & BOTLENS SUB-TAB VISIBILITY
    ===================================================================== */
-.tab-view {
-  display: flex !important;
-  flex-direction: column;
-  gap: 18px;
-  margin-bottom: 36px;
-  padding-top: 8px;
-  scroll-margin-top: 20px;
-}
-
-.tab-panel {
-  display: block !important;
-  margin-bottom: 22px;
-  scroll-margin-top: 20px;
-}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 .tab-panel > .card, .tab-panel > .grid2 { margin-bottom: 18px; }
-
-.ab-subpane,
-.pd-subpane {
-  display: block !important;
-  margin-bottom: 22px;
-  scroll-margin-top: 20px;
-}
 
 /* =====================================================================
    CYBER-RADAR ORBITAL SCANNER & 8-SUBSYSTEM LIVE PROGRESS DECK

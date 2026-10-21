@@ -116,12 +116,10 @@
   function wire() {
     document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
+      const targetTab = b.dataset.tab;
       document.querySelectorAll('.tab-panel').forEach((p) => {
-        const isMatch = p.dataset.panel === b.dataset.tab;
+        const isMatch = targetTab === 'all' || p.dataset.panel === targetTab;
         p.classList.toggle('active', isMatch);
-        if (isMatch && typeof p.scrollIntoView === 'function') {
-          p.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
       });
     }));
     if ($('btn-rescan')) $('btn-rescan').addEventListener('click', () => { if (typeof window.runFullAudit === 'function') window.runFullAudit(); else location.reload(); });
