@@ -232,10 +232,9 @@ function completeVisualAudit(suiteTitle, durationMs, summaryText) {
 }
 
 function switchTab(tab, skipScroll = false) {
-    const isBotlensOverviewJump = (tab === 'botlensoverview');
-    const effectiveViewTab = isBotlensOverviewJump ? 'botlensdeep' : tab;
     const tabs = [
         { id: 'botlensdeep', btn: 'tabBotlensDeepBtn', view: 'botlensDeepView', title: 'BotLens Deep Investigation & Active Network' },
+        { id: 'botlensoverview', btn: 'tabBotlensOverviewBtn', view: 'botlensOverviewView', title: 'BotLens Overview & Live Monitor' },
         { id: 'fingerprint', btn: 'tabFingerprintBtn', view: 'fingerprintView', title: 'GhostDetect Native Lab' },
         { id: 'fingerprintcom', btn: 'tabFingerprintComBtn', view: 'fingerprintComView', title: 'Fingerprint.com Pro v4' },
         { id: 'antibot', btn: 'tabAntiBotBtn', view: 'antiBotView', title: 'Anti.Bot Vector T13 Suite' },
@@ -252,36 +251,15 @@ function switchTab(tab, skipScroll = false) {
     tabs.forEach(t => {
         const btn = document.getElementById(t.btn);
         const view = document.getElementById(t.view);
+        const isMatch = (t.id === tab);
         if (view) {
-            if (t.id === effectiveViewTab) {
-                view.classList.add('active');
-            } else {
-                view.classList.remove('active');
-            }
+            view.classList.toggle('active', isMatch);
+            view.style.display = isMatch ? 'flex' : 'none';
         }
         if (btn) {
-            if (t.id === tab) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            btn.classList.toggle('active', isMatch);
         }
     });
-    const ovBtn = document.getElementById('tabBotlensOverviewBtn');
-    if (ovBtn) {
-        ovBtn.classList.toggle('active', isBotlensOverviewJump);
-    }
-
-    if (isBotlensOverviewJump) {
-        const subTabOv = document.querySelector('#tabs .tab[data-tab="overview"]');
-        if (subTabOv) subTabOv.click();
-    } else if (tab === 'botlensdeep') {
-        const activeSubTab = document.querySelector('#tabs .tab.active');
-        if (!activeSubTab || activeSubTab.dataset.tab === 'overview') {
-            const subTabSum = document.querySelector('#tabs .tab[data-tab="summary"]');
-            if (subTabSum) subTabSum.click();
-        }
-    }
 
     if (tab === 'uncovered') {
         if (typeof window.runUncoveredFrontierAudit === 'function') {

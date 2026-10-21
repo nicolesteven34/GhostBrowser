@@ -442,7 +442,6 @@
 
             <nav class="tabs" id="tabs" role="tablist">
                 <button class="tab active" data-tab="summary">Summary &amp; Consensus Matrix</button>
-                <button class="tab" data-tab="overview">Overview &amp; 95+ Checks</button>
                 <button class="tab" data-tab="net">Network &amp; TLS (:4443) <i data-count="net"></i></button>
                 <button class="tab" data-tab="ip">IP, DNS (:53) &amp; STUN (:3478) <i data-count="ip"></i></button>
                 <button class="tab" data-tab="device">Device &amp; OS Forensics <i data-count="device"></i></button>
@@ -527,80 +526,80 @@
                     <ul class="checks" id="f-challenge"></ul></div>
                 <div class="card"><h2>Identity &amp; history</h2><dl class="fp" id="rep-detail"><dt>…</dt><dd>loading</dd></dl></div>
             </section>
+        </div>
 
-            <!-- ======================================================== -->
-            <!-- SUB-TAB: BOTLENS OVERVIEW & LIVE RUNTIME MONITOR         -->
-            <!-- ======================================================== -->
-            <section class="tab-panel" data-panel="overview" id="botlensOverviewView">
-                <div class="botlens-section-banner">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                            <span style="background: #38bdf8; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">BOTLENS OVERVIEW &amp; 95+ STATIC / RUNTIME CHECKS</span>
-                            <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ 7 Category Cards &amp; Behavior Lab</span>
-                        </div>
-                        <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Overview Scanner &bull; Automation Frameworks, Headless, Tampering, Consistency, iOS/WKWebView &amp; Live Traps</h2>
+        <!-- ======================================================== -->
+        <!-- TAB 0B: BOTLENS OVERVIEW & LIVE RUNTIME MONITOR           -->
+        <!-- ======================================================== -->
+        <div id="botlensOverviewView" class="tab-view">
+            <div class="botlens-section-banner">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="background: #38bdf8; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">BOTLENS OVERVIEW &amp; 95+ STATIC / RUNTIME CHECKS</span>
+                        <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ 7 Category Cards &amp; Behavior Lab</span>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button id="ov-btn-rescan" class="btn">↻ Rescan Overview</button>
-                        <button id="ov-btn-copy" class="btn ghost">Copy Overview JSON</button>
-                        <button id="ov-btn-download" class="btn ghost">Download Overview JSON</button>
+                    <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Overview Scanner &bull; Automation Frameworks, Headless, Tampering, Consistency, iOS/WKWebView &amp; Live Traps</h2>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="ov-btn-rescan" class="btn">↻ Rescan Overview</button>
+                    <button id="ov-btn-copy" class="btn ghost">Copy Overview JSON</button>
+                    <button id="ov-btn-download" class="btn ghost">Download Overview JSON</button>
+                </div>
+            </div>
+
+            <section class="card hero">
+                <div class="gauge" id="ov-gauge" data-verdict="scanning">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <circle class="track" cx="60" cy="60" r="52"/>
+                        <circle class="bar" id="ov-gauge-bar" cx="60" cy="60" r="52"/>
+                    </svg>
+                    <div class="gauge-label">
+                        <span id="ov-score">··</span>
+                        <small>risk score</small>
                     </div>
                 </div>
-
-                <section class="card hero">
-                    <div class="gauge" id="ov-gauge" data-verdict="scanning">
-                        <svg viewBox="0 0 120 120" aria-hidden="true">
-                            <circle class="track" cx="60" cy="60" r="52"/>
-                            <circle class="bar" id="ov-gauge-bar" cx="60" cy="60" r="52"/>
-                        </svg>
-                        <div class="gauge-label">
-                            <span id="ov-score">··</span>
-                            <small>risk score</small>
-                        </div>
+                <div class="verdict">
+                    <div class="verdict-title" id="ov-verdict-title">Scanning…</div>
+                    <p class="verdict-sub" id="ov-verdict-sub">Running automation, headless, tampering, consistency and iOS checks.</p>
+                    <div class="counts">
+                        <span class="count fail"><b id="ov-n-fail">0</b> failed</span>
+                        <span class="count warn"><b id="ov-n-warn">0</b> warnings</span>
+                        <span class="count pass"><b id="ov-n-pass">0</b> passed</span>
                     </div>
-                    <div class="verdict">
-                        <div class="verdict-title" id="ov-verdict-title">Scanning…</div>
-                        <p class="verdict-sub" id="ov-verdict-sub">Running automation, headless, tampering, consistency and iOS checks.</p>
-                        <div class="counts">
-                            <span class="count fail"><b id="ov-n-fail">0</b> failed</span>
-                            <span class="count warn"><b id="ov-n-warn">0</b> warnings</span>
-                            <span class="count pass"><b id="ov-n-pass">0</b> passed</span>
-                        </div>
-                        <div class="chips" id="ov-chips"></div>
-                    </div>
-                </section>
-
-                <section class="grid2">
-                    <div class="card">
-                        <h2>Fingerprint Summary</h2>
-                        <dl class="fp" id="fp"><dt>…</dt><dd>collecting</dd></dl>
-                    </div>
-
-                    <div class="card lab">
-                        <h2>Behavior Lab <span class="hint">feed the live behavior checks</span></h2>
-                        <div class="lab-zone" id="lab-zone">
-                            <span>Move your mouse, scroll or swipe here</span>
-                        </div>
-                        <div class="lab-row">
-                            <input id="lab-input" type="text" placeholder="Type a sentence…" autocomplete="off" autocapitalize="off" spellcheck="false">
-                            <button id="lab-btn" class="btn">Click me</button>
-                        </div>
-                        <div class="lab-stats" id="lab-stats"></div>
-                        <button id="lab-selftest" class="btn ghost small">Self-test: dispatch a synthetic click (will flag you)</button>
-                    </div>
-                </section>
-
-                <div class="toolbar">
-                    <label class="switch">
-                        <input type="checkbox" id="issues-only">
-                        <span class="slider"></span>
-                        Show issues only
-                    </label>
-                    <span class="meta" id="scan-meta"></span>
+                    <div class="chips" id="ov-chips"></div>
                 </div>
-
-                <section id="categories" class="cats"></section>
             </section>
+
+            <section class="grid2">
+                <div class="card">
+                    <h2>Fingerprint Summary</h2>
+                    <dl class="fp" id="fp"><dt>…</dt><dd>collecting</dd></dl>
+                </div>
+
+                <div class="card lab">
+                    <h2>Behavior Lab <span class="hint">feed the live behavior checks</span></h2>
+                    <div class="lab-zone" id="lab-zone">
+                        <span>Move your mouse, scroll or swipe here</span>
+                    </div>
+                    <div class="lab-row">
+                        <input id="lab-input" type="text" placeholder="Type a sentence…" autocomplete="off" autocapitalize="off" spellcheck="false">
+                        <button id="lab-btn" class="btn">Click me</button>
+                    </div>
+                    <div class="lab-stats" id="lab-stats"></div>
+                    <button id="lab-selftest" class="btn ghost small">Self-test: dispatch a synthetic click (will flag you)</button>
+                </div>
+            </section>
+
+            <div class="toolbar">
+                <label class="switch">
+                    <input type="checkbox" id="issues-only">
+                    <span class="slider"></span>
+                    Show issues only
+                </label>
+                <span class="meta" id="scan-meta"></span>
+            </div>
+
+            <section id="categories" class="cats"></section>
         </div>
 
         <!-- TAB 1: FINGERPRINT & BROWSER INTEGRITY LAB              -->
