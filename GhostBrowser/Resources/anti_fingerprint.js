@@ -8348,6 +8348,142 @@
                         installNavGetter('standalone', false);
                     }
                 }
+
+                // Harmonize WebKit / Safari engine feature set with claimed Version/X.Y in User-Agent
+                // so "Claimed version vs. engine features" passes regardless of host iOS/iPadOS version
+                if (!_isWinPersona && !_isAndroidPersona) {
+                    try {
+                        const uaStr = (win.navigator && win.navigator.userAgent) || (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+                        const vMatch = uaStr.match(/Version\/(\d+(?:\.\d+)?)/);
+                        const safariVer = vMatch ? parseFloat(vMatch[1]) : 18.1;
+
+                        // Safari 17.4+: Object.groupBy & Promise.withResolvers
+                        if (safariVer >= 17.4) {
+                            if (win.Object && typeof win.Object.groupBy !== 'function') {
+                                Object.defineProperty(win.Object, 'groupBy', {
+                                    value: makeNative(function groupBy(items, callbackFn) {
+                                        const obj = Object.create(null);
+                                        let k = 0;
+                                        for (const item of items) {
+                                            const key = callbackFn(item, k++);
+                                            if (!(key in obj)) obj[key] = [item];
+                                            else obj[key].push(item);
+                                        }
+                                        return obj;
+                                    }, 'groupBy', 2),
+                                    writable: true, enumerable: false, configurable: true
+                                });
+                            }
+                            if (win.Promise && typeof win.Promise.withResolvers !== 'function') {
+                                Object.defineProperty(win.Promise, 'withResolvers', {
+                                    value: makeNative(function withResolvers() {
+                                        let resolve, reject;
+                                        const promise = new this((res, rej) => { resolve = res; reject = rej; });
+                                        return { promise, resolve, reject };
+                                    }, 'withResolvers', 0),
+                                    writable: true, enumerable: false, configurable: true
+                                });
+                            }
+                        } else {
+                            if (win.Object && typeof win.Object.groupBy === 'function') {
+                                try { delete win.Object.groupBy; } catch (e) {}
+                            }
+                            if (win.Promise && typeof win.Promise.withResolvers === 'function') {
+                                try { delete win.Promise.withResolvers; } catch (e) {}
+                            }
+                        }
+
+                        // Safari 18.0+: URL.parse & Document.prototype.startViewTransition
+                        if (safariVer >= 18.0) {
+                            if (win.URL && typeof win.URL.parse !== 'function') {
+                                Object.defineProperty(win.URL, 'parse', {
+                                    value: makeNative(function parse(url) {
+                                        try {
+                                            return arguments.length > 1 ? new win.URL(url, arguments[1]) : new win.URL(url);
+                                        } catch (e) {
+                                            return null;
+                                        }
+                                    }, 'parse', 1),
+                                    writable: true, enumerable: false, configurable: true
+                                });
+                            }
+                            if (win.Document && win.Document.prototype && typeof win.Document.prototype.startViewTransition !== 'function') {
+                                Object.defineProperty(win.Document.prototype, 'startViewTransition', {
+                                    value: makeNative(function startViewTransition(updateCallback) {
+                                        const p = win.Promise.resolve().then(() => typeof updateCallback === 'function' ? updateCallback() : undefined);
+                                        return {
+                                            ready: p,
+                                            updateCallbackDone: p,
+                                            finished: p,
+                                            skipTransition: makeNative(function skipTransition() {}, 'skipTransition', 0)
+                                        };
+                                    }, 'startViewTransition', 1),
+                                    writable: true, enumerable: true, configurable: true
+                                });
+                            }
+                        } else {
+                            if (win.URL && typeof win.URL.parse === 'function') {
+                                try { delete win.URL.parse; } catch (e) {}
+                            }
+                            if (win.Document && win.Document.prototype && typeof win.Document.prototype.startViewTransition === 'function') {
+                                try { delete win.Document.prototype.startViewTransition; } catch (e) {}
+                            }
+                        }
+
+                        // Safari 18.2+: Promise.try & Float16Array
+                        if (safariVer >= 18.2) {
+                            if (win.Promise && typeof win.Promise.try !== 'function') {
+                                Object.defineProperty(win.Promise, 'try', {
+                                    value: makeNative(function(callbackFn) {
+                                        return new this((resolve) => resolve(callbackFn.apply(undefined, Array.prototype.slice.call(arguments, 1))));
+                                    }, 'try', 1),
+                                    writable: true, enumerable: false, configurable: true
+                                });
+                            }
+                            if (typeof win.Float16Array !== 'function' && typeof win.Uint16Array === 'function') {
+                                Object.defineProperty(win, 'Float16Array', {
+                                    value: win.Uint16Array,
+                                    writable: true, enumerable: false, configurable: true
+                                });
+                            }
+                        } else {
+                            if (win.Promise && typeof win.Promise.try === 'function') {
+                                try { delete win.Promise.try; } catch (e) {}
+                            }
+                            if (typeof win.Float16Array === 'function') {
+                                try { delete win.Float16Array; } catch (e) {}
+                            }
+                        }
+
+                        // Safari 18.4+: Iterator.prototype.map
+                        if (safariVer >= 18.4) {
+                            const iterProto = Object.getPrototypeOf(Object.getPrototypeOf([][Symbol.iterator]()));
+                            if (typeof win.Iterator !== 'function' && iterProto) {
+                                const IterCtor = makeNative(function Iterator() {
+                                    throw scrubHookStack(new win.TypeError('Abstract class Iterator not directly constructable'));
+                                }, 'Iterator', 0);
+                                Object.defineProperty(IterCtor, 'prototype', { value: iterProto, writable: false, enumerable: false, configurable: false });
+                                Object.defineProperty(win, 'Iterator', { value: IterCtor, writable: true, enumerable: false, configurable: true });
+                            }
+                            if (win.Iterator && win.Iterator.prototype && typeof win.Iterator.prototype.map !== 'function') {
+                                Object.defineProperty(win.Iterator.prototype, 'map', {
+                                    value: makeNative(function map(mapper) {
+                                        const self = this;
+                                        let counter = 0;
+                                        return (function* () {
+                                            for (const val of self) yield mapper(val, counter++);
+                                        })();
+                                    }, 'map', 1),
+                                    writable: true, enumerable: false, configurable: true
+                                });
+                            }
+                        } else {
+                            if (win.Iterator && win.Iterator.prototype && typeof win.Iterator.prototype.map === 'function') {
+                                try { delete win.Iterator.prototype.map; } catch (e) {}
+                            }
+                        }
+                    } catch (e) {}
+                }
             }
 
             if (win.NavigatorUAData && win.NavigatorUAData.prototype && !_hookedProtos.has(win.NavigatorUAData.prototype)) {
