@@ -46,6 +46,185 @@ html[data-theme="cream-dusk"] {
 .tab-panel > .card, .tab-panel > .grid2 { margin-bottom: 18px; }
 
 /* =====================================================================
+   REDESIGNED EXECUTIVE HEADER, LOGO & MOBILE-RESPONSIVE NAV BAR
+   ===================================================================== */
+.fm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.16);
+}
+.fm-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.fm-logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: radial-gradient(circle at 30% 25%, rgba(0, 229, 255, 0.18), rgba(13, 19, 31, 0.96) 75%);
+  border: 1px solid rgba(0, 229, 255, 0.38);
+  box-shadow: 0 4px 16px rgba(0, 229, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fm-brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fm-wordmark {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  line-height: 1;
+}
+.fm-wordmark-accent {
+  background: linear-gradient(90deg, #00e5ff 0%, #38bdf8 55%, #34d399 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.fm-version-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(0, 229, 255, 0.14);
+  color: #00e5ff;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  line-height: 1.2;
+}
+.fm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.fm-sensor-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(16, 185, 129, 0.11);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.32);
+}
+.fm-theme-btn,
+.fm-scan-btn {
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 13px !important;
+  font-size: 12.5px !important;
+  border-radius: 9px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.fm-botlens-tier-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.fm-dual-special-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.fm-special-tier {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  gap: 8px;
+}
+.fm-special-purple {
+  background: rgba(168, 85, 247, 0.09);
+  border: 1px solid rgba(168, 85, 247, 0.32);
+}
+.fm-special-emerald {
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.42);
+}
+.fm-special-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.fm-special-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  color: #fff;
+  white-space: nowrap;
+}
+.fm-pill-purple { background: #9333ea; }
+.fm-pill-emerald { background: #059669; }
+.fm-special-desc {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 860px) {
+  .fm-dual-special-grid {
+    grid-template-columns: 1fr;
+  }
+  .fm-sensor-indicator {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .fm-header {
+    padding: 8px 0 10px;
+    gap: 8px;
+  }
+  .fm-logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .fm-wordmark {
+    font-size: 18px;
+  }
+  .fm-theme-btn .theme-toggle-text {
+    display: none;
+  }
+  .fm-theme-btn {
+    padding: 0 10px !important;
+  }
+  .fm-botlens-tier-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .fm-special-tier {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-tier-count {
+    display: none;
+  }
+}
+
+/* =====================================================================
    CYBER-RADAR ORBITAL SCANNER & 8-SUBSYSTEM LIVE PROGRESS DECK
    ===================================================================== */
 @keyframes radarSweepSpin {

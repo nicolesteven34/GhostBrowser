@@ -33,32 +33,53 @@
 <body class="deep">
     <div class="bg-glow" aria-hidden="true"></div>
     <div class="wrapper">
-        <!-- Unified Header -->
-        <header class="header">
-            <div class="brand">
-                <div class="brand-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        <circle cx="12" cy="12" r="3"/>
+        <!-- Unified Header (Clean, Minimalist Wordmark + Compact Non-Wrapping Controls) -->
+        <header class="header fm-header">
+            <a href="/" class="brand fm-brand" style="text-decoration: none;">
+                <div class="fm-logo-mark" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="fmGradMain" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#00e5ff"/>
+                                <stop offset="55%" stop-color="#3b82f6"/>
+                                <stop offset="100%" stop-color="#10b981"/>
+                            </linearGradient>
+                            <linearGradient id="fmGradCore" x1="8" y1="8" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.05"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Outer Hexagonal Telemetry Shield -->
+                        <path d="M16 2.5L28 8.5V16.5C28 23.2 22.8 28.1 16 29.8C9.2 28.1 4 23.2 4 16.5V8.5L16 2.5Z" fill="url(#fmGradCore)" stroke="url(#fmGradMain)" stroke-width="2" stroke-linejoin="round"/>
+                        <!-- Orbital Radar Arc -->
+                        <path d="M10.2 15.5C10.2 12.3 12.8 9.7 16 9.7C19.2 9.7 21.8 12.3 21.8 15.5" stroke="#00e5ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2.5 2.5"/>
+                        <!-- Precision Signal Needle & Pulse Bars -->
+                        <path d="M11.5 19.5L14.3 15.2L17.2 17.6L20.8 12.2" stroke="#f8fafc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="20.8" cy="12.2" r="2" fill="#00e5ff"/>
                     </svg>
                 </div>
-                <div>
-                    <h1>FlagMeter &bull; GhostDetect &amp; BotLens Unified Lab</h1>
-                    <p class="subtitle">Single-Page Active Edge TLS/JA4 (:4443) &bull; Authoritative DNS (:53) &bull; First-Party STUN (:3478) &bull; 14 Enterprise Anti-Bot &amp; Silicon Suites</p>
+                <div class="fm-brand-text">
+                    <div class="fm-brand-title-row">
+                        <span class="fm-wordmark">Flag<span class="fm-wordmark-accent">Meter</span></span>
+                        <span class="fm-version-badge">PRO</span>
+                    </div>
                 </div>
-            </div>
-            <div class="header-actions">
-                <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Switch Theme (Cyber Dark / Cream Dusk)">
+            </a>
+            <div class="header-actions fm-header-actions">
+                <span class="fm-sensor-indicator" title="Direct Edge TLS :4443 • Authoritative DNS :53 • First-Party STUN :3478">
+                    <span class="pulse-dot"></span>
+                    <span class="fm-sensor-indicator-text">Sensors Online</span>
+                </span>
+                <button id="themeToggleBtn" class="theme-toggle-btn fm-theme-btn" onclick="toggleTheme()" title="Switch Theme (Cyber Dark / Cream Dusk)">
                     <span id="themeToggleIcon" class="theme-toggle-icon">🌙</span>
                     <span id="themeToggleText" class="theme-toggle-text">Cream Dusk</span>
                 </button>
-                <span class="live-pill"><span class="pulse-dot"></span> ALL 14 SUITES EXPANDED LIVE</span>
-                <button class="btn-primary" onclick="runUnifiedFullAudit()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <button class="btn-primary fm-scan-btn" onclick="runUnifiedFullAudit()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
                         <polyline points="23 4 23 10 17 10"></polyline>
                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                     </svg>
-                    <span>Run Unified Benchmark</span>
+                    <span>Run Scan</span>
                 </button>
             </div>
         </header>
@@ -66,15 +87,15 @@
         <!-- Unified Navigation Deck (Tabbed Views: Click Any Tab To Switch View) -->
         <nav class="nav-tabs nav-tabs-deck">
             <!-- PART 0: BOTLENS ACTIVE EDGE & RUNTIME FORENSICS -->
-            <div class="nav-tier" style="border-color: rgba(0, 229, 255, 0.38); background: linear-gradient(90deg, rgba(0, 229, 255, 0.09) 0%, rgba(15, 23, 42, 0.85) 100%); margin-bottom: 6px;">
+            <div class="nav-tier" style="border-color: rgba(0, 229, 255, 0.38); background: linear-gradient(90deg, rgba(0, 229, 255, 0.09) 0%, rgba(15, 23, 42, 0.85) 100%); margin-bottom: 4px;">
                 <div class="nav-tier-header">
                     <div class="nav-tier-label">
                         <span class="nav-tier-dot dot-cyan"></span>
-                        <span class="nav-tier-tag" style="color: #00e5ff;">ACTIVE SERVER SENSORS &amp; BOTLENS FORENSICS &bull; DIRECT TLS :4443 + AUTH DNS :53 + STUN :3478 + 95 CHECKS</span>
+                        <span class="nav-tier-tag" style="color: #00e5ff;">BOTLENS ACTIVE EDGE &amp; RUNTIME FORENSICS</span>
                     </div>
-                    <span class="nav-tier-count">UNIFIED ON BOTLENS VIEW &bull; SUB-TABS ENABLED</span>
+                    <span class="nav-tier-count">TLS :4443 &bull; DNS :53 &bull; STUN :3478</span>
                 </div>
-                <div class="nav-tier-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+                <div class="nav-tier-grid fm-botlens-tier-grid">
                     <button class="nav-tab active" id="tabBotlensDeepBtn" onclick="switchTab('botlensdeep')">
                         <div class="nav-tab-icon" style="color: #00e5ff;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -103,23 +124,14 @@
                 </div>
             </div>
 
-            <!-- PART I HEADER -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(0, 229, 255, 0.07); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 8px; margin-bottom: 4px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="background: #00e5ff; color: #090d16; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART I &bull; DEVICE &amp; ENVIRONMENT VALIDATION</span>
-                    <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Hardware, OS, Browser, GPU, Audio, Workers, TLS &amp; Proxy Egress Integrity</span>
-                </div>
-                <span style="font-size: 11px; color: #34d399; font-weight: 700;">✓ Click Any Tab Below To View Its Dedicated Results</span>
-            </div>
-
             <!-- Tier 1: Browser Identity & Bot Detection Labs -->
             <div class="nav-tier">
                 <div class="nav-tier-header">
                     <div class="nav-tier-label">
                         <span class="nav-tier-dot dot-cyan"></span>
-                        <span class="nav-tier-tag">PART I (TIER 1) &bull; BROWSER IDENTITY &amp; BOT DETECTION LABS</span>
+                        <span class="nav-tier-tag">TIER 1 &bull; BROWSER IDENTITY &amp; BOT DETECTION LABS</span>
                     </div>
-                    <span class="nav-tier-count">5 ACTIVE ENGINES</span>
+                    <span class="nav-tier-count">5 ENGINES</span>
                 </div>
                 <div class="nav-tier-grid">
                     <button class="nav-tab" id="tabFingerprintBtn" onclick="switchTab('fingerprint')">
@@ -269,11 +281,11 @@
             </div>
 
             <!-- PART II & PART III SEPARATE COLUMNS: BEHAVIORAL BIOMETRICS (LEFT) & UNCOVERED FRONTIER LAB (RIGHT) -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 8px; margin-top: 6px; margin-bottom: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(168, 85, 247, 0.09); border: 1px solid rgba(168, 85, 247, 0.32); border-radius: 8px; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: #a855f7; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART II &bull; USER BEHAVIOR TELEMETRY</span>
-                        <span style="font-size: 11.5px; font-weight: 600; color: #e2e8f0;">Fitts's Law, Keystroke Cadence &amp; Playbook</span>
+            <div class="fm-dual-special-grid">
+                <div class="fm-special-tier fm-special-purple">
+                    <div class="fm-special-meta">
+                        <span class="fm-special-pill fm-pill-purple">BEHAVIORAL LAB</span>
+                        <span class="fm-special-desc">Fitts's Law &amp; Keystroke Cadence</span>
                     </div>
                     <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(168, 85, 247, 0.45); background: rgba(168, 85, 247, 0.14);">
                         <div class="nav-tab-icon" style="color: #c084fc;">
@@ -288,10 +300,10 @@
                     </button>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.42); border-radius: 8px; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: #059669; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART III &bull; UNCOVERED FRONTIER LAB</span>
-                        <span style="font-size: 11.5px; font-weight: 600; color: #d1fae5;">16 Novel JS, Container &amp; DPI Vectors (Phase 2 Hardened &bull; 16/16 PASS)</span>
+                <div class="fm-special-tier fm-special-emerald">
+                    <div class="fm-special-meta">
+                        <span class="fm-special-pill fm-pill-emerald">FRONTIER LAB</span>
+                        <span class="fm-special-desc">16 Novel JS, Container &amp; DPI Probes</span>
                     </div>
                     <button class="nav-tab" id="tabUncoveredBtn" onclick="switchTab('uncovered')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(16, 185, 129, 0.55); background: rgba(16, 185, 129, 0.16);">
                         <div class="nav-tab-icon" style="color: #34d399;">
