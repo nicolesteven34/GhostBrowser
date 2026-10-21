@@ -114,13 +114,18 @@
 
   // ------------------------------------------------------------------ tabs & buttons
   function wire() {
-    document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === b));
-      const targetTab = b.dataset.tab;
-      document.querySelectorAll('.tab-panel').forEach((p) => {
-        const isMatch = targetTab === 'all' || p.dataset.panel === targetTab;
+    const syncPanels = (targetTab) => {
+      document.querySelectorAll('#botlensDeepView .tab-panel').forEach((p) => {
+        const isMatch = p.dataset.panel === targetTab;
         p.classList.toggle('active', isMatch);
+        p.style.display = isMatch ? 'block' : 'none';
       });
+    };
+    const initialActive = document.querySelector('#tabs .tab.active');
+    syncPanels(initialActive ? initialActive.dataset.tab : 'summary');
+    document.querySelectorAll('#tabs .tab').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('#tabs .tab').forEach((x) => x.classList.toggle('active', x === b));
+      syncPanels(b.dataset.tab);
     }));
     if ($('btn-rescan')) $('btn-rescan').addEventListener('click', () => { if (typeof window.runFullAudit === 'function') window.runFullAudit(); else location.reload(); });
     if ($('btn-copy')) $('btn-copy').addEventListener('click', async () => {

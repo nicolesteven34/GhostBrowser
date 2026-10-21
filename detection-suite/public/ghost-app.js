@@ -272,10 +272,14 @@ function switchTab(tab, skipScroll = false) {
         ovBtn.classList.toggle('active', isBotlensOverviewJump);
     }
 
-    if (!skipScroll && isBotlensOverviewJump) {
-        const ovEl = document.getElementById('botlensOverviewView');
-        if (ovEl && typeof ovEl.scrollIntoView === 'function') {
-            ovEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (isBotlensOverviewJump) {
+        const subTabOv = document.querySelector('#tabs .tab[data-tab="overview"]');
+        if (subTabOv) subTabOv.click();
+    } else if (tab === 'botlensdeep') {
+        const activeSubTab = document.querySelector('#tabs .tab.active');
+        if (!activeSubTab || activeSubTab.dataset.tab === 'overview') {
+            const subTabSum = document.querySelector('#tabs .tab[data-tab="summary"]');
+            if (subTabSum) subTabSum.click();
         }
     }
 

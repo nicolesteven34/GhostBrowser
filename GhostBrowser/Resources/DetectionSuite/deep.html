@@ -7,8 +7,14 @@
     <meta name="theme-color" content="#070b12">
     <meta name="format-detection" content="telephone=no">
     <title>FlagMeter &bull; GhostDetect &amp; BotLens Unified Browser, Silicon &amp; Active Network Telemetry Lab</title>
-    <link rel="stylesheet" href="/style.css?pv={{PV}}">
-    <link rel="stylesheet" href="/styles.css?pv={{PV}}">
+    <link rel="stylesheet" href="/style.css?v=4&amp;pv={{PV}}">
+    <link rel="stylesheet" href="/styles.css?v=4&amp;pv={{PV}}">
+    <style>
+        .tab-view { display: none !important; flex-direction: column; gap: 22px; }
+        .tab-view.active { display: flex !important; }
+        .tab-panel { display: none !important; }
+        .tab-panel.active { display: block !important; }
+    </style>
     <script>
         window.__SERVER__ = /*__SERVER_DATA__*/null;
         (function() {
@@ -436,12 +442,12 @@
 
             <nav class="tabs" id="tabs" role="tablist">
                 <button class="tab active" data-tab="summary">Summary &amp; Consensus Matrix</button>
+                <button class="tab" data-tab="overview">Overview &amp; 95+ Checks</button>
                 <button class="tab" data-tab="net">Network &amp; TLS (:4443) <i data-count="net"></i></button>
                 <button class="tab" data-tab="ip">IP, DNS (:53) &amp; STUN (:3478) <i data-count="ip"></i></button>
                 <button class="tab" data-tab="device">Device &amp; OS Forensics <i data-count="device"></i></button>
                 <button class="tab" data-tab="behavior">Behavioural Biometrics <i data-count="behavior"></i></button>
                 <button class="tab" data-tab="challenge">Challenges, PoW &amp; Reputation <i data-count="challenge"></i></button>
-                <button class="tab" data-tab="all">All Sub-Tabs</button>
             </nav>
 
             <!-- SUMMARY -->
@@ -454,6 +460,7 @@
                     <div class="card"><h2>Strongest signals</h2><ul class="checks" id="top-signals"></ul></div>
                     <div class="card"><h2>Sensors &amp; services</h2><dl class="fp" id="sensors"></dl></div>
                 </div>
+                <details class="card raw"><summary>Raw Deep Investigation Data (JSON)</summary><pre id="raw"></pre></details>
             </section>
 
             <!-- NETWORK -->
@@ -521,17 +528,15 @@
                 <div class="card"><h2>Identity &amp; history</h2><dl class="fp" id="rep-detail"><dt>…</dt><dd>loading</dd></dl></div>
             </section>
 
-            <details class="card raw"><summary>Raw Deep Investigation Data (JSON)</summary><pre id="raw"></pre></details>
-
             <!-- ======================================================== -->
-            <!-- BOTLENS OVERVIEW & LIVE RUNTIME MONITOR (ON SAME PAGE)   -->
+            <!-- SUB-TAB: BOTLENS OVERVIEW & LIVE RUNTIME MONITOR         -->
             <!-- ======================================================== -->
-            <div id="botlensOverviewView" style="display: flex; flex-direction: column; gap: 18px; margin-top: 10px; padding-top: 18px; border-top: 1px solid rgba(56, 189, 248, 0.22);">
+            <section class="tab-panel" data-panel="overview" id="botlensOverviewView">
                 <div class="botlens-section-banner">
                     <div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                             <span style="background: #38bdf8; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">BOTLENS OVERVIEW &amp; 95+ STATIC / RUNTIME CHECKS</span>
-                            <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ 7 Category Cards &amp; Behavior Lab On Same BotLens Page</span>
+                            <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ 7 Category Cards &amp; Behavior Lab</span>
                         </div>
                         <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Overview Scanner &bull; Automation Frameworks, Headless, Tampering, Consistency, iOS/WKWebView &amp; Live Traps</h2>
                     </div>
@@ -595,7 +600,7 @@
                 </div>
 
                 <section id="categories" class="cats"></section>
-            </div>
+            </section>
         </div>
 
         <!-- TAB 1: FINGERPRINT & BROWSER INTEGRITY LAB              -->

@@ -41,8 +41,8 @@ html[data-theme="cream-dusk"] {
 /* =====================================================================
    TABBED VIEW & BOTLENS SUB-TAB VISIBILITY
    ===================================================================== */
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel { display: none !important; }
+.tab-panel.active { display: block !important; }
 .tab-panel > .card, .tab-panel > .grid2 { margin-bottom: 18px; }
 
 /* =====================================================================
