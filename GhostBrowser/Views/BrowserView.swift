@@ -585,7 +585,8 @@ public struct BrowserView: UIViewRepresentable {
             }
 
             let cachePolicy: URLRequest.CachePolicy = forceReload ? .reloadIgnoringLocalAndRemoteCacheData : .useProtocolCachePolicy
-            let request = URLRequest(url: url, cachePolicy: cachePolicy, timeoutInterval: 30)
+            var request = URLRequest(url: url, cachePolicy: cachePolicy, timeoutInterval: 30)
+            request.setValue("1", forHTTPHeaderField: "Upgrade-Insecure-Requests")
             webView.load(request)
         }
 
