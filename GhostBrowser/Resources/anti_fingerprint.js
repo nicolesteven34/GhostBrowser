@@ -263,7 +263,7 @@
         const isCtor = /^[A-Z]/.test(fnName);
         let targetFn = fn;
         try {
-            if (!isCtor) {
+            if (!isCtor && ('prototype' in fn)) {
                 const holder = {
                     [fnName]() {
                         try {
@@ -8310,17 +8310,21 @@
                 function installNavGetter(prop, value) {
                     const origDesc = Object.getOwnPropertyDescriptor(navProto, prop);
                     const origGet = origDesc && origDesc.get;
-                    const getter = makeNative(function() {
-                        if (origGet) {
-                            invokeNativeWithCleanStack(origGet, this, arguments);
-                        } else if (!(this instanceof win.Navigator) || Object.getPrototypeOf(this) === navProto && this !== win.navigator) {
-                            throw scrubHookStack(new win.TypeError('Illegal invocation'));
+                    const getterName = `get ${prop}`;
+                    const getter = makeNative(({
+                        [getterName]() {
+                            if (this === win.navigator) return value;
+                            if (origGet) {
+                                invokeNativeWithCleanStack(origGet, this, arguments);
+                            } else if (!(this instanceof win.Navigator) || Object.getPrototypeOf(this) === navProto && this !== win.navigator) {
+                                throw scrubHookStack(new win.TypeError('Illegal invocation'));
+                            }
+                            if (!_isWinPersona && this !== win.navigator) {
+                                throw scrubHookStack(new win.TypeError(`The Navigator.${prop} getter can only be used on instances of Navigator`));
+                            }
+                            return value;
                         }
-                        if (!_isWinPersona && this !== win.navigator) {
-                            throw scrubHookStack(new win.TypeError(`The Navigator.${prop} getter can only be used on instances of Navigator`));
-                        }
-                        return value;
-                    }, `get ${prop}`, 0);
+                    })[getterName], getterName, 0);
                     Object.defineProperty(navProto, prop, {
                         get: getter,
                         set: undefined,
@@ -8880,6 +8884,7 @@
             for (const proto of ctxProtos) {
                 if (_hookedProtos.has(proto)) continue;
                 _hookedProtos.add(proto);
+                const isOffscreenProto = Boolean(win.OffscreenCanvasRenderingContext2D && proto === win.OffscreenCanvasRenderingContext2D.prototype);
 
                 const origMeasureText = proto.measureText;
                 if (typeof origMeasureText === 'function') {
@@ -8898,7 +8903,9 @@
                     });
                 }
 
-                if (isAntiBotHost) continue;
+                // Leave OffscreenCanvasRenderingContext2D.prototype.fillText and .arc untouched
+                // so 2D OffscreenCanvas renders identically between main thread (window) and Worker realms.
+                if (isAntiBotHost || isOffscreenProto) continue;
 
                 const origFillText = proto.fillText;
                 const origGetImageData = proto.getImageData;
@@ -10584,10 +10591,64 @@
             if (origDataDesc && typeof origDataDesc.get === 'function') {
                 const origDataGet = origDataDesc.get;
                 let _cachedMainFptc = null;
+                let _cachedMainOffscreen2dHash = null;
+                let _cachedMainGlMaxTex = null;
+                const getMainOffscreen2dHash = () => {
+                    if (_cachedMainOffscreen2dHash) return _cachedMainOffscreen2dHash;
+                    try {
+                        if (typeof OffscreenCanvas !== 'undefined') {
+                            const c2 = new OffscreenCanvas(120, 30);
+                            const x2 = c2.getContext('2d');
+                            if (x2) {
+                                x2.fillStyle = 'rgb(17,128,201)';
+                                x2.fillRect(0, 0, 10, 10);
+                                x2.getImageData(0, 0, 10, 10);
+                                x2.textBaseline = 'top';
+                                x2.font = '14px sans-serif';
+                                x2.fillStyle = '#e53';
+                                x2.fillRect(40, 2, 50, 18);
+                                x2.fillStyle = '#18a';
+                                x2.fillText('BL-W2D-9', 2, 6);
+                                const pd = x2.getImageData(0, 0, 120, 30).data;
+                                let s = '';
+                                for (let i = 0; i < pd.length; i += 19) s += pd[i].toString(36);
+                                let h = 2166136261;
+                                for (let k = 0; k < s.length; k++) {
+                                    h ^= s.charCodeAt(k);
+                                    h = Math.imul(h, 16777619) >>> 0;
+                                }
+                                _cachedMainOffscreen2dHash = ('0000000' + h.toString(16)).slice(-8);
+                            }
+                        }
+                    } catch (e) {}
+                    return _cachedMainOffscreen2dHash;
+                };
+                const getMainGlMaxTex = () => {
+                    if (_cachedMainGlMaxTex) return _cachedMainGlMaxTex;
+                    try {
+                        const c = typeof document !== 'undefined' ? document.createElement('canvas') : (typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(1, 1) : null);
+                        const gl = c && (c.getContext('webgl') || c.getContext('experimental-webgl'));
+                        if (gl) {
+                            _cachedMainGlMaxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+                        }
+                    } catch (e) {}
+                    return _cachedMainGlMaxTex;
+                };
                 const harmonizeWorkerPayloadObj = (obj, depth) => {
                     if (!obj || typeof obj !== 'object') return obj;
                     const d = depth || 0;
                     if (d > 5) return obj;
+                    if ('canvas2dHash' in obj && typeof obj.canvas2dHash === 'string') {
+                        const mainOcHash = getMainOffscreen2dHash();
+                        if (mainOcHash) obj.canvas2dHash = mainOcHash;
+                    }
+                    if ('solidMismatch' in obj && typeof obj.solidMismatch === 'number') {
+                        obj.solidMismatch = 0;
+                    }
+                    if ('glMaxTex' in obj && typeof obj.glMaxTex === 'number') {
+                        const mainMaxTex = getMainGlMaxTex();
+                        if (typeof mainMaxTex === 'number' && mainMaxTex > 0) obj.glMaxTex = mainMaxTex;
+                    }
                     const targetRenderer = cfg.webglRenderer || 'Apple M4';
                     const targetVendor = cfg.webglVendor || 'Apple Inc.';
                     const effHc = cfg.hardwareConcurrency || 8;
@@ -10625,10 +10686,31 @@
                     }
                     if ('platform' in obj && typeof obj.platform === 'string') obj.platform = effPlat;
                     if ('plat' in obj && typeof obj.plat === 'string') obj.plat = effPlat;
-                    if (typeof navigator !== 'undefined' && navigator.userAgent) {
-                        if ('ua' in obj && typeof obj.ua === 'string') obj.ua = navigator.userAgent;
-                        if ('userAgent' in obj && typeof obj.userAgent === 'string') obj.userAgent = navigator.userAgent;
-                        if ('navigatorUa' in obj && typeof obj.navigatorUa === 'string') obj.navigatorUa = navigator.userAgent;
+                    if (typeof navigator !== 'undefined') {
+                        if (navigator.userAgent) {
+                            if ('ua' in obj && typeof obj.ua === 'string') obj.ua = navigator.userAgent;
+                            if ('userAgent' in obj && typeof obj.userAgent === 'string') obj.userAgent = navigator.userAgent;
+                            if ('navigatorUa' in obj && typeof obj.navigatorUa === 'string') obj.navigatorUa = navigator.userAgent;
+                        }
+                        if (navigator.language) {
+                            if ('language' in obj && typeof obj.language === 'string') obj.language = navigator.language;
+                            if ('lang' in obj && typeof obj.lang === 'string') obj.lang = navigator.language;
+                        }
+                        if (Array.isArray(navigator.languages)) {
+                            if ('languages' in obj && Array.isArray(obj.languages)) obj.languages = Array.from(navigator.languages);
+                            if ('langs' in obj && Array.isArray(obj.langs)) obj.langs = Array.from(navigator.languages);
+                        }
+                        if (navigator.userAgentData) {
+                            if ('uaPlatform' in obj && navigator.userAgentData.platform) obj.uaPlatform = navigator.userAgentData.platform;
+                            if ('uaMobile' in obj && typeof navigator.userAgentData.mobile === 'boolean') obj.uaMobile = navigator.userAgentData.mobile;
+                            if ('uaBrands' in obj && Array.isArray(navigator.userAgentData.brands)) {
+                                if (typeof obj.uaBrands === 'string') {
+                                    obj.uaBrands = navigator.userAgentData.brands.map(b => b.brand + ' ' + b.version).join(', ');
+                                } else if (Array.isArray(obj.uaBrands)) {
+                                    obj.uaBrands = cleanUaBrandsList(obj.uaBrands);
+                                }
+                            }
+                        }
                     }
                     if ('webdriver' in obj) obj.webdriver = false;
                     if ('renderer' in obj && typeof obj.renderer === 'string') obj.renderer = targetRenderer;
