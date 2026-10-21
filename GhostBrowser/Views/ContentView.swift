@@ -390,9 +390,9 @@ public struct ContentView: View {
                         },
                         onLaunchGhostDetect: {
                             if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
-                                tabs[index].urlString = "ghost://detect"
-                                tabs[index].title = "GhostDetect Lab"
-                                inputURLText = "ghost://detect"
+                                tabs[index].urlString = "https://flagmeter.com"
+                                tabs[index].title = "FlagMeter — GhostDetect Lab"
+                                inputURLText = "https://flagmeter.com"
                                 profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                             }
                         }
@@ -400,6 +400,23 @@ public struct ContentView: View {
                 }
 
                 Spacer(minLength: 4)
+
+                // FlagMeter / GhostDetect Unified Integrity Suite Quick-Launch Button
+                Button(action: {
+                    if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
+                        tabs[index].urlString = "https://flagmeter.com"
+                        tabs[index].title = "FlagMeter — GhostDetect Lab"
+                        inputURLText = "https://flagmeter.com"
+                        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                    }
+                }) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.cyan)
+                        .padding(8)
+                        .background(Color.cyan.opacity(0.14))
+                        .clipShape(Circle())
+                }
 
                 // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera, Mock GPS & Evergreen Engine Updates)
                 Button(action: {

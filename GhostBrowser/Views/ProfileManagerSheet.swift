@@ -227,7 +227,7 @@ public struct ProfileManagerSheet: View {
                                         HStack(spacing: 5) {
                                             Image(systemName: "checkmark.shield.fill")
                                                 .font(.system(size: 12, weight: .semibold))
-                                            Text("GhostDetect Lab")
+                                            Text("FlagMeter • GhostDetect")
                                                 .font(.system(size: 12, weight: .semibold))
                                         }
                                         .padding(.horizontal, 10)

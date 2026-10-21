@@ -2,21 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostDetect &bull; Enterprise Fingerprint &amp; Browser Integrity Lab</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#070b12">
+    <meta name="format-detection" content="telephone=no">
+    <title>FlagMeter &bull; GhostDetect &amp; BotLens Unified Browser, Silicon &amp; Active Network Telemetry Lab</title>
+    <link rel="stylesheet" href="/style.css?pv={{PV}}">
+    <link rel="stylesheet" href="/styles.css?pv={{PV}}">
     <script>
+        window.__SERVER__ = /*__SERVER_DATA__*/null;
         (function() {
             try {
-                var t = localStorage.getItem('detectexpert_theme');
-                if (t === 'cream-dusk') document.documentElement.setAttribute('data-theme', 'cream-dusk');
+                var t = localStorage.getItem("detectexpert_theme");
+                if (t === "cream-dusk") document.documentElement.setAttribute("data-theme", "cream-dusk");
             } catch(e) {}
         })();
+        function runUnifiedFullAudit() {
+            try { if (typeof runFullAudit === "function") runFullAudit(); } catch (e) {}
+            try { var b1 = document.getElementById("btn-rescan"); if (b1) b1.click(); } catch (e) {}
+            try { var b2 = document.getElementById("ov-btn-rescan"); if (b2) b2.click(); } catch (e) {}
+        }
     </script>
 </head>
-<body>
+<body class="deep">
+    <div class="bg-glow" aria-hidden="true"></div>
     <div class="wrapper">
-        <!-- Header -->
+        <!-- Unified Header -->
         <header class="header">
             <div class="brand">
                 <div class="brand-icon">
@@ -26,8 +37,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h1>GhostDetect Lab</h1>
-                    <p class="subtitle">Enterprise Browser Fingerprinting &amp; Defense Integrity Benchmark</p>
+                    <h1>FlagMeter &bull; GhostDetect &amp; BotLens Unified Lab</h1>
+                    <p class="subtitle">Single-Page Active Edge TLS/JA4 (:4443) &bull; Authoritative DNS (:53) &bull; First-Party STUN (:3478) &bull; 14 Enterprise Anti-Bot &amp; Silicon Suites</p>
                 </div>
             </div>
             <div class="header-actions">
@@ -35,26 +46,64 @@
                     <span id="themeToggleIcon" class="theme-toggle-icon">🌙</span>
                     <span id="themeToggleText" class="theme-toggle-text">Cream Dusk</span>
                 </button>
-                <span class="live-pill"><span class="pulse-dot"></span> BENCHMARK ACTIVE</span>
-                <button class="btn-primary" onclick="runFullAudit()">
+                <span class="live-pill"><span class="pulse-dot"></span> ALL 14 SUITES EXPANDED LIVE</span>
+                <button class="btn-primary" onclick="runUnifiedFullAudit()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <polyline points="23 4 23 10 17 10"></polyline>
                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                     </svg>
-                    <span>Run Benchmark</span>
+                    <span>Run Unified Benchmark</span>
                 </button>
             </div>
         </header>
 
-        <!-- Navigation Tabs: Categorized Dual-Part Deck (Part I: Device Validation vs Part II: Behavioral Biometrics) -->
+        <!-- Unified Navigation Deck (All Sections Visible On Same Page; Click Any Button To Smooth-Scroll) -->
         <nav class="nav-tabs nav-tabs-deck">
+            <!-- PART 0: BOTLENS ACTIVE EDGE & RUNTIME FORENSICS -->
+            <div class="nav-tier" style="border-color: rgba(0, 229, 255, 0.38); background: linear-gradient(90deg, rgba(0, 229, 255, 0.09) 0%, rgba(15, 23, 42, 0.85) 100%); margin-bottom: 6px;">
+                <div class="nav-tier-header">
+                    <div class="nav-tier-label">
+                        <span class="nav-tier-dot dot-cyan"></span>
+                        <span class="nav-tier-tag" style="color: #00e5ff;">ACTIVE SERVER SENSORS &amp; BOTLENS FORENSICS &bull; DIRECT TLS :4443 + AUTH DNS :53 + STUN :3478 + 95 CHECKS</span>
+                    </div>
+                    <span class="nav-tier-count">ALL PANELS EXPANDED BELOW &bull; CLICK TO JUMP</span>
+                </div>
+                <div class="nav-tier-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+                    <button class="nav-tab active" id="tabBotlensDeepBtn" onclick="switchTab('botlensdeep')">
+                        <div class="nav-tab-icon" style="color: #00e5ff;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                <circle cx="11" cy="11" r="3"></circle>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title">BotLens Deep Investigation</span>
+                            <span class="nav-tab-sub">JA3/JA4 :4443 &bull; p0f TCP &bull; DNS :53 &bull; STUN :3478 &bull; PoW</span>
+                        </div>
+                    </button>
+                    <button class="nav-tab" id="tabBotlensOverviewBtn" onclick="switchTab('botlensoverview')">
+                        <div class="nav-tab-icon" style="color: #38bdf8;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                                <path d="M12 12 2.1 10.5"></path>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title">BotLens Overview &amp; Live Monitor</span>
+                            <span class="nav-tab-sub">Automation, Headless, WKWebView &amp; Runtime Traps</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
             <!-- PART I HEADER -->
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(0, 229, 255, 0.07); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 8px; margin-bottom: 4px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="background: #00e5ff; color: #090d16; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART I &bull; DEVICE &amp; ENVIRONMENT VALIDATION</span>
                     <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Hardware, OS, Browser, GPU, Audio, Workers, TLS &amp; Proxy Egress Integrity</span>
                 </div>
-                <span style="font-size: 11px; color: #34d399; font-weight: 700;">✓ 100% Automated by GhostBrowser Engine</span>
+                <span style="font-size: 11px; color: #34d399; font-weight: 700;">✓ All Sections Rendered Visible On This Page</span>
             </div>
 
             <!-- Tier 1: Browser Identity & Bot Detection Labs -->
@@ -67,7 +116,7 @@
                     <span class="nav-tier-count">5 ACTIVE ENGINES</span>
                 </div>
                 <div class="nav-tier-grid">
-                    <button class="nav-tab active" id="tabFingerprintBtn" onclick="switchTab('fingerprint')">
+                    <button class="nav-tab" id="tabFingerprintBtn" onclick="switchTab('fingerprint')">
                         <div class="nav-tab-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -215,7 +264,6 @@
 
             <!-- PART II & PART III SEPARATE COLUMNS: BEHAVIORAL BIOMETRICS (LEFT) & UNCOVERED FRONTIER LAB (RIGHT) -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 8px; margin-top: 6px; margin-bottom: 4px;">
-                <!-- Column 1: PART II Behavioral Biometrics -->
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(168, 85, 247, 0.09); border: 1px solid rgba(168, 85, 247, 0.32); border-radius: 8px; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="background: #a855f7; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART II &bull; USER BEHAVIOR TELEMETRY</span>
@@ -234,11 +282,10 @@
                     </button>
                 </div>
 
-                <!-- Column 2: PART III Uncovered Frontier & Zero-Day Container Audit Lab -->
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.42); border-radius: 8px; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="background: #059669; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.6px;">PART III &bull; UNCOVERED FRONTIER LAB</span>
-                        <span style="font-size: 11.5px; font-weight: 600; color: #d1fae5;">16 Novel JS, Container &amp; DPI Vectors (Phase 2 Hardened • 16/16 PASS)</span>
+                        <span style="font-size: 11.5px; font-weight: 600; color: #d1fae5;">16 Novel JS, Container &amp; DPI Vectors (Phase 2 Hardened &bull; 16/16 PASS)</span>
                     </div>
                     <button class="nav-tab" id="tabUncoveredBtn" onclick="switchTab('uncovered')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(16, 185, 129, 0.55); background: rgba(16, 185, 129, 0.16);">
                         <div class="nav-tab-icon" style="color: #34d399;">
@@ -255,15 +302,11 @@
             </div>
         </nav>
 
-        <!-- LIVE MULTI-STAGE AUDIT TELEMETRY & RE-SCAN PIPELINE BANNER -->
+        <!-- UPGRADED CYBER-RADAR ORBITAL SCANNER & 8-SUBSYSTEM LIVE PROGRESS BANNER -->
         <style>
             @keyframes ghostAuditSpin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
-            }
-            @keyframes ghostCardScanSweep {
-                0% { background-position: -200% 0; }
-                100% { background-position: 200% 0; }
             }
             @keyframes ghostFreshResultPulse {
                 0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.45); }
@@ -285,41 +328,275 @@
                 pointer-events: none;
                 box-shadow: 0 0 14px rgba(0, 229, 255, 0.38) !important;
             }
-            .tab-view.audit-scanning-active .card,
-            .tab-view.audit-scanning-active .fp-visitor-card,
-            .tab-view.audit-scanning-active .gauge-card,
-            .tab-view.audit-scanning-active .entropy-card,
-            .tab-view.audit-scanning-active .smart-signal-card,
-            .tab-view.audit-scanning-active .ab-surface-card,
-            .tab-view.audit-scanning-active .fps-hero-card {
-                position: relative;
-                opacity: 0.72;
-                transition: opacity 0.16s ease, transform 0.16s ease;
-            }
-            .tab-view.audit-fresh-complete .fp-visitor-card,
-            .tab-view.audit-fresh-complete .gauge-card,
-            .tab-view.audit-fresh-complete .fps-hero-card {
-                animation: ghostFreshResultPulse 0.85s ease-out;
-            }
         </style>
-        <div id="liveAuditProgressBanner" style="margin: 0 0 16px 0; border-radius: 10px; border: 1px solid rgba(0, 229, 255, 0.38); background: linear-gradient(90deg, rgba(13, 22, 38, 0.96) 0%, rgba(15, 29, 48, 0.96) 100%); overflow: hidden; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32); transition: border-color 0.25s ease;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; flex-wrap: wrap; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="liveAuditSpinner" class="ghost-audit-spinner"></span>
-                    <span id="liveAuditStagePill" style="background: rgba(0, 229, 255, 0.18); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.45); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; font-family: monospace;">STAGE 1 / 6</span>
-                    <span id="liveAuditStageText" style="font-size: 12.5px; font-weight: 600; color: #f8fafc;">Initializing GhostDetect Multi-Engine Silicon &amp; Network Pipeline...</span>
+        <div id="liveAuditProgressBanner" style="margin: 0 0 22px 0; border-radius: 12px; border: 1px solid rgba(0, 229, 255, 0.42); background: linear-gradient(90deg, rgba(10, 17, 30, 0.97) 0%, rgba(15, 27, 46, 0.97) 100%); overflow: hidden; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.38); transition: border-color 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div id="cyberRadarOrb" class="cyber-radar-orb">
+                        <div id="cyberRadarSweep" class="cyber-radar-sweep"></div>
+                        <div id="cyberRadarCore" class="cyber-radar-core"></div>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span id="liveAuditSpinner" class="ghost-audit-spinner"></span>
+                            <span id="liveAuditStagePill" style="background: rgba(0, 229, 255, 0.18); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.45); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; font-family: monospace;">STAGE 1 / 8</span>
+                            <span id="liveAuditStageText" style="font-size: 13.5px; font-weight: 700; color: #f8fafc;">Initializing FlagMeter &amp; GhostDetect Multi-Engine Active Telemetry Pipeline...</span>
+                        </div>
+                        <div id="liveAuditStageSub" style="font-size: 11.5px; font-family: monospace; color: #94a3b8; margin-top: 3px;">Probing active Edge TLS :4443, Authoritative DNS :53, First-Party STUN :3478 &amp; 12 In-House Suites...</div>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span id="liveAuditStageSub" style="font-size: 11px; font-family: monospace; color: #94a3b8;">Probing live hardware &amp; transport...</span>
-                    <span id="liveAuditPctBadge" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 4px; font-family: monospace;">0%</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="liveAuditPctBadge" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 11.5px; font-weight: 800; padding: 4px 11px; border-radius: 6px; font-family: monospace;">12%</span>
                 </div>
             </div>
             <div style="height: 4px; width: 100%; background: rgba(255, 255, 255, 0.07);">
-                <div id="liveAuditProgressBar" style="height: 100%; width: 8%; background: linear-gradient(90deg, #00e5ff 0%, #3b82f6 50%, #10b981 100%); transition: width 0.14s ease-out;"></div>
+                <div id="liveAuditProgressBar" style="height: 100%; width: 12%; background: linear-gradient(90deg, #00e5ff 0%, #3b82f6 50%, #10b981 100%); transition: width 0.18s ease-out;"></div>
+            </div>
+            <div id="unifiedSubsystemDeck" class="unified-subsystem-deck">
+                <div id="subBotlensStatic" class="sub-pill sub-scanning" onclick="switchTab('botlensoverview')">
+                    <span class="sub-pill-name">1. BotLens Static &amp; Runtime</span>
+                    <span class="sub-pill-status">SCANNING…</span>
+                </div>
+                <div id="subEdgeTls" class="sub-pill sub-scanning" onclick="switchTab('botlensdeep')">
+                    <span class="sub-pill-name">2. Direct Edge TLS/H2 :4443</span>
+                    <span class="sub-pill-status">PROBING…</span>
+                </div>
+                <div id="subDnsStun" class="sub-pill sub-scanning" onclick="switchTab('botlensdeep')">
+                    <span class="sub-pill-name">3. Auth DNS :53 &amp; STUN :3478</span>
+                    <span class="sub-pill-status">PROBING…</span>
+                </div>
+                <div id="subBotlensDeep" class="sub-pill sub-scanning" onclick="switchTab('botlensdeep')">
+                    <span class="sub-pill-name">4. BotLens Deep GPU/Wasm/PoW</span>
+                    <span class="sub-pill-status">SOLVING…</span>
+                </div>
+                <div id="subGhostNative" class="sub-pill sub-scanning" onclick="switchTab('fingerprint')">
+                    <span class="sub-pill-name">5. GhostDetect &amp; 16-STUN RTC</span>
+                    <span class="sub-pill-status">AUDITING…</span>
+                </div>
+                <div id="subFpCom" class="sub-pill sub-scanning" onclick="switchTab('fingerprintcom')">
+                    <span class="sub-pill-name">6. Fingerprint.com Pro &amp; Scan</span>
+                    <span class="sub-pill-status">AUDITING…</span>
+                </div>
+                <div id="subAntiBot" class="sub-pill sub-scanning" onclick="switchTab('antibot')">
+                    <span class="sub-pill-name">7. Anti.Bot T13 &amp; ProxyDetect</span>
+                    <span class="sub-pill-status">AUDITING…</span>
+                </div>
+                <div id="subUncovered" class="sub-pill sub-scanning" onclick="switchTab('uncovered')">
+                    <span class="sub-pill-name">8. Uncovered 16 Probes &amp; Titans</span>
+                    <span class="sub-pill-status">AUDITING…</span>
+                </div>
             </div>
         </div>
 
         <!-- ======================================================== -->
+        <!-- SECTION A: BOTLENS DEEP INVESTIGATION (ALL PANELS VISIBLE) -->
+        <!-- ======================================================== -->
+        <div id="botlensDeepView" class="tab-view active">
+            <div class="botlens-section-banner">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="background: #00e5ff; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">ACTIVE SERVER &amp; DEEP CLIENT FORENSICS</span>
+                        <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ All 6 Deep Investigation Sub-Panels Rendered Open Below</span>
+                    </div>
+                    <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Deep Investigation &bull; Direct Edge TLS/H2/TCP (:4443), Authoritative DNS (:53), First-Party STUN (:3478) &amp; Hardware Forensics</h2>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="btn-rescan" class="btn">↻ Rescan Deep</button>
+                    <button id="btn-copy" class="btn ghost">Copy Deep JSON</button>
+                    <button id="btn-download" class="btn ghost">Download Deep JSON</button>
+                </div>
+            </div>
+
+            <div id="https-banner" class="banner" hidden>
+                <b>Plain HTTP:</b> TLS (JA3/JA4) and HTTP/2 fingerprints are unavailable and some browser APIs are hidden.
+                <a id="https-link" href="#">Switch to HTTPS →</a>
+                <small>(self-signed certificate: accept the warning once)</small>
+            </div>
+
+            <section class="card hero">
+                <div class="gauge" id="gauge" data-verdict="scanning">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <circle class="track" cx="60" cy="60" r="52"/>
+                        <circle class="bar" id="gauge-bar" cx="60" cy="60" r="52"/>
+                    </svg>
+                    <div class="gauge-label"><span id="score">··</span><small>combined risk</small></div>
+                </div>
+                <div class="verdict">
+                    <div class="verdict-title" id="verdict-title">Investigating…</div>
+                    <p class="verdict-sub" id="verdict-sub">Running network, IP, device, behavioural and challenge forensics.</p>
+                    <div class="counts">
+                        <span class="count fail"><b id="n-fail">0</b> failed</span>
+                        <span class="count warn"><b id="n-warn">0</b> warnings</span>
+                        <span class="count pass"><b id="n-pass">0</b> passed</span>
+                    </div>
+                    <div class="section-scores" id="section-scores"></div>
+                    <div class="chips" id="chips"></div>
+                </div>
+            </section>
+
+            <nav class="tabs" id="tabs" role="tablist">
+                <button class="tab active" data-tab="summary">Summary &amp; Consensus Matrix</button>
+                <button class="tab" data-tab="net">Network &amp; TLS (:4443) <i data-count="net"></i></button>
+                <button class="tab" data-tab="ip">IP, DNS (:53) &amp; STUN (:3478) <i data-count="ip"></i></button>
+                <button class="tab" data-tab="device">Device &amp; OS Forensics <i data-count="device"></i></button>
+                <button class="tab" data-tab="behavior">Behavioural Biometrics <i data-count="behavior"></i></button>
+                <button class="tab" data-tab="challenge">Challenges, PoW &amp; Reputation <i data-count="challenge"></i></button>
+            </nav>
+
+            <!-- SUMMARY -->
+            <section class="tab-panel active" data-panel="summary">
+                <div class="card">
+                    <h2>Identity consensus matrix <span class="hint">every layer that can reveal what this client really is</span></h2>
+                    <div class="table-wrap"><table class="matrix" id="matrix"><tbody><tr><td>Collecting…</td></tr></tbody></table></div>
+                </div>
+                <div class="grid2">
+                    <div class="card"><h2>Strongest signals</h2><ul class="checks" id="top-signals"></ul></div>
+                    <div class="card"><h2>Sensors &amp; services</h2><dl class="fp" id="sensors"></dl></div>
+                </div>
+            </section>
+
+            <!-- NETWORK -->
+            <section class="tab-panel" data-panel="net">
+                <div class="card cat"><header><div class="cat-head"><h3>Network-stack forensics</h3><div class="badges" data-badges="net"></div></div>
+                    <p class="cat-desc">TLS ClientHello (JA3/JA4), HTTP/2 framing (Akamai), TCP/IP SYN (p0f), latency triangulation, cookies and sub-resource audit. These layers are produced by the client's network stack, not by JavaScript.</p></header>
+                    <ul class="checks" id="f-net"></ul></div>
+                <div class="grid2">
+                    <div class="card"><h2>TLS ClientHello</h2><dl class="fp" id="tls-detail"><dt>…</dt><dd>loading</dd></dl></div>
+                    <div class="card"><h2>HTTP/2 &amp; TCP/IP</h2><dl class="fp" id="h2-detail"><dt>…</dt><dd>loading</dd></dl></div>
+                </div>
+            </section>
+
+            <!-- IP -->
+            <section class="tab-panel" data-panel="ip">
+                <div class="card cat"><header><div class="cat-head"><h3>IP intelligence, DNS &amp; WebRTC paths</h3><div class="badges" data-badges="ip"></div></div>
+                    <p class="cat-desc">ASN (Team Cymru), forward-confirmed reverse DNS, datacenter/VPN/Tor lists, geolocation vs device clock, STUN/WebRTC UDP path vs HTTP TCP path, DNS resolver probe.</p></header>
+                    <ul class="checks" id="f-ip"></ul></div>
+                <div class="grid2">
+                    <div class="card"><h2>IP profile</h2><dl class="fp" id="ip-detail"><dt>…</dt><dd>loading</dd></dl></div>
+                    <div class="card"><h2>WebRTC candidates</h2><dl class="fp" id="rtc-detail"><dt>…</dt><dd>gathering</dd></dl></div>
+                </div>
+            </section>
+
+            <!-- DEVICE -->
+            <section class="tab-panel" data-panel="device">
+                <div class="card cat"><header><div class="cat-head"><h3>Device &amp; operating-system forensics</h3><div class="badges" data-badges="device"></div></div>
+                    <p class="cat-desc">Independent OS evidence (fonts, system UI font, voices, GPU driver), codecs &amp; DRM (bundled-Chromium detection), WebGPU vs WebGL, display, storage, platform APIs, CPU parallelism, sensors.</p></header>
+                    <ul class="checks" id="f-device"></ul>
+                    <div class="card-actions"><button class="btn small" id="btn-motion">Run motion-sensor check (phones/tablets)</button></div>
+                </div>
+                <div class="grid2">
+                    <div class="card"><h2>OS evidence</h2><dl class="fp" id="os-detail"><dt>…</dt><dd>probing</dd></dl></div>
+                    <div class="card"><h2>Hardware, media &amp; platform</h2><dl class="fp" id="hw-detail"><dt>…</dt><dd>probing</dd></dl></div>
+                </div>
+            </section>
+
+            <!-- BEHAVIOR -->
+            <section class="tab-panel" data-panel="behavior">
+                <div class="card cat"><header><div class="cat-head"><h3>Behavioural biometrics</h3><div class="badges" data-badges="behavior"></div></div>
+                    <p class="cat-desc">Mouse kinematics (velocity, acceleration reversals, curvature, direction entropy), Fitts's-law motor test, keystroke dwell/flight/rollover, scroll device, touch contact dynamics. Analysed live.</p></header>
+                    <ul class="checks" id="f-behavior"></ul></div>
+                <div class="grid2">
+                    <div class="card">
+                        <h2>Fitts's-law target test <span class="hint">click the 13 targets as fast as you naturally can</span></h2>
+                        <div class="fitts-arena" id="fitts-arena"><button class="btn" id="btn-fitts">Start target test</button></div>
+                        <svg class="chart" id="fitts-chart" viewBox="0 0 320 170" preserveAspectRatio="none"></svg>
+                    </div>
+                    <div class="card">
+                        <h2>Typing test</h2>
+                        <p class="hint-line">Type: <code>the quick brown fox jumps over the lazy dog</code></p>
+                        <input id="typing" class="text-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="start typing…">
+                        <h2 class="mt">Mouse velocity profile <span class="hint">last stroke</span></h2>
+                        <svg class="chart" id="velocity-chart" viewBox="0 0 320 90" preserveAspectRatio="none"></svg>
+                        <dl class="fp" id="bio-detail"></dl>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CHALLENGE -->
+            <section class="tab-panel" data-panel="challenge">
+                <div class="card cat"><header><div class="cat-head"><h3>Challenges, integrity &amp; reputation</h3><div class="badges" data-badges="challenge"></div></div>
+                    <p class="cat-desc">Server-verified proof-of-work, persistent visitor identity, device-fingerprint history, UA/IP rotation, request velocity and live runtime integrity traps.</p></header>
+                    <ul class="checks" id="f-challenge"></ul></div>
+                <div class="card"><h2>Identity &amp; history</h2><dl class="fp" id="rep-detail"><dt>…</dt><dd>loading</dd></dl></div>
+            </section>
+
+            <details class="card raw"><summary>Raw Deep Investigation Data (JSON)</summary><pre id="raw"></pre></details>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- SECTION B: BOTLENS OVERVIEW & LIVE RUNTIME MONITOR        -->
+        <!-- ======================================================== -->
+        <div id="botlensOverviewView" class="tab-view">
+            <div class="botlens-section-banner">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="background: #38bdf8; color: #070b12; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.6px;">BOTLENS OVERVIEW &amp; 95+ STATIC / RUNTIME CHECKS</span>
+                        <span style="font-size: 12px; color: #34d399; font-weight: 700;">✓ All 7 Category Cards &amp; Behavior Lab Expanded Below</span>
+                    </div>
+                    <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: var(--text);">BotLens Overview Scanner &bull; Automation Frameworks, Headless, Tampering, Consistency, iOS/WKWebView &amp; Live Traps</h2>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="ov-btn-rescan" class="btn">↻ Rescan Overview</button>
+                    <button id="ov-btn-copy" class="btn ghost">Copy Overview JSON</button>
+                    <button id="ov-btn-download" class="btn ghost">Download Overview JSON</button>
+                </div>
+            </div>
+
+            <section class="card hero">
+                <div class="gauge" id="ov-gauge" data-verdict="scanning">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <circle class="track" cx="60" cy="60" r="52"/>
+                        <circle class="bar" id="ov-gauge-bar" cx="60" cy="60" r="52"/>
+                    </svg>
+                    <div class="gauge-label">
+                        <span id="ov-score">··</span>
+                        <small>risk score</small>
+                    </div>
+                </div>
+                <div class="verdict">
+                    <div class="verdict-title" id="ov-verdict-title">Scanning…</div>
+                    <p class="verdict-sub" id="ov-verdict-sub">Running automation, headless, tampering, consistency and iOS checks.</p>
+                    <div class="counts">
+                        <span class="count fail"><b id="ov-n-fail">0</b> failed</span>
+                        <span class="count warn"><b id="ov-n-warn">0</b> warnings</span>
+                        <span class="count pass"><b id="ov-n-pass">0</b> passed</span>
+                    </div>
+                    <div class="chips" id="ov-chips"></div>
+                </div>
+            </section>
+
+            <section class="grid2">
+                <div class="card">
+                    <h2>Fingerprint Summary</h2>
+                    <dl class="fp" id="fp"><dt>…</dt><dd>collecting</dd></dl>
+                </div>
+
+                <div class="card lab">
+                    <h2>Behavior Lab <span class="hint">feed the live behavior checks</span></h2>
+                    <div class="lab-zone" id="lab-zone">
+                        <span>Move your mouse, scroll or swipe here</span>
+                    </div>
+                    <div class="lab-row">
+                        <input id="lab-input" type="text" placeholder="Type a sentence…" autocomplete="off" autocapitalize="off" spellcheck="false">
+                        <button id="lab-btn" class="btn">Click me</button>
+                    </div>
+                    <div class="lab-stats" id="lab-stats"></div>
+                    <button id="lab-selftest" class="btn ghost small">Self-test: dispatch a synthetic click (will flag you)</button>
+                </div>
+            </section>
+
+            <div class="toolbar">
+                <label class="switch">
+                    <input type="checkbox" id="issues-only">
+                    <span class="slider"></span>
+                    Show issues only
+                </label>
+                <span class="meta" id="scan-meta"></span>
+            </div>
+
+            <section id="categories" class="cats"></section>
+        </div>
+
         <!-- TAB 1: FINGERPRINT & BROWSER INTEGRITY LAB              -->
         <!-- ======================================================== -->
         <div id="fingerprintView" class="tab-view active">
@@ -4597,21 +4874,32 @@
             </div>
         </div>
 
+        
+
         <footer class="footer">
-            GhostBrowser Deep Telemetry &bull; Inbuilt Defense Verification Suite &bull; Active Node.js Benchmark
+            FlagMeter &bull; GhostDetect &amp; BotLens Unified Enterprise Browser, Silicon &amp; Active Network Telemetry Suite &bull; Direct Edge TLS :4443 &bull; DNS :53 &bull; STUN :3478
         </footer>
     </div>
 
-    <script src="detector.js"></script>
-    <script src="fingerprintcom.js"></script>
-    <script src="antibot.js"></script>
-    <script src="fingerprintscan.js"></script>
-    <script src="proxydetect.js"></script>
-    <script src="ecommerce.js"></script>
-    <script src="shopping.js"></script>
-    <script src="ecomm3.js"></script>
-    <script src="payments.js"></script>
-    <script src="app.js"></script>
-    <script src="uncovered_lab.js"></script>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <a class="hp" href="/trap/{{PV}}" tabindex="-1" aria-hidden="true" rel="nofollow">site archive</a>
+    <img class="px" src="/a/px.gif?pv={{PV}}" alt="" width="1" height="1">
+    <div class="bgpx" style="background-image:url('/a/bg.gif?pv={{PV}}')"></div>
+
+    <script src="/detector.js?pv={{PV}}"></script>
+    <script src="/deep.js?pv={{PV}}"></script>
+    <script src="/ghost-detector.js?pv={{PV}}"></script>
+    <script src="/fingerprintcom.js?pv={{PV}}"></script>
+    <script src="/antibot.js?pv={{PV}}"></script>
+    <script src="/fingerprintscan.js?pv={{PV}}"></script>
+    <script src="/proxydetect.js?pv={{PV}}"></script>
+    <script src="/ecommerce.js?pv={{PV}}"></script>
+    <script src="/shopping.js?pv={{PV}}"></script>
+    <script src="/ecomm3.js?pv={{PV}}"></script>
+    <script src="/payments.js?pv={{PV}}"></script>
+    <script src="/ghost-app.js?pv={{PV}}"></script>
+    <script src="/uncovered_lab.js?pv={{PV}}"></script>
+    <script src="/app.js?pv={{PV}}"></script>
+    <script src="/deep-app.js?pv={{PV}}"></script>
 </body>
 </html>

@@ -8893,7 +8893,7 @@
                             const metrics = invokeNativeWithCleanStack(origMeasureText, this, arguments);
                             try {
                                 const fontStr = String(this.font || '');
-                                if (/Segoe Fluent Icons|Segoe UI Variable|SF Pro Display|SF Pro Text/i.test(fontStr)) {
+                                if (/Segoe Fluent Icons|Segoe UI Variable|SF Pro Display|SF Pro Text|Apple Color Emoji/i.test(fontStr)) {
                                     _textMetricsFontBonus.set(metrics, 1.375);
                                 }
                             } catch (e) {}
