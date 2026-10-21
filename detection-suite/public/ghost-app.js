@@ -7894,20 +7894,24 @@ window.renderComprehensiveWebrtcMultiStunSection = async function(clientResults,
         '|' + navigator.userAgent + '|' + mediaDevicesRows.map(d => d.kind).join(',')
     );
 
-    const anyLeak = probeResults.some(r => r.leaked) || Boolean(mediaDevicesError);
+    const hasSyntheticFakeDevice = mediaDevicesRows.some(d => /\bfake\b|fake_device|Fake Default|Fake Audio/i.test(d.label || ''));
+    const anyLeak = probeResults.some(r => r.leaked) || Boolean(mediaDevicesError) || hasSyntheticFakeDevice;
     const uniquePublicIps = Array.from(new Set(probeResults.map(r => r.publicIp).filter(Boolean)));
     const primaryPublicIp = uniquePublicIps[0] || exitIp;
 
     containers.forEach(({ el, prefix }) => {
         const mediaRowsHtml = mediaDevicesRows.length > 0
-            ? mediaDevicesRows.map(d => `
+            ? mediaDevicesRows.map(d => {
+                const isFakeLbl = /\bfake\b|fake_device|Fake Default|Fake Audio/i.test(d.label || '');
+                return `
                 <tr style="border-bottom: 1px solid rgba(148, 163, 184, 0.12);">
                     <td style="padding: 7px 12px; color: #e2e8f0; font-family: monospace; font-size: 12px;">${d.kind}</td>
                     <td style="padding: 7px 12px; color: #94a3b8; font-family: monospace; font-size: 11.5px;">${d.deviceId ? d.deviceId.slice(0, 24) + (d.deviceId.length > 24 ? '…' : '') : '<span style="color:#64748b;">(empty)</span>'}</td>
-                    <td style="padding: 7px 12px; color: #94a3b8; font-size: 12px;">${d.label || '<span style="color:#64748b;">—</span>'}</td>
+                    <td style="padding: 7px 12px; color: ${isFakeLbl ? '#ef4444; font-weight:700' : '#94a3b8'}; font-size: 12px;">${d.label ? (isFakeLbl ? '⚠ ' + d.label : d.label) : '<span style="color:#64748b;">—</span>'}</td>
                     <td style="padding: 7px 12px; color: #94a3b8; font-family: monospace; font-size: 11.5px;">${d.groupId ? d.groupId.slice(0, 20) + (d.groupId.length > 20 ? '…' : '') : '<span style="color:#64748b;">—</span>'}</td>
                 </tr>
-            `).join('')
+            `;
+            }).join('')
             : `<tr><td colspan="4" style="padding: 8px 12px; color: #ef4444;">${mediaDevicesError || 'No media devices returned'}</td></tr>`;
 
         const stunRowsHtml = probeResults.map((r, idx) => {
@@ -7991,8 +7995,8 @@ window.renderComprehensiveWebrtcMultiStunSection = async function(clientResults,
                 <div style="background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 8px; overflow: hidden;">
                     <div style="padding: 8px 12px; background: rgba(15, 23, 42, 0.85); border-bottom: 1px solid rgba(148, 163, 184, 0.14); display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 11.5px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.4px;">Media Devices (${mediaDevicesRows.length} Enumerated)</span>
-                        <span style="font-size: 11px; color: ${mediaDevicesError ? '#ef4444' : '#10b981'}; font-family: monospace;">
-                            ${mediaDevicesError ? '⚠ Getter Exception: ' + mediaDevicesError : '✓ Native MediaDeviceInfo Prototype Verified'}
+                        <span style="font-size: 11px; color: ${(mediaDevicesError || hasSyntheticFakeDevice) ? '#ef4444' : '#10b981'}; font-family: monospace;">
+                            ${mediaDevicesError ? '⚠ Getter Exception: ' + mediaDevicesError : (hasSyntheticFakeDevice ? '⚠ Synthetic Fake Media Device (--use-fake-device-for-media-stream)' : '✓ Native MediaDeviceInfo Prototype Verified')}
                         </span>
                     </div>
                     <div style="overflow-x: auto;">

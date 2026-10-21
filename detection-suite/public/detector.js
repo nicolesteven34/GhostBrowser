@@ -529,8 +529,12 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return null;
     const list = await navigator.mediaDevices.enumerateDevices();
     const kinds = {};
-    for (const d of list) kinds[d.kind] = (kinds[d.kind] || 0) + 1;
-    return { count: list.length, kinds };
+    const fakeLabels = [];
+    for (const d of list) {
+      kinds[d.kind] = (kinds[d.kind] || 0) + 1;
+      if (/\bfake\b|fake_device|Fake Default|Fake Audio/i.test(d.label || '')) fakeLabels.push(d.label);
+    }
+    return { count: list.length, kinds, fakeLabels };
   }
 
   function voicesProbe() {
@@ -794,7 +798,8 @@
     }
 
     if (ctx.devices) {
-      if (ctx.devices.count === 0 && ctx.desktop) add(C, 'media-devices', 'Media devices', 'warn', 'No audio/video devices enumerated. Headless browsers and servers usually have none.', { weight: 10 });
+      if (ctx.devices.fakeLabels && ctx.devices.fakeLabels.length > 0) add(C, 'media-devices', 'Media devices', 'fail', `Synthetic Chromium fake media devices exposed (--use-fake-device-for-media-stream): ${ctx.devices.fakeLabels.slice(0, 4).join(', ')}`, { weight: 35 });
+      else if (ctx.devices.count === 0 && ctx.desktop) add(C, 'media-devices', 'Media devices', 'warn', 'No audio/video devices enumerated. Headless browsers and servers usually have none.', { weight: 10 });
       else add(C, 'media-devices', 'Media devices', 'pass', `${ctx.devices.count} device(s): ${Object.entries(ctx.devices.kinds).map(([k, v]) => k + '×' + v).join(', ') || '-'}`);
     } else if (!ctx.secure) {
       add(C, 'media-devices', 'Media devices', 'info', 'navigator.mediaDevices is unavailable in an insecure (http LAN) context. Check skipped.');
