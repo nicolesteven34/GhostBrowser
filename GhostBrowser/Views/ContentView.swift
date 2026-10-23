@@ -536,14 +536,29 @@ public struct ContentView: View {
     // MARK: - Safari Horizontal Tab Bar (High-Sensitivity Touch Targets for iPadOS/iOS)
     private var safariTabBar: some View {
         HStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(tabs) { tab in
-                        tabItemView(for: tab)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(tabs) { tab in
+                            tabItemView(for: tab)
+                                .id(tab.id)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                }
+                .onChange(of: activeTabID) { newID in
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        proxy.scrollTo(newID, anchor: .trailing)
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .onChange(of: tabs.count) { _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            proxy.scrollTo(activeTabID, anchor: .trailing)
+                        }
+                    }
+                }
             }
 
             // Tab Bar Plus Button (Full 38x38pt High-Sensitivity Touch Target)
