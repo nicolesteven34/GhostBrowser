@@ -238,10 +238,7 @@
     renderFingerprint();
     if ($('scan-meta')) $('scan-meta').textContent = `${scan.results.length} static checks in ${scan.ms} ms · runtime & behavior monitors active`;
     render();
-    if (typeof window.updateUnifiedSubsystemBadge === 'function') {
-      const s = BL.score(all());
-      window.updateUnifiedSubsystemBadge('subBotlensStatic', s.fails === 0, `${scan.results.length} Checks (${s.score}/100)`);
-    }
+    syncBotlensOverviewStatus();
 
     // Register runtime trap listener to be armed after all static/in-house engines finish scanning
     window.__BL_RUNTIME_CALLBACKS__ = window.__BL_RUNTIME_CALLBACKS__ || [];
@@ -253,11 +250,28 @@
         toast('Live detection: ' + r.name);
       }
       render();
+      syncBotlensOverviewStatus();
       if (isNew && r.status !== 'pass' && state.reported) sendReport();
     });
 
     setTimeout(() => { state.reported = true; sendReport(); }, 400);
     edgeEnrich();
+  }
+
+  function syncBotlensOverviewStatus() {
+    const list = all();
+    const s = BL.score(list);
+    const totalIssues = (s.fails || 0) + (s.warns || 0);
+    const clean = totalIssues === 0 && (s.score || 0) === 0;
+    const statusText = clean
+      ? `✓ ${list.length} Checks Clean (0/100)`
+      : `✗ ${totalIssues} Issue(s) (${s.score}/100)`;
+    if (typeof window.updateUnifiedSubsystemBadge === 'function') {
+      window.updateUnifiedSubsystemBadge('subBotlensStatic', clean, statusText);
+    }
+    if (typeof window.updateNavTabStatus === 'function') {
+      window.updateNavTabStatus('tabBotlensOverviewBtn', clean, statusText);
+    }
   }
 
   /** Probe the direct TLS edge so TLS / HTTP2 / TCP verdicts join the Network & Headers category. */
@@ -294,6 +308,7 @@
       state.results.push({ category: NET, id: 'edge-err', name: 'Direct TLS edge', status: 'info', detail: `Edge probe failed (${e.message}). A firewall or proxy blocks ${S.edge.origin}.`, weight: 0 });
     }
     render();
+    syncBotlensOverviewStatus();
     if (state.reported) sendReport();
   }
 
@@ -304,6 +319,7 @@
     renderChips();
     renderFingerprint();
     render();
+    syncBotlensOverviewStatus();
     edgeEnrich();
   };
 

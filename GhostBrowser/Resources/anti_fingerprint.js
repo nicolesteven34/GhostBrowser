@@ -225,7 +225,9 @@
                prop === '_protoState';
     }
 
-    function scrubHookStack(err) {
+    const _OrigProxy = typeof Proxy === 'function' ? Proxy : null;
+
+    function scrubHookStack(err, origLimit) {
         if (!err || typeof err !== 'object') return err;
         try {
             if (typeof err.stack === 'string') {
@@ -233,9 +235,13 @@
                 const cleaned = lines.filter((line, idx) => {
                     if (idx === 0 && !line.includes('@') && !line.trim().startsWith('at ')) return true;
                     if (/\(<anonymous>(?::\d+:\d+)?\)/.test(line)) return false;
-                    return !/(makeNative|invokeNativeWithCleanStack|installNavGetter|installScreenGetter|installGpuInfoGetter|hookedGetParam|hookedGetChannelData|hookedToString|_hookedToString|buildPatchedDtfOptions|prepareDtfArgs|ProxiedDTF|ProxiedDate|anti_fingerprint|ghost_engine_core|Object\.construct|Reflect\.construct)/i.test(line);
+                    return !/(makeNative|invokeNativeWithCleanStack|installNavGetter|installScreenGetter|installGpuInfoGetter|hookedGetParam|hookedGetChannelData|hookedToString|_hookedToString|_hookedStringToString|buildPatchedDtfOptions|prepareDtfArgs|ProxiedDTF|ProxiedDate|anti_fingerprint|ghost_engine_core|Object\.construct|Reflect\.construct)/i.test(line);
                 });
-                const finalStack = cleaned.join('\n');
+                const maxFrames = (typeof origLimit === 'number' && origLimit > 0 && isFinite(origLimit)) ? Math.floor(origLimit) : 0;
+                const capped = (maxFrames > 0 && cleaned.length > 1 + maxFrames)
+                    ? cleaned.slice(0, 1 + maxFrames)
+                    : cleaned;
+                const finalStack = capped.join('\n');
                 if (finalStack !== err.stack) {
                     Object.defineProperty(err, 'stack', {
                         value: finalStack,
@@ -250,14 +256,26 @@
     }
 
     function invokeNativeWithCleanStack(origFn, thisArg, args) {
+        const origLimit = Error.stackTraceLimit;
+        const canBump = typeof origLimit === 'number' && isFinite(origLimit) && origLimit > 0;
+        if (canBump) {
+            try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
+        }
         try {
-            return origFn.apply(thisArg, args);
+            const res = origFn.apply(thisArg, args);
+            if (canBump) {
+                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+            }
+            return res;
         } catch (err) {
-            throw scrubHookStack(err);
+            if (canBump) {
+                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+            }
+            throw scrubHookStack(err, origLimit);
         }
     }
 
-    function makeNative(fn, name, length) {
+    function makeNative(fn, name, length, origNativeFn) {
         if (typeof fn !== 'function') return fn;
         const fnName = name !== undefined ? name : (fn.name || '');
         const isCtor = /^[A-Z]/.test(fnName);
@@ -266,10 +284,22 @@
             if (!isCtor && ('prototype' in fn)) {
                 const holder = {
                     [fnName]() {
+                        const origLimit = Error.stackTraceLimit;
+                        const canBump = typeof origLimit === 'number' && isFinite(origLimit) && origLimit > 0;
+                        if (canBump) {
+                            try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
+                        }
                         try {
-                            return fn.apply(this, arguments);
+                            const res = fn.apply(this, arguments);
+                            if (canBump) {
+                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                            }
+                            return res;
                         } catch (err) {
-                            throw scrubHookStack(err);
+                            if (canBump) {
+                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                            }
+                            throw scrubHookStack(err, origLimit);
                         }
                     }
                 };
@@ -294,10 +324,40 @@
 
         tagFn(fn);
         if (targetFn !== fn) tagFn(targetFn);
+
+        if (!isCtor && _OrigProxy) {
+            const nativeTarget = typeof origNativeFn === 'function' ? origNativeFn : _origFnToString;
+            try {
+                const proxiedFn = new _OrigProxy(nativeTarget, {
+                    apply(t, thisArg, args) {
+                        const origLimit = Error.stackTraceLimit;
+                        const canBump = typeof origLimit === 'number' && isFinite(origLimit) && origLimit > 0;
+                        if (canBump) {
+                            try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
+                        }
+                        try {
+                            const res = targetFn.apply(thisArg, args);
+                            if (canBump) {
+                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                            }
+                            return res;
+                        } catch (err) {
+                            if (canBump) {
+                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                            }
+                            throw scrubHookStack(err, origLimit);
+                        }
+                    }
+                });
+                _proxyTargetMap.set(proxiedFn, targetFn);
+                _nativeToStringMap.set(proxiedFn, _formatNativeString(fnName));
+                return proxiedFn;
+            } catch (e) {}
+        }
         return targetFn;
     }
 
-    const _hookedToString = ({
+    const _customToStringImpl = ({
         toString() {
             let self = this;
             while (self && (typeof self === 'function' || typeof self === 'object') && _proxyTargetMap.has(self)) {
@@ -312,7 +372,8 @@
             return invokeNativeWithCleanStack(_origFnToString, self, arguments);
         }
     }).toString;
-    _nativeToStringMap.set(_hookedToString, _formatNativeString('toString'));
+    _nativeToStringMap.set(_customToStringImpl, _formatNativeString('toString'));
+    const _hookedToString = makeNative(_customToStringImpl, 'toString', 0, _origFnToString);
 
     try {
         Object.defineProperty(Function.prototype, 'toString', {
@@ -323,11 +384,32 @@
         });
     } catch (e) {}
 
+    try {
+        const _origStrToString = String.prototype.toString;
+        const _customStrToStringImpl = ({
+            toString() {
+                let self = this;
+                while (self && (typeof self === 'function' || typeof self === 'object') && _proxyTargetMap.has(self)) {
+                    self = _proxyTargetMap.get(self);
+                }
+                return invokeNativeWithCleanStack(_origStrToString, self, arguments);
+            }
+        }).toString;
+        _nativeToStringMap.set(_customStrToStringImpl, _formatNativeString('toString'));
+        const _hookedStringToString = makeNative(_customStrToStringImpl, 'toString', 0, _origStrToString);
+        Object.defineProperty(String.prototype, 'toString', {
+            value: _hookedStringToString,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        });
+    } catch (e) {}
+
     // Track all user/engine Proxy instances in _proxyTargetMap so Function.prototype.toString.call(proxy)
     // unwraps [[ProxyTarget]] in O(1) without firing any Proxy traps (get/apply/getPrototypeOf)
     try {
-        if (typeof Proxy === 'function') {
-            const OrigProxy = Proxy;
+        if (_OrigProxy) {
+            const OrigProxy = _OrigProxy;
             const HookedProxy = new OrigProxy(OrigProxy, {
                 construct(target, args, newTarget) {
                     const p = invokeNativeWithCleanStack(Reflect.construct, Reflect, [target, args, newTarget]);
@@ -10634,10 +10716,62 @@
                     } catch (e) {}
                     return _cachedMainGlMaxTex;
                 };
+                let _rawSystemTz = '';
+                try {
+                    if (_OrigDateTimeFormat && _origResolvedOptions) {
+                        const sysOpt = _origResolvedOptions.call(new _OrigDateTimeFormat());
+                        if (sysOpt && sysOpt.timeZone) _rawSystemTz = sysOpt.timeZone;
+                    }
+                } catch (e) {}
+
                 const harmonizeWorkerPayloadObj = (obj, depth) => {
                     if (!obj || typeof obj !== 'object') return obj;
                     const d = depth || 0;
-                    if (d > 5) return obj;
+                    if (d > 6) return obj;
+                    const targetRenderer = cfg.webglRenderer || 'Apple M4';
+                    const targetVendor = cfg.webglVendor || 'Apple Inc.';
+                    const effHc = cfg.hardwareConcurrency || 8;
+                    const effDm = Math.min(8, cfg.deviceMemory || 8);
+                    const effPlat = cfg.platform || 'MacIntel';
+                    const effTz = getEffectiveTimezone();
+                    const chPlat = (typeof navigator !== 'undefined' && navigator.userAgentData && navigator.userAgentData.platform)
+                        ? navigator.userAgentData.platform
+                        : (_earlyIsWinPersona ? 'Windows' : 'macOS');
+
+                    if (Array.isArray(obj)) {
+                        if (obj.length === 3 && (obj[0] === '3g' || obj[0] === '2g' || obj[0] === 'slow-2g') && typeof obj[1] === 'number') {
+                            obj[0] = '4g';
+                            return obj;
+                        }
+                        if (obj.length > 0 && obj[0] && typeof obj[0] === 'object' && 'brand' in obj[0] && 'version' in obj[0] &&
+                            typeof navigator !== 'undefined' && navigator.userAgentData && Array.isArray(navigator.userAgentData.brands)) {
+                            const isFullVer = String(obj[0].version || '').includes('.');
+                            const mainBrands = navigator.userAgentData.brands;
+                            const cleaned = mainBrands.map(b => ({
+                                brand: b.brand,
+                                version: isFullVer && !String(b.version).includes('.') ? (b.version + '.0.0.0') : b.version
+                            }));
+                            obj.length = 0;
+                            for (let i = 0; i < cleaned.length; i++) obj.push(cleaned[i]);
+                            return obj;
+                        }
+                        for (let i = 0; i < obj.length; i++) {
+                            const el = obj[i];
+                            if (typeof el === 'string') {
+                                if (el === 'Apple GPU' && targetRenderer) {
+                                    obj[i] = targetRenderer;
+                                } else if (effTz && _rawSystemTz && el === _rawSystemTz) {
+                                    obj[i] = effTz;
+                                } else if (effTz && /\bGMT[+-]\d{4}\s*\([^)]+\)/.test(el)) {
+                                    try { obj[i] = (new Date()).toString(); } catch (e) {}
+                                }
+                            } else if (el && typeof el === 'object') {
+                                harmonizeWorkerPayloadObj(el, d + 1);
+                            }
+                        }
+                        return obj;
+                    }
+
                     if ('canvas2dHash' in obj && typeof obj.canvas2dHash === 'string') {
                         const mainOcHash = getMainOffscreen2dHash();
                         if (mainOcHash) obj.canvas2dHash = mainOcHash;
@@ -10649,12 +10783,6 @@
                         const mainMaxTex = getMainGlMaxTex();
                         if (typeof mainMaxTex === 'number' && mainMaxTex > 0) obj.glMaxTex = mainMaxTex;
                     }
-                    const targetRenderer = cfg.webglRenderer || 'Apple M4';
-                    const targetVendor = cfg.webglVendor || 'Apple Inc.';
-                    const effHc = cfg.hardwareConcurrency || 8;
-                    const effDm = Math.min(8, cfg.deviceMemory || 8);
-                    const effPlat = cfg.platform || 'MacIntel';
-                    const effTz = getEffectiveTimezone();
                     // Pixelscan iframeCheckings() posts { messageSource: 'fpCollect', value: f }
                     if (obj.messageSource === 'fpCollect' && obj.value && typeof obj.value === 'object') {
                         try {
@@ -10684,8 +10812,22 @@
                             if ('tzOffset' in obj) obj.tzOffset = effMeta.offsetMin;
                         }
                     }
-                    if ('platform' in obj && typeof obj.platform === 'string') obj.platform = effPlat;
+                    const isUaDataNode = ('brands' in obj && Array.isArray(obj.brands)) ||
+                                         ('fullVersionList' in obj && Array.isArray(obj.fullVersionList)) ||
+                                         ('uaFullVersion' in obj && 'platformVersion' in obj);
+                    if (isUaDataNode) {
+                        if ('platform' in obj && typeof obj.platform === 'string') obj.platform = chPlat;
+                        if ('brands' in obj && Array.isArray(obj.brands)) harmonizeWorkerPayloadObj(obj.brands, d + 1);
+                        if ('fullVersionList' in obj && Array.isArray(obj.fullVersionList)) harmonizeWorkerPayloadObj(obj.fullVersionList, d + 1);
+                    } else {
+                        if ('platform' in obj && typeof obj.platform === 'string') obj.platform = effPlat;
+                    }
                     if ('plat' in obj && typeof obj.plat === 'string') obj.plat = effPlat;
+                    if ('effectiveType' in obj && (obj.effectiveType === '3g' || obj.effectiveType === '2g' || obj.effectiveType === 'slow-2g')) {
+                        obj.effectiveType = '4g';
+                        if ('rtt' in obj) obj.rtt = 50;
+                        if ('downlink' in obj) obj.downlink = 10;
+                    }
                     if (typeof navigator !== 'undefined') {
                         if (navigator.userAgent) {
                             if ('ua' in obj && typeof obj.ua === 'string') obj.ua = navigator.userAgent;
@@ -10707,7 +10849,7 @@
                                 if (typeof obj.uaBrands === 'string') {
                                     obj.uaBrands = navigator.userAgentData.brands.map(b => b.brand + ' ' + b.version).join(', ');
                                 } else if (Array.isArray(obj.uaBrands)) {
-                                    obj.uaBrands = cleanUaBrandsList(obj.uaBrands);
+                                    harmonizeWorkerPayloadObj(obj.uaBrands, d + 1);
                                 }
                             }
                         }
@@ -10731,7 +10873,15 @@
                     if ('glVendor' in obj && typeof obj.glVendor === 'string') obj.glVendor = targetVendor;
                     for (const k of Object.keys(obj)) {
                         const sub = obj[k];
-                        if (sub && typeof sub === 'object' && !Array.isArray(sub)) {
+                        if (typeof sub === 'string') {
+                            if (sub === 'Apple GPU' && targetRenderer) {
+                                obj[k] = targetRenderer;
+                            } else if (effTz && _rawSystemTz && sub === _rawSystemTz) {
+                                obj[k] = effTz;
+                            } else if (effTz && /\bGMT[+-]\d{4}\s*\([^)]+\)/.test(sub)) {
+                                try { obj[k] = (new Date()).toString(); } catch (e) {}
+                            }
+                        } else if (sub && typeof sub === 'object') {
                             harmonizeWorkerPayloadObj(sub, d + 1);
                         }
                     }
@@ -10749,7 +10899,7 @@
                             if (isWorkerOrFrameMsg) {
                                 if (raw && typeof raw === 'object') {
                                     harmonizeWorkerPayloadObj(raw, 0);
-                                } else if (typeof raw === 'string' && raw.startsWith('{') && raw.endsWith('}')) {
+                                } else if (typeof raw === 'string' && ((raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']')))) {
                                     const parsed = JSON.parse(raw);
                                     if (parsed && typeof parsed === 'object') {
                                         harmonizeWorkerPayloadObj(parsed, 0);

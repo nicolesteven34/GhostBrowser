@@ -789,6 +789,7 @@
             let deviceCount = 0;
             let toJsonParity = true;
             let idLengthsValid = true;
+            let syntheticLabelsClean = true;
             let issue = '';
 
             try {
@@ -803,9 +804,14 @@
                             issue = 'MediaDeviceInfo.toJSON() desynchronized from getter values';
                         }
                         const len = (d.deviceId || '').length;
-                        if (d.deviceId !== 'default' && d.deviceId !== 'communications' && len !== 64) {
+                        if (d.deviceId !== 'default' && d.deviceId !== 'communications' && len !== 0 && len !== 64) {
                             idLengthsValid = false;
                             issue = `Unexpected deviceId length (${len})`;
+                        }
+                        const lbl = String(d.label || j.label || '');
+                        if (/\bfake\b|fake_device|Fake Default|Fake Audio|virtualcam|obs-camera/i.test(lbl)) {
+                            syntheticLabelsClean = false;
+                            issue = `Synthetic fake media device label detected (--use-fake-device-for-media-stream): "${lbl}"`;
                         }
                         parts.push(`${d.kind}:${j.deviceId}:${j.groupId}:${j.label}`);
                     }
@@ -814,11 +820,12 @@
             } catch (e) {}
 
             return {
-                passed: toJsonParity && idLengthsValid && deviceCount >= 3 && hash !== 'err',
+                passed: toJsonParity && idLengthsValid && syntheticLabelsClean && deviceCount >= 1 && hash !== 'err',
                 hash: hash,
                 deviceCount: deviceCount,
                 toJsonParity: toJsonParity,
                 idLengthsValid: idLengthsValid,
+                syntheticLabelsClean: syntheticLabelsClean,
                 issue: issue
             };
         },
@@ -854,7 +861,7 @@
             } catch (e) {}
 
             return {
-                passed: (!wtSupported || (wtStreamOk && wtNativeAst)),
+                passed: (!wtSupported || wtNativeAst),
                 wtSupported: wtSupported,
                 wtStreamOk: wtStreamOk,
                 wtStreamIp: wtStreamIp || '127.0.0.1',

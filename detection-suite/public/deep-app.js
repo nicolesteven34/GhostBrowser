@@ -668,13 +668,20 @@
     });
     renderMatrix(Object.assign(x, { net, intel, corr }));
     render();
+    const netIssues = (state.groups.net || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+    const ipIssues = (state.groups.ip || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+    const devIssues = (state.groups.device || []).concat(state.groups.challenge || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+    const behIssues = (state.groups.behavior || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+    const totalDeepIssues = netIssues + ipIssues + devIssues + behIssues;
     if (typeof window.updateUnifiedSubsystemBadge === 'function') {
-      const netFails = (state.groups.net || []).filter((f) => f.status === 'fail').length;
-      const ipFails = (state.groups.ip || []).filter((f) => f.status === 'fail').length;
-      const devFails = (state.groups.device || []).concat(state.groups.challenge || []).filter((f) => f.status === 'fail').length;
-      window.updateUnifiedSubsystemBadge('subEdgeTls', netFails === 0, net.tls ? `JA4 ${net.tls.ja4.slice(0, 10)}…` : 'TLS/H2 Active');
-      window.updateUnifiedSubsystemBadge('subDnsStun', ipFails === 0, `DNS :53 & STUN :3478`);
-      window.updateUnifiedSubsystemBadge('subBotlensDeep', devFails === 0, `Wasm/Shader/PoW Clean`);
+      window.updateUnifiedSubsystemBadge('subEdgeTls', netIssues === 0, netIssues === 0 ? (net.tls ? `✓ JA4 ${net.tls.ja4.slice(0, 10)}…` : '✓ TLS/H2 Clean') : `✗ ${netIssues} TLS/H2 Issue(s)`);
+      window.updateUnifiedSubsystemBadge('subDnsStun', ipIssues === 0, ipIssues === 0 ? '✓ DNS :53 & STUN :3478' : `✗ ${ipIssues} DNS/IP Issue(s)`);
+      window.updateUnifiedSubsystemBadge('subBotlensDeep', devIssues === 0, devIssues === 0 ? '✓ Wasm/Shader/PoW Clean' : `✗ ${devIssues} GPU/PoW Issue(s)`);
+    }
+    if (typeof window.updateNavTabStatus === 'function') {
+      const rp = report();
+      const deepClean = totalDeepIssues === 0 && (rp.score || 0) === 0;
+      window.updateNavTabStatus('tabBotlensDeepBtn', deepClean, deepClean ? '✓ 5 Pillars Clean (0/100)' : `✗ ${totalDeepIssues} Issue(s) (${rp.score || 0}/100)`);
     }
 
     setTimeout(() => {

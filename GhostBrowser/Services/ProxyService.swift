@@ -1210,14 +1210,21 @@ public final class LocalSocks5DnsBridge {
             return
         }
 
-        // 2. For normal websites, forward ATYP=0x03 directly to the upstream SOCKS5 proxy in 0ms
-        //    so subresources across multiple tabs never stall on Port 53 DNS probes.
+        // 2. For normal websites, if we already cached an IPv4 fallback for an ATYP=0x03-blocked domain (e.g. Chase, CapitalOne, Coinbase),
+        //    use the cached IPv4 (ATYP=0x01) immediately in 0ms; otherwise forward ATYP=0x03 directly to the upstream SOCKS5 proxy in 0ms.
+        let lowerHost = targetHost.lowercased()
         cacheLock.lock()
         let bypassPort53 = port53BlockedByProxy
+        let cachedEntry = dnsCache[lowerHost]
         cacheLock.unlock()
 
+        if let cached = cachedEntry, cached.expires > Date(), let cachedIp = cached.ip, !cachedIp.isEmpty {
+            connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
+            return
+        }
+
         if bypassPort53 || !isDnsResolverProbeHostname(targetHost) {
-            connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
+            connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: true)
             return
         }
 
@@ -1502,7 +1509,51 @@ public final class LocalSocks5DnsBridge {
         })
     }
 
-    private func connectUpstreamAndRelay(clientConn: NWConnection, connectHost: String, targetPort: UInt16) {
+    private func resolveIpv4Fallback(domain: String, completion: @escaping (String?) -> Void) {
+        let lower = domain.lowercased()
+        cacheLock.lock()
+        if let cached = dnsCache[lower], cached.expires > Date(), let ip = cached.ip, !ip.isEmpty {
+            cacheLock.unlock()
+            completion(ip)
+            return
+        }
+        cacheLock.unlock()
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var hints = addrinfo(
+                ai_flags: AI_DEFAULT,
+                ai_family: AF_INET,
+                ai_socktype: SOCK_STREAM,
+                ai_protocol: IPPROTO_TCP,
+                ai_addrlen: 0,
+                ai_canonname: nil,
+                ai_addr: nil,
+                ai_next: nil
+            )
+            var res: UnsafeMutablePointer<addrinfo>? = nil
+            var resolvedIp: String? = nil
+            if getaddrinfo(domain, nil, &hints, &res) == 0, let first = res {
+                var hostBuf = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                if getnameinfo(first.pointee.ai_addr, first.pointee.ai_addrlen, &hostBuf, socklen_t(hostBuf.count), nil, 0, NI_NUMERICHOST) == 0 {
+                    let ipStr = String(cString: hostBuf)
+                    if !ipStr.isEmpty && ipStr != "0.0.0.0" && !ipStr.hasPrefix("127.") {
+                        resolvedIp = ipStr
+                    }
+                }
+                freeaddrinfo(res)
+            }
+            if let ip = resolvedIp {
+                self?.cacheLock.lock()
+                self?.dnsCache[lower] = (ip, Date().addingTimeInterval(300))
+                self?.cacheLock.unlock()
+            }
+            self?.queue.async {
+                completion(resolvedIp)
+            }
+        }
+    }
+
+    private func connectUpstreamAndRelay(clientConn: NWConnection, connectHost: String, targetPort: UInt16, allowIpv4Fallback: Bool = false) {
         guard let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
             unregisterAndCancel(clientConn)
             return
@@ -1523,9 +1574,24 @@ public final class LocalSocks5DnsBridge {
                 self.negotiateUpstreamSocks5(conn: upConn, targetHost: connectHost, targetPort: targetPort) { [weak self] ok in
                     guard let self = self else { return }
                     guard ok else {
+                        self.unregisterAndCancel(upConn)
+                        let isDomain = connectHost.split(separator: ".").compactMap({ UInt8($0) }).count != 4
+                        if allowIpv4Fallback && isDomain {
+                            self.resolveIpv4Fallback(domain: connectHost) { [weak self] ipv4 in
+                                guard let self = self else { return }
+                                if let ip = ipv4, !ip.isEmpty {
+                                    handshaked = true
+                                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: ip, targetPort: targetPort, allowIpv4Fallback: false)
+                                } else {
+                                    clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
+                                        self?.unregisterAndCancel(clientConn)
+                                    })
+                                }
+                            }
+                            return
+                        }
                         clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
                             self?.unregisterAndCancel(clientConn)
-                            self?.unregisterAndCancel(upConn)
                         })
                         return
                     }

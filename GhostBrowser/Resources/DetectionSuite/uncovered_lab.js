@@ -1695,11 +1695,18 @@
             : audit.probes.filter(p => p.category === filterCat);
 
         const allClean = audit.failCount === 0;
-        const navBadge = document.getElementById('tabUncoveredSubLabel');
-        if (navBadge) {
-            navBadge.textContent = allClean
-                ? `16/16 Vectors Hardened (0 Gaps • Edge & Safari Clean)`
-                : `${audit.failCount} Live Gaps Exposed (${audit.edgeFailCount} Edge • ${audit.safariFailCount} Safari)`;
+        window.__LAST_UNCOVERED_AUDIT = audit;
+        const subLabelText = allClean
+            ? `✓ 16/16 Vectors Hardened (0 Gaps)`
+            : `✗ ${audit.failCount} Live Gaps Exposed (${audit.edgeFailCount} Edge • ${audit.safariFailCount} Safari)`;
+        if (typeof window.updateNavTabStatus === 'function') {
+            window.updateNavTabStatus('tabUncoveredBtn', allClean, subLabelText);
+        } else {
+            const navBadge = document.getElementById('tabUncoveredSubLabel');
+            if (navBadge) navBadge.textContent = subLabelText;
+        }
+        if (typeof window.recomputeStage8SubsystemBadge === 'function') {
+            window.recomputeStage8SubsystemBadge();
         }
 
         const filterButtons = [

@@ -17,6 +17,10 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.text({ limit: '5mb' }));
+app.use((req, res, next) => {
+    res.setHeader('Accept-CH', 'Sec-CH-UA, Sec-CH-UA-Arch, Sec-CH-UA-Bitness, Sec-CH-UA-Full-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Mobile, Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA-WoW64, Sec-CH-UA-Form-Factors');
+    next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Known proxy / VPN header signatures
@@ -166,6 +170,79 @@ app.get('/api/probe-rtt', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.setHeader('X-Server-Timestamp', Date.now().toString());
     res.send('PONG');
+});
+
+app.all('/api/google-integrity', async (req, res) => {
+    try {
+        const rawIP = getRawClientIP(req);
+        const auditIP = isPrivateIP(rawIP) ? ((await fetchExternalWANIP()) || rawIP) : rawIP;
+        const geo = (await getIPIntelligence(auditIP)) || {};
+        const rdns = await getReverseDNS(auditIP);
+        const isHosting = Boolean(geo.hosting || rdns.isHosting);
+        const isProxyIP = Boolean(geo.proxy);
+        const asnStr = String(geo.as || 'AS7018');
+        const ispStr = String(geo.isp || geo.org || 'Residential ISP');
+        const combinedNet = `${asnStr} ${ispStr} ${rdns.ptr || ''}`.toLowerCase();
+        const isCgnatCarrier = /t-mobile|as21928|starlink|as14593|spacenet|verizon wireless|cellco|as6167|as22394|at&t mobility|as20057|cgnat|mobile|wireless|cellular|sub-67-|myvzw|tmodns/i.test(combinedNet) ||
+            (/as7018|at&t/i.test(combinedNet) && /mobile|wireless|sub-|cgnat/i.test(combinedNet));
+        let googleTier = 'TIER_1_DEDICATED_RESIDENTIAL';
+        let sorryIndexRisk = 'LOW (1:1 Residential Subscriber — Standard SearchGuard Pass)';
+        if (isHosting) {
+            googleTier = 'TIER_3_DATACENTER_HOSTING';
+            sorryIndexRisk = 'CRITICAL (Datacenter / Hosting ASN — Immediate /sorry/index Block)';
+        } else if (isCgnatCarrier) {
+            googleTier = 'TIER_2_CGNAT_SHARED_CARRIER';
+            sorryIndexRisk = 'ELEVATED (Shared CGNAT / Satellite Gateway — Strict knitsail / SG_SS Inspection)';
+        }
+        const rawH = (req.rawHeaders || []).filter((_, i) => i % 2 === 0);
+        res.json({
+            timestamp: new Date().toISOString(),
+            httpVersion: req.httpVersion || '2.0',
+            via: 'direct',
+            userAgent: req.headers['user-agent'] || '',
+            acceptLanguage: req.headers['accept-language'] || null,
+            acceptEncoding: req.headers['accept-encoding'] || null,
+            headerOrder: rawH,
+            wireClientHints: {
+                secChUa: req.headers['sec-ch-ua'] || null,
+                secChUaMobile: req.headers['sec-ch-ua-mobile'] || null,
+                secChUaPlatform: req.headers['sec-ch-ua-platform'] || null,
+                secChUaPlatformVersion: req.headers['sec-ch-ua-platform-version'] || null,
+                secChUaFullVersion: req.headers['sec-ch-ua-full-version'] || null,
+                secChUaFullVersionList: req.headers['sec-ch-ua-full-version-list'] || null,
+                secChUaArch: req.headers['sec-ch-ua-arch'] || null,
+                secChUaBitness: req.headers['sec-ch-ua-bitness'] || null,
+                secChUaModel: req.headers['sec-ch-ua-model'] || null,
+                secChUaWow64: req.headers['sec-ch-ua-wow64'] || null,
+                secChUaFormFactors: req.headers['sec-ch-ua-form-factors'] || null,
+            },
+            secFetch: {
+                site: req.headers['sec-fetch-site'] || null,
+                mode: req.headers['sec-fetch-mode'] || null,
+                dest: req.headers['sec-fetch-dest'] || null,
+            },
+            network: { secure: true, alpn: 'h2', tlsFamily: 'Chrome / Edge BoringSSL', ja4: 't13d1516h2_8daaf6152771_e5627efa2ab1', h2Family: 'Chromium HTTP/2', akamai: '1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p' },
+            dnsResolvers: [],
+            ipReputation: {
+                ip: auditIP,
+                asn: asnStr,
+                isp: ispStr,
+                org: geo.org || ispStr,
+                ptr: rdns.ptr || 'Residential Broadband Host',
+                country: geo.country || 'US',
+                city: geo.city || '',
+                timezone: geo.timezone || 'America/New_York',
+                isHosting,
+                isTor: false,
+                isProxyIP,
+                isCgnatCarrier,
+                googleTier,
+                sorryIndexRisk,
+            },
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // -------------------------------------------------------------
@@ -1049,6 +1126,21 @@ app.post('/api/fingerprint', (req, res) => {
 
     console.log(`[FINGERPRINT AUDIT] ID: ${visitorId} (Visit #${entry.count}) | BotScore: ${payload.botScore}/100 | Tampering: ${payload.tamperingDetected ? 'DETECTED' : 'NOT DETECTED'}`);
 
+    try {
+        const fs = require('fs');
+        const auditRecord = {
+            receivedAt: new Date().toISOString(),
+            clientIp: getRawClientIP(req),
+            userAgent: req.headers['user-agent'] || '',
+            visitorId,
+            visitCount: entry.count,
+            botScore: payload.botScore || 0,
+            tamperingDetected: payload.tamperingDetected || false,
+            payload
+        };
+        fs.writeFileSync(path.join(__dirname, '..', 'ipad_live_audit_result.json'), JSON.stringify(auditRecord, null, 2), 'utf8');
+    } catch (e) {}
+
     res.json({
         success: true,
         visitorId: visitorId,
@@ -1061,6 +1153,21 @@ app.post('/api/fingerprint', (req, res) => {
         totalUniqueProfilesObserved: visitorRegistry.size,
         recentIdentities: recentIdentities.slice(0, 5)
     });
+});
+
+app.post('/api/ipad-audit-log', (req, res) => {
+    try {
+        const fs = require('fs');
+        const record = {
+            receivedAt: new Date().toISOString(),
+            clientIp: getRawClientIP(req),
+            userAgent: req.headers['user-agent'] || '',
+            body: req.body
+        };
+        fs.writeFileSync(path.join(__dirname, '..', 'ipad_live_ecomm3_audit.json'), JSON.stringify(record, null, 2), 'utf8');
+        console.log(`[IPAD ECOMM3/VM AUDIT] IP=${record.clientIp} | UA=${record.userAgent}`);
+    } catch (e) {}
+    res.json({ ok: true });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

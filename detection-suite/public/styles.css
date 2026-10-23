@@ -140,7 +140,7 @@ html[data-theme="cream-dusk"] {
 }
 .fm-dual-special-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 4px;
 }
@@ -160,6 +160,10 @@ html[data-theme="cream-dusk"] {
   background: rgba(16, 185, 129, 0.10);
   border: 1px solid rgba(16, 185, 129, 0.42);
 }
+.fm-special-google {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.14) 0%, rgba(16, 185, 129, 0.10) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.52);
+}
 .fm-special-meta {
   display: flex;
   align-items: center;
@@ -177,6 +181,7 @@ html[data-theme="cream-dusk"] {
 }
 .fm-pill-purple { background: #9333ea; }
 .fm-pill-emerald { background: #059669; }
+.fm-pill-google { background: linear-gradient(90deg, #2563eb, #0284c7); }
 .fm-special-desc {
   font-size: 11.5px;
   font-weight: 600;
@@ -330,18 +335,75 @@ html[data-theme="cream-dusk"] {
   white-space: nowrap;
 }
 .sub-pill.sub-pass {
-  border-color: rgba(16, 185, 129, 0.42);
-  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.52);
+  background: rgba(16, 185, 129, 0.11);
 }
 .sub-pill.sub-pass .sub-pill-status {
   color: #34d399;
 }
-.sub-pill.sub-warn {
-  border-color: rgba(245, 158, 11, 0.45);
-  background: rgba(245, 158, 11, 0.10);
+.sub-pill.sub-warn,
+.sub-pill.sub-fail {
+  border-color: rgba(239, 68, 68, 0.68);
+  background: rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.18);
 }
-.sub-pill.sub-warn .sub-pill-status {
-  color: #fbbf24;
+.sub-pill.sub-warn .sub-pill-status,
+.sub-pill.sub-fail .sub-pill-status {
+  color: #f87171;
+}
+
+/* =====================================================================
+   LIVE RED / GREEN STATUS INDICATORS FOR ALL 16 TOP NAVIGATION TABS
+   ===================================================================== */
+.nav-tab.tab-status-fail {
+  border-color: rgba(239, 68, 68, 0.72) !important;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(15, 23, 42, 0.92) 100%) !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.22);
+}
+.nav-tab.tab-status-fail .nav-tab-icon {
+  color: #f87171 !important;
+}
+.nav-tab.tab-status-fail .nav-tab-title {
+  color: #ffe4e6 !important;
+}
+.nav-tab.tab-status-fail .nav-tab-sub {
+  color: #fca5a5 !important;
+  font-weight: 700 !important;
+}
+
+.nav-tab.tab-status-pass {
+  border-color: rgba(16, 185, 129, 0.52) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(15, 23, 42, 0.90) 100%) !important;
+}
+.nav-tab.tab-status-pass .nav-tab-icon {
+  color: #34d399 !important;
+}
+.nav-tab.tab-status-pass .nav-tab-title {
+  color: #ecfdf5 !important;
+}
+.nav-tab.tab-status-pass .nav-tab-sub {
+  color: #6ee7b7 !important;
+  font-weight: 600 !important;
+}
+
+.fm-special-tier.tier-status-fail {
+  border-color: rgba(239, 68, 68, 0.68) !important;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(15, 23, 42, 0.92) 100%) !important;
+}
+.fm-special-tier.tier-status-fail .fm-special-pill {
+  background: #dc2626 !important;
+  border-color: rgba(248, 113, 113, 0.65) !important;
+  color: #fff !important;
+}
+
+.fm-special-tier.tier-status-pass {
+  border-color: rgba(16, 185, 129, 0.52) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.90) 100%) !important;
+}
+.fm-special-tier.tier-status-pass .fm-special-pill {
+  background: #059669 !important;
+  border-color: rgba(52, 211, 153, 0.55) !important;
+  color: #fff !important;
 }
 
 /* =====================================================================
