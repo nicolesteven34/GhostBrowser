@@ -941,7 +941,11 @@ public struct ContentView: View {
         }
 
         if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
+            let prev = tabs[index].urlString
             tabs[index].urlString = target
+            if prev == target || prev == "https://\(target)" || prev == "https://\(target)/" {
+                reloadTrigger += 1
+            }
             profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
         }
     }

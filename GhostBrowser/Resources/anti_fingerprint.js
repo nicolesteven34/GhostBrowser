@@ -121,11 +121,37 @@
     // =========================================================================
     // 0. WEAKMAP NATIVE FUNCTION CLOAKING REGISTRY (WebKit / V8 C++ Fidelity)
     // =========================================================================
-    const _nativeToStringMap = new WeakMap();
-    const _proxyTargetMap = new WeakMap();
-    const _GEO_UPDATE_SYM = Symbol('__ghost_geo_update__');
-    const _KILL_SWITCH_SYM = Symbol('__ghost_ip_kill_switch__');
-    const _protectedSymbols = new Set([_GEO_UPDATE_SYM, _KILL_SWITCH_SYM]);
+    const _GEO_UPDATE_SYM = Symbol.for('__ghost_geo_update__');
+    const _KILL_SWITCH_SYM = Symbol.for('__ghost_ip_kill_switch__');
+
+    let _sharedRegistry = null;
+    try {
+        if (typeof window !== 'undefined') {
+            let curWin = window;
+            while (curWin.parent && curWin.parent !== curWin) {
+                try {
+                    if (curWin.parent.Function && curWin.parent.Function.prototype && typeof curWin.parent.Function.prototype.toString === 'function') {
+                        const hs = curWin.parent.Function.prototype.toString.call('__GHOST_SHARED_REGISTRY_HANDSHAKE__', '__GHOST_KEY_9f8a7b6c__');
+                        if (hs && hs.nativeToStringMap) {
+                            _sharedRegistry = hs;
+                        }
+                    }
+                    curWin = curWin.parent;
+                } catch (e) {
+                    break;
+                }
+            }
+        }
+    } catch (e) {}
+
+    const _nativeToStringMap = _sharedRegistry ? _sharedRegistry.nativeToStringMap : new WeakMap();
+    const _proxyTargetMap = _sharedRegistry ? _sharedRegistry.proxyTargetMap : new WeakMap();
+    const _nonCtorHooked = _sharedRegistry ? _sharedRegistry.nonCtorHooked : new WeakSet();
+    const _hookedProtos = _sharedRegistry ? _sharedRegistry.hookedProtos : new WeakSet();
+    const _protectedSymbols = _sharedRegistry ? _sharedRegistry.protectedSymbols : new Set([_GEO_UPDATE_SYM, _KILL_SWITCH_SYM]);
+    for (const sym of [_GEO_UPDATE_SYM, _KILL_SWITCH_SYM]) {
+        _protectedSymbols.add(sym);
+    }
     const _origFnToString = Function.prototype.toString;
     const _isMultilineNative = (() => {
         try { return _origFnToString.call(_origFnToString).includes('\n'); } catch (e) { return true; }
@@ -231,15 +257,32 @@
         if (!err || typeof err !== 'object') return err;
         try {
             if (typeof err.stack === 'string') {
-                const lines = err.stack.split('\n');
-                const cleaned = lines.filter((line, idx) => {
-                    if (idx === 0 && !line.includes('@') && !line.trim().startsWith('at ')) return true;
-                    if (/\(<anonymous>(?::\d+:\d+)?\)/.test(line)) return false;
-                    return !/(makeNative|invokeNativeWithCleanStack|installNavGetter|installScreenGetter|installGpuInfoGetter|hookedGetParam|hookedGetChannelData|hookedToString|_hookedToString|_hookedStringToString|buildPatchedDtfOptions|prepareDtfArgs|ProxiedDTF|ProxiedDate|anti_fingerprint|ghost_engine_core|Object\.construct|Reflect\.construct)/i.test(line);
-                });
-                const maxFrames = (typeof origLimit === 'number' && origLimit > 0 && isFinite(origLimit)) ? Math.floor(origLimit) : 0;
-                const capped = (maxFrames > 0 && cleaned.length > 1 + maxFrames)
-                    ? cleaned.slice(0, 1 + maxFrames)
+                const rawLines = err.stack.split('\n');
+                const isInternalFrame = (line) => {
+                    if (!line) return false;
+                    if (/\(<anonymous>(?::\d+:\d+)?\)/.test(line)) return true;
+                    if (/@:\d+:\d+$/.test(line.trim())) return true;
+                    return /(makeNative|invokeNativeWithCleanStack|scrubHookStack|installNavGetter|installScreenGetter|installGpuInfoGetter|hookedGetParam|hookedGetChannelData|hookedToString|_hookedToString|_hookedStringToString|_customToString|_customStrToString|buildPatchedDtfOptions|prepareDtfArgs|ProxiedDTF|ProxiedDate|anti_fingerprint|ghost_engine_core|Object\.construct|Reflect\.construct)/i.test(line);
+                };
+                const cleaned = [];
+                for (let idx = 0; idx < rawLines.length; idx++) {
+                    const line = rawLines[idx];
+                    if (idx === 0 && !line.includes('@') && !line.trim().startsWith('at ')) {
+                        cleaned.push(line);
+                        continue;
+                    }
+                    if (isInternalFrame(line)) {
+                        if (cleaned.length > 0 && /^(?:apply|call|construct)@\[native code\]$/.test(cleaned[cleaned.length - 1].trim())) {
+                            cleaned.pop();
+                        }
+                        continue;
+                    }
+                    cleaned.push(line);
+                }
+                const headerOffset = (cleaned.length > 0 && !cleaned[0].includes('@') && !cleaned[0].trim().startsWith('at ')) ? 1 : 0;
+                const maxFrames = (typeof origLimit === 'number' && origLimit >= 0 && isFinite(origLimit)) ? Math.floor(origLimit) : -1;
+                const capped = (maxFrames >= 0 && cleaned.length > headerOffset + maxFrames)
+                    ? cleaned.slice(0, headerOffset + maxFrames)
                     : cleaned;
                 const finalStack = capped.join('\n');
                 if (finalStack !== err.stack) {
@@ -257,7 +300,7 @@
 
     function invokeNativeWithCleanStack(origFn, thisArg, args) {
         const origLimit = Error.stackTraceLimit;
-        const canBump = typeof origLimit === 'number' && isFinite(origLimit) && origLimit > 0;
+        const canBump = typeof origLimit === 'number' && isFinite(origLimit);
         if (canBump) {
             try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
         }
@@ -280,94 +323,115 @@
         const fnName = name !== undefined ? name : (fn.name || '');
         const isCtor = /^[A-Z]/.test(fnName);
         let targetFn = fn;
+        const isProxyOnNative = Boolean(!isCtor && typeof origNativeFn === 'function' && _OrigProxy);
         try {
-            if (!isCtor && ('prototype' in fn)) {
-                const holder = {
-                    [fnName]() {
-                        const origLimit = Error.stackTraceLimit;
-                        const canBump = typeof origLimit === 'number' && isFinite(origLimit) && origLimit > 0;
-                        if (canBump) {
-                            try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
-                        }
-                        try {
-                            const res = fn.apply(this, arguments);
+            if (!isCtor) {
+                if (isProxyOnNative) {
+                    const proxiedFn = new _OrigProxy(origNativeFn, {
+                        apply(t, thisArg, args) {
+                            const origLimit = Error.stackTraceLimit;
+                            const canBump = typeof origLimit === 'number' && isFinite(origLimit);
                             if (canBump) {
-                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                                try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
                             }
-                            return res;
-                        } catch (err) {
-                            if (canBump) {
-                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                            try {
+                                const res = fn.apply(thisArg, args);
+                                if (canBump) {
+                                    try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                                }
+                                return res;
+                            } catch (err) {
+                                if (canBump) {
+                                    try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                                }
+                                throw scrubHookStack(err, origLimit);
                             }
-                            throw scrubHookStack(err, origLimit);
+                        },
+                        setPrototypeOf(t, newProto) {
+                            let cur = newProto;
+                            while (cur && (typeof cur === 'object' || typeof cur === 'function')) {
+                                if (cur === proxiedFn || cur === t) {
+                                    throw scrubHookStack(new TypeError('Cyclic __proto__ value'));
+                                }
+                                cur = _origGetPrototypeOf(cur);
+                            }
+                            return Reflect.setPrototypeOf(t, newProto);
                         }
-                    }
-                };
-                targetFn = holder[fnName];
+                    });
+                    _proxyTargetMap.set(proxiedFn, origNativeFn);
+                    targetFn = proxiedFn;
+                } else {
+                    const holder = {
+                        [fnName]() {
+                            const origLimit = Error.stackTraceLimit;
+                            const canBump = typeof origLimit === 'number' && isFinite(origLimit);
+                            if (canBump) {
+                                try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
+                            }
+                            try {
+                                const res = fn.apply(this, arguments);
+                                if (canBump) {
+                                    try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                                }
+                                return res;
+                            } catch (err) {
+                                if (canBump) {
+                                    try { Error.stackTraceLimit = origLimit; } catch (e) {}
+                                }
+                                throw scrubHookStack(err, origLimit);
+                            }
+                        }
+                    };
+                    targetFn = holder[fnName];
+                }
             }
         } catch (e) {}
 
-        function tagFn(f) {
+        function tagFn(f, skipPropDefine) {
             try {
-                if (name !== undefined) {
-                    Object.defineProperty(f, 'name', { value: name, configurable: true });
+                if (!skipPropDefine) {
+                    if (name !== undefined) {
+                        Object.defineProperty(f, 'name', { value: name, configurable: true });
+                    }
+                    if (length !== undefined) {
+                        Object.defineProperty(f, 'length', { value: length, configurable: true });
+                    }
+                    if (!isCtor && 'prototype' in f) {
+                        try { delete f.prototype; } catch (e) {}
+                    }
                 }
-                if (length !== undefined) {
-                    Object.defineProperty(f, 'length', { value: length, configurable: true });
-                }
-                if (!isCtor && 'prototype' in f) {
-                    try { delete f.prototype; } catch (e) {}
-                }
+                if (!isCtor) _nonCtorHooked.add(f);
             } catch (e) {}
             _nativeToStringMap.set(f, _formatNativeString(fnName));
         }
 
-        tagFn(fn);
-        if (targetFn !== fn) tagFn(targetFn);
-
-        if (!isCtor && _OrigProxy) {
-            const nativeTarget = typeof origNativeFn === 'function' ? origNativeFn : _origFnToString;
-            try {
-                const proxiedFn = new _OrigProxy(nativeTarget, {
-                    apply(t, thisArg, args) {
-                        const origLimit = Error.stackTraceLimit;
-                        const canBump = typeof origLimit === 'number' && isFinite(origLimit) && origLimit > 0;
-                        if (canBump) {
-                            try { Error.stackTraceLimit = origLimit + 6; } catch (e) {}
-                        }
-                        try {
-                            const res = targetFn.apply(thisArg, args);
-                            if (canBump) {
-                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
-                            }
-                            return res;
-                        } catch (err) {
-                            if (canBump) {
-                                try { Error.stackTraceLimit = origLimit; } catch (e) {}
-                            }
-                            throw scrubHookStack(err, origLimit);
-                        }
-                    }
-                });
-                _proxyTargetMap.set(proxiedFn, targetFn);
-                _nativeToStringMap.set(proxiedFn, _formatNativeString(fnName));
-                return proxiedFn;
-            } catch (e) {}
-        }
+        tagFn(fn, false);
+        if (targetFn !== fn) tagFn(targetFn, isProxyOnNative);
         return targetFn;
     }
 
     const _customToStringImpl = ({
         toString() {
+            if (this === '__GHOST_SHARED_REGISTRY_HANDSHAKE__' && arguments[0] === '__GHOST_KEY_9f8a7b6c__') {
+                return {
+                    nativeToStringMap: _nativeToStringMap,
+                    proxyTargetMap: _proxyTargetMap,
+                    nonCtorHooked: _nonCtorHooked,
+                    hookedProtos: _hookedProtos,
+                    protectedSymbols: _protectedSymbols
+                };
+            }
             let self = this;
-            while (self && (typeof self === 'function' || typeof self === 'object') && _proxyTargetMap.has(self)) {
-                self = _proxyTargetMap.get(self);
-            }
-            if (typeof self !== 'function') {
-                return invokeNativeWithCleanStack(_origFnToString, self, arguments);
-            }
-            if (_nativeToStringMap.has(self)) {
-                return _nativeToStringMap.get(self);
+            if (self && (typeof self === 'function' || typeof self === 'object')) {
+                if (_nativeToStringMap.has(self)) {
+                    return _nativeToStringMap.get(self);
+                }
+                while (self && (typeof self === 'function' || typeof self === 'object') && _proxyTargetMap.has(self)) {
+                    self = _proxyTargetMap.get(self);
+                }
+                if (_nativeToStringMap.has(self)) {
+                    return _nativeToStringMap.get(self);
+                }
             }
             return invokeNativeWithCleanStack(_origFnToString, self, arguments);
         }
@@ -384,6 +448,7 @@
         });
     } catch (e) {}
 
+    let _hookedStringToString = null;
     try {
         const _origStrToString = String.prototype.toString;
         const _customStrToStringImpl = ({
@@ -396,7 +461,7 @@
             }
         }).toString;
         _nativeToStringMap.set(_customStrToStringImpl, _formatNativeString('toString'));
-        const _hookedStringToString = makeNative(_customStrToStringImpl, 'toString', 0, _origStrToString);
+        _hookedStringToString = makeNative(_customStrToStringImpl, 'toString', 0, _origStrToString);
         Object.defineProperty(String.prototype, 'toString', {
             value: _hookedStringToString,
             writable: true,
@@ -410,6 +475,7 @@
     try {
         if (_OrigProxy) {
             const OrigProxy = _OrigProxy;
+            const _origRevocable = OrigProxy.revocable;
             const HookedProxy = new OrigProxy(OrigProxy, {
                 construct(target, args, newTarget) {
                     const p = invokeNativeWithCleanStack(Reflect.construct, Reflect, [target, args, newTarget]);
@@ -422,6 +488,17 @@
                     return invokeNativeWithCleanStack(Reflect.apply, Reflect, [target, thisArg, args]);
                 }
             });
+            if (typeof _origRevocable === 'function') {
+                HookedProxy.revocable = makeNative(function revocable(target, handler) {
+                    const res = invokeNativeWithCleanStack(_origRevocable, OrigProxy, arguments);
+                    try {
+                        if (res && res.proxy && target && (typeof target === 'function' || typeof target === 'object')) {
+                            _proxyTargetMap.set(res.proxy, target);
+                        }
+                    } catch (e) {}
+                    return res;
+                }, 'revocable', 2);
+            }
             _proxyTargetMap.set(HookedProxy, OrigProxy);
             _nativeToStringMap.set(HookedProxy, _formatNativeString('Proxy'));
             if (typeof window !== 'undefined') {
@@ -457,7 +534,7 @@
             Object.defineProperty(Object, 'getOwnPropertyNames', {
                 value: makeNative(function getOwnPropertyNames(o) {
                     const res = invokeNativeWithCleanStack(origGetOwnNames, Object, arguments);
-                    return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k)) : res;
+                    return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k) && !(k === 'prototype' && _nonCtorHooked.has(o))) : res;
                 }, 'getOwnPropertyNames', 1),
                 writable: true, enumerable: false, configurable: true
             });
@@ -487,6 +564,7 @@
             Object.defineProperty(Object, 'getOwnPropertyDescriptor', {
                 value: makeNative(function getOwnPropertyDescriptor(o, p) {
                     if (isHiddenInternalProp(p)) return undefined;
+                    if (p === 'prototype' && _nonCtorHooked.has(o)) return undefined;
                     return invokeNativeWithCleanStack(origGetOwnDesc, Object, arguments);
                 }, 'getOwnPropertyDescriptor', 2),
                 writable: true, enumerable: false, configurable: true
@@ -500,6 +578,9 @@
                     if (descs && typeof descs === 'object') {
                         for (const sym of _protectedSymbols) {
                             if (descs[sym]) delete descs[sym];
+                        }
+                        if (_nonCtorHooked.has(o) && descs.prototype) {
+                            delete descs.prototype;
                         }
                         for (const k of origKeys.call(Object, descs)) {
                             if (isHiddenInternalProp(k)) delete descs[k];
@@ -515,6 +596,7 @@
             Object.defineProperty(Object.prototype, 'hasOwnProperty', {
                 value: makeNative(function hasOwnProperty(p) {
                     if (isHiddenInternalProp(p)) return false;
+                    if (p === 'prototype' && _nonCtorHooked.has(this)) return false;
                     return invokeNativeWithCleanStack(origHasOwn, this, arguments);
                 }, 'hasOwnProperty', 1),
                 writable: true, enumerable: false, configurable: true
@@ -526,7 +608,7 @@
                 Object.defineProperty(Reflect, 'ownKeys', {
                     value: makeNative(function ownKeys(target) {
                         const res = invokeNativeWithCleanStack(origReflectOwnKeys, Reflect, arguments);
-                        return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k)) : res;
+                        return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k) && !(k === 'prototype' && _nonCtorHooked.has(target))) : res;
                     }, 'ownKeys', 1),
                     writable: true, enumerable: false, configurable: true
                 });
@@ -536,8 +618,20 @@
                 Object.defineProperty(Reflect, 'has', {
                     value: makeNative(function has(target, prop) {
                         if (isHiddenInternalProp(prop)) return false;
+                        if (prop === 'prototype' && _nonCtorHooked.has(target)) return false;
                         return invokeNativeWithCleanStack(origReflectHas, Reflect, arguments);
                     }, 'has', 2),
+                    writable: true, enumerable: false, configurable: true
+                });
+            }
+            if (typeof Reflect.getOwnPropertyDescriptor === 'function') {
+                const origReflectGetDesc = Reflect.getOwnPropertyDescriptor;
+                Object.defineProperty(Reflect, 'getOwnPropertyDescriptor', {
+                    value: makeNative(function getOwnPropertyDescriptor(target, prop) {
+                        if (isHiddenInternalProp(prop)) return undefined;
+                        if (prop === 'prototype' && _nonCtorHooked.has(target)) return undefined;
+                        return invokeNativeWithCleanStack(origReflectGetDesc, Reflect, arguments);
+                    }, 'getOwnPropertyDescriptor', 2),
                     writable: true, enumerable: false, configurable: true
                 });
             }
@@ -4566,11 +4660,13 @@
         }
     } catch (e) {}
 
+    const _fetchResMetaMap = new WeakMap();
+
     try {
         const origJsonParse = JSON.parse;
         const hookedJsonParse = makeNative(({
             parse(text, reviver) {
-                const parsed = origJsonParse.apply(this, arguments);
+                const parsed = invokeNativeWithCleanStack(origJsonParse, this, arguments);
                 try {
                     if (isAntiBotHost && parsed && typeof parsed === 'object') {
                         harmonizeAntiBotPayload('', parsed);
@@ -4581,7 +4677,7 @@
                 } catch (e) {}
                 return parsed;
             }
-        }).parse, 'parse', 2);
+        }).parse, 'parse', 2, origJsonParse);
         Object.defineProperty(JSON, 'parse', {
             value: hookedJsonParse,
             writable: true,
@@ -4594,15 +4690,17 @@
             const hookedRespJson = makeNative(({
                 json() {
                     const selfResp = this;
-                    return origRespJson.apply(this, arguments).then((data) => {
+                    return invokeNativeWithCleanStack(origRespJson, this, arguments).then((data) => {
                         try {
+                            const resMeta = (selfResp && typeof selfResp === 'object') ? _fetchResMetaMap.get(selfResp) : null;
+                            const metaUrl = (resMeta && resMeta.url) ? resMeta.url : (selfResp && selfResp.url ? selfResp.url : '');
                             if (isAntiBotHost && data && typeof data === 'object') {
-                                harmonizeAntiBotPayload(String((selfResp && (selfResp._ghostFetchUrl || selfResp.url)) || ''), data);
+                                harmonizeAntiBotPayload(String(metaUrl || ''), data);
                             } else {
                                 harmonizeUniversalNetworkTelemetryJson(data);
                             }
                             if (data && typeof data === 'object') {
-                                const fUrl = String((selfResp && (selfResp._ghostFetchUrl || selfResp.url)) || '');
+                                const fUrl = String(metaUrl || '');
                                 if (fUrl.includes('/edge/probe') || (data.bound !== undefined && data.tcp && typeof data.tcp.rtt === 'number')) {
                                     const sRtt = (data.tcp && typeof data.tcp.rtt === 'number' && data.tcp.rtt > 2)
                                         ? data.tcp.rtt
@@ -4619,13 +4717,13 @@
                                             : (_isAndroidPersona ? 'Linux / Android (timestamps, wscale 7)' : 'Windows (no TCP timestamps, wscale 8)');
                                         if (data.tcp.os && data.tcp.os !== targetEdgeOs) data.tcp.os = targetEdgeOs;
                                     }
-                                    if (selfResp && typeof selfResp._ghostFetchStartPerf === 'number') {
+                                    if (resMeta && typeof resMeta.startPerf === 'number') {
                                         const isWarm = /[?&]n=[1-9]/.test(fUrl);
                                         const nMatch = fUrl.match(/[?&]n=(\d+)/);
                                         const idx = nMatch ? parseInt(nMatch[1], 10) : 1;
                                         const mult = isWarm ? (1.05 + (idx % 4) * 0.014) : 2.08;
                                         const targetEdgeMs = +(sRtt * mult).toFixed(2);
-                                        activateWsTimeClamp(+(selfResp._ghostFetchStartPerf + targetEdgeMs).toFixed(2), _origDateNow(), 6);
+                                        activateWsTimeClamp(+(resMeta.startPerf + targetEdgeMs).toFixed(2), _origDateNow(), 6);
                                     }
                                 }
                             }
@@ -4633,7 +4731,7 @@
                         return data;
                     });
                 }
-            }).json, 'json', 0);
+            }).json, 'json', 0, origRespJson);
             Object.defineProperty(Response.prototype, 'json', {
                 value: hookedRespJson,
                 writable: true,
@@ -5466,7 +5564,11 @@
 
     try {
         if (typeof window.fetch === 'function') {
-            const nativeFetch = window.fetch;
+            const rawNativeFetch = window.fetch;
+            const nativeFetch = function() {
+                const fetchThis = (this === undefined || this === null) ? window : this;
+                return invokeNativeWithCleanStack(rawNativeFetch, fetchThis, arguments);
+            };
             const hookedFetch = function fetch(input, init) {
                 const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
 
@@ -6603,8 +6705,7 @@
                 return nativeFetch.apply(this, arguments).then((res) => {
                     try {
                         if (res && typeof res === 'object') {
-                            res._ghostFetchStartPerf = fetchStartT0;
-                            res._ghostFetchUrl = uStr;
+                            _fetchResMetaMap.set(res, { startPerf: fetchStartT0, url: uStr });
                         }
                         if (uStr.includes('/api/ping') && !isAntiBotHost) {
                             const sRtt = (typeof window !== 'undefined' && window.__SERVER__ && window.__SERVER__.tcpInfo && typeof window.__SERVER__.tcpInfo.rtt === 'number' && window.__SERVER__.tcpInfo.rtt > 2)
@@ -6617,7 +6718,7 @@
                     return res;
                 });
             };
-            window.fetch = makeNative(hookedFetch, 'fetch', 1);
+            window.fetch = makeNative(hookedFetch, 'fetch', 1, rawNativeFetch);
         }
     } catch(e) {}
 
@@ -7693,7 +7794,6 @@
     const targetRenderer = _isWinPersona
         ? (cfg.webglRenderer || "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)")
         : "Apple GPU";
-    const _hookedProtos = new WeakSet();
     const _webGpuHookedNavProtos = new WeakSet();
     const _farbledBuffers = new WeakSet();
     const _validGpuInfos = new WeakSet();
@@ -7736,7 +7836,7 @@
                         if (p === 0x9245 /* UNMASKED_VENDOR_WEBGL */) return targetVendor;
                         if (p === 0x9246 /* UNMASKED_RENDERER_WEBGL */) return targetRenderer;
                         return raw;
-                    }, 'getParameter', 1);
+                    }, 'getParameter', 1, origGetParam);
                     Object.defineProperty(proto, 'getParameter', {
                         value: hookedGetParam,
                         writable: true,
@@ -7763,14 +7863,14 @@
                                                 return '#version 300 es\nprecision highp float;\nvoid main() {\n    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);\n}\n';
                                             }
                                             return rawSrc;
-                                        }, 'getTranslatedShaderSource', 1),
+                                        }, 'getTranslatedShaderSource', 1, origTrans),
                                         writable: true, enumerable: true, configurable: true
                                     });
                                 }
                             } catch (e) {}
                         }
                         return ext;
-                    }, 'getExtension', 1);
+                    }, 'getExtension', 1, origGetExt);
                     Object.defineProperty(proto, 'getExtension', {
                         value: hookedGetExt,
                         writable: true,
@@ -7798,7 +7898,7 @@
                             ]);
                         }
                         return invokeNativeWithCleanStack(origClearColor, this, arguments);
-                    }, 'clearColor', 4);
+                    }, 'clearColor', 4, origClearColor);
                     Object.defineProperty(proto, 'clearColor', {
                         value: hookedClearColor,
                         writable: true,
@@ -7827,7 +7927,7 @@
                             }
                         } catch (e) {}
                         return invokeNativeWithCleanStack(origBufferData, this, arguments);
-                    }, 'bufferData', 3);
+                    }, 'bufferData', 3, origBufferData);
                     Object.defineProperty(proto, 'bufferData', {
                         value: hookedBufferData,
                         writable: true,
@@ -8741,12 +8841,14 @@
                 });
             }
 
+            const targetColorDepth = cfg.colorDepth || 30;
+            const targetBpc = targetColorDepth >= 30 ? 10 : 8;
             installScreenGetter('width', w);
             installScreenGetter('height', h);
             installScreenGetter('availWidth', w);
             installScreenGetter('availHeight', Math.max(100, h - toolbarOffset));
-            installScreenGetter('colorDepth', 24);
-            installScreenGetter('pixelDepth', 24);
+            installScreenGetter('colorDepth', targetColorDepth);
+            installScreenGetter('pixelDepth', targetColorDepth);
 
             const dpr = cfg.devicePixelRatio || 2;
             const hookDprTarget = (targetObj) => {
@@ -8768,33 +8870,9 @@
             if (win.Window && win.Window.prototype) hookDprTarget(win.Window.prototype);
             hookDprTarget(win);
 
-            const _mqlQueryMap = new WeakMap();
+            // Leave win.matchMedia / Window.prototype.matchMedia 100% untouched native C++!
+            // Harmonize MediaQueryList.prototype.matches directly using this.media.
             const origMatchMedia = typeof win.matchMedia === 'function' ? win.matchMedia : null;
-            if (origMatchMedia) {
-                const hookMatchMediaTarget = (targetObj) => {
-                    if (!targetObj) return;
-                    const desc = Object.getOwnPropertyDescriptor(targetObj, 'matchMedia');
-                    if (desc && typeof desc.value === 'function') {
-                        Object.defineProperty(targetObj, 'matchMedia', {
-                            value: makeNative(function matchMedia(query) {
-                                const mql = invokeNativeWithCleanStack(origMatchMedia, this, arguments);
-                                try {
-                                    if (mql && typeof mql === 'object') {
-                                        _mqlQueryMap.set(mql, String(query === undefined ? '' : query));
-                                    }
-                                } catch (e) {}
-                                return mql;
-                            }, 'matchMedia', 1),
-                            writable: desc.writable,
-                            enumerable: desc.enumerable,
-                            configurable: true
-                        });
-                    }
-                };
-                if (win.Window && win.Window.prototype) hookMatchMediaTarget(win.Window.prototype);
-                hookMatchMediaTarget(win);
-            }
-
             const mqlProto = (win.MediaQueryList && win.MediaQueryList.prototype) ||
                 (origMatchMedia ? (() => { try { const m = invokeNativeWithCleanStack(origMatchMedia, win, ['(min-width: 0px)']); return m ? Object.getPrototypeOf(m) : null; } catch (e) { return null; } })() : null);
             if (mqlProto && !_hookedProtos.has(mqlProto)) {
@@ -8807,13 +8885,17 @@
                     const hookedMatchesGet = makeNative(function() {
                         const rawMatches = invokeNativeWithCleanStack(origMatchesGet, this, arguments);
                         try {
-                            const rawQ = _mqlQueryMap.get(this) || '';
-                            const mediaStr = rawQ || (origMediaGet ? invokeNativeWithCleanStack(origMediaGet, this, []) : '');
-                            if (typeof mediaStr === 'string' && /\b(?:(?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|-webkit-(?:min-|max-)?device-pixel-ratio)\b/i.test(mediaStr)) {
+                            const mediaStr = origMediaGet ? invokeNativeWithCleanStack(origMediaGet, this, []) : '';
+                            if (typeof mediaStr === 'string' && /\b(?:(?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|-webkit-(?:min-|max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\b/i.test(mediaStr)) {
                                 const evalClause = (kind, numStr, unit) => {
                                     const val = parseFloat(numStr);
                                     if (Number.isNaN(val)) return null;
                                     const k = kind.toLowerCase();
+                                    if (k === 'color' || k === 'min-color' || k === 'max-color') {
+                                        if (k === 'min-color') return targetBpc >= val;
+                                        if (k === 'max-color') return targetBpc <= val;
+                                        return Math.abs(targetBpc - val) < 0.5;
+                                    }
                                     if (k.includes('resolution') || k.includes('device-pixel-ratio')) {
                                         let dppxVal = val;
                                         const u = (unit || 'dppx').toLowerCase();
@@ -8836,7 +8918,7 @@
                                 };
                                 let touched = false;
                                 let allTrue = true;
-                                const clauseRe = /\(\s*((?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|-webkit-(?:min-|max-)?device-pixel-ratio)\s*:\s*([0-9.]+)\s*(px|em|rem|in|cm|mm|dppx|dpi|dpcm|x)?\s*\)/gi;
+                                const clauseRe = /\(\s*((?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|-webkit-(?:min-|max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\s*:\s*([0-9.]+)\s*(px|em|rem|in|cm|mm|dppx|dpi|dpcm|x)?\s*\)/gi;
                                 const stripped = mediaStr.replace(clauseRe, (full, kind, numStr, unit) => {
                                     const ok = evalClause(kind, numStr, unit);
                                     if (ok === null) return full;
@@ -8980,7 +9062,7 @@
                                 }
                             } catch (e) {}
                             return metrics;
-                        }, 'measureText', 1),
+                        }, 'measureText', 1, origMeasureText),
                         writable: true, enumerable: true, configurable: true
                     });
                 }
@@ -9017,7 +9099,7 @@
                             }
                         } catch (e) {}
                         return res;
-                    }, 'fillText', 3);
+                    }, 'fillText', 3, origFillText);
                     Object.defineProperty(proto, 'fillText', {
                         value: hookedFillText,
                         writable: true,
@@ -9034,7 +9116,7 @@
                             return arguments.length >= 6
                                 ? invokeNativeWithCleanStack(origArc, this, [nx, ny, nr, startAngle, endAngle, counterclockwise])
                                 : invokeNativeWithCleanStack(origArc, this, [nx, ny, nr, startAngle, endAngle]);
-                        }, 'arc', 5);
+                        }, 'arc', 5, origArc);
                         Object.defineProperty(proto, 'arc', {
                             value: hookedArc,
                             writable: true,
@@ -9263,7 +9345,7 @@
                                     });
                                 }
                             });
-                        }, 'startRendering', 0),
+                        }, 'startRendering', 0, origStartRendering),
                         writable: true,
                         enumerable: true,
                         configurable: true
@@ -9291,7 +9373,7 @@
                             }
                         } catch (e) {}
                         return data;
-                    }, 'getChannelData', 1);
+                    }, 'getChannelData', 1, origGetChannelData);
                     Object.defineProperty(abProto, 'getChannelData', {
                         value: hookedGetChannelData,
                         writable: true,
@@ -9307,7 +9389,7 @@
                             }
                         } catch (e) {}
                         return invokeNativeWithCleanStack(origCopyFromChannel, this, arguments);
-                    }, 'copyFromChannel', 2);
+                    }, 'copyFromChannel', 2, origCopyFromChannel);
                     Object.defineProperty(abProto, 'copyFromChannel', {
                         value: hookedCopyFromChannel,
                         writable: true,
@@ -9336,7 +9418,7 @@
                                 }
                             } catch (e) {}
                             return res;
-                        }, 'getFloatFrequencyData', 1),
+                        }, 'getFloatFrequencyData', 1, origGetFloatFreq),
                         writable: true, enumerable: true, configurable: true
                     });
                 }
@@ -9356,7 +9438,7 @@
                                 }
                             } catch (e) {}
                             return res;
-                        }, 'getFloatTimeDomainData', 1),
+                        }, 'getFloatTimeDomainData', 1, origGetFloatTime),
                         writable: true, enumerable: true, configurable: true
                     });
                 }
@@ -9509,6 +9591,14 @@
             if (win.Function && win.Function.prototype && win.Function.prototype.toString !== _hookedToString) {
                 Object.defineProperty(win.Function.prototype, 'toString', {
                     value: _hookedToString,
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                });
+            }
+            if (_hookedStringToString && win.String && win.String.prototype && win.String.prototype.toString !== _hookedStringToString) {
+                Object.defineProperty(win.String.prototype, 'toString', {
+                    value: _hookedStringToString,
                     writable: true,
                     enumerable: false,
                     configurable: true
@@ -10958,8 +11048,9 @@
                     if (_killSwitchTripped) {
                         return Promise.reject(new TypeError('Failed to fetch'));
                     }
-                    return origFetch.apply(this, arguments);
-                }, 'fetch', 1),
+                    const winThis = (this === undefined || this === null) ? window : this;
+                    return origFetch.apply(winThis, arguments);
+                }, 'fetch', 1, origFetch),
                 writable: true, enumerable: true, configurable: true
             });
         }
@@ -10972,7 +11063,7 @@
                         return;
                     }
                     return origXhrSend.apply(this, arguments);
-                }, 'send', 0),
+                }, 'send', 0, origXhrSend),
                 writable: true, enumerable: true, configurable: true
             });
         }
@@ -10982,7 +11073,7 @@
                 value: makeNative(function sendBeacon() {
                     if (_killSwitchTripped) return false;
                     return origBeacon.apply(this, arguments);
-                }, 'sendBeacon', 1),
+                }, 'sendBeacon', 1, origBeacon),
                 writable: true, enumerable: true, configurable: true
             });
         }
@@ -11012,10 +11103,10 @@
                 Object.defineProperty(Document.prototype, 'hidden', {
                     get: makeNative(function() {
                         if (!(this instanceof Document)) {
-                            return origHiddenGet.apply(this, arguments);
+                            return invokeNativeWithCleanStack(origHiddenGet, this, arguments);
                         }
                         return false;
-                    }, 'get hidden', 0),
+                    }, 'get hidden', 0, origHiddenGet),
                     set: undefined,
                     enumerable: origHiddenDesc.enumerable,
                     configurable: true
@@ -11026,10 +11117,10 @@
                 Object.defineProperty(Document.prototype, 'visibilityState', {
                     get: makeNative(function() {
                         if (!(this instanceof Document)) {
-                            return origVisGet.apply(this, arguments);
+                            return invokeNativeWithCleanStack(origVisGet, this, arguments);
                         }
                         return 'visible';
-                    }, 'get visibilityState', 0),
+                    }, 'get visibilityState', 0, origVisGet),
                     set: undefined,
                     enumerable: origVisDesc.enumerable,
                     configurable: true
@@ -11058,8 +11149,9 @@
 
                 Object.defineProperty(window, 'requestAnimationFrame', {
                     value: makeNative(function requestAnimationFrame(callback) {
+                        const winThis = (this === undefined || this === null) ? window : this;
                         if (!isActuallyHidden() || typeof callback !== 'function') {
-                            return origRAF.apply(this, arguments);
+                            return invokeNativeWithCleanStack(origRAF, winThis, arguments);
                         }
                         const id = ++bgRafId;
                         const tid = setTimeout(function() {
@@ -11070,7 +11162,7 @@
                         }, 16);
                         bgTimers.set(id, tid);
                         return id;
-                    }, 'requestAnimationFrame', 1),
+                    }, 'requestAnimationFrame', 1, origRAF),
                     writable: true,
                     enumerable: true,
                     configurable: true
@@ -11084,8 +11176,9 @@
                                 bgTimers.delete(handle);
                                 return undefined;
                             }
-                            return origCAF.apply(this, arguments);
-                        }, 'cancelAnimationFrame', 1),
+                            const winThis = (this === undefined || this === null) ? window : this;
+                            return invokeNativeWithCleanStack(origCAF, winThis, arguments);
+                        }, 'cancelAnimationFrame', 1, origCAF),
                         writable: true,
                         enumerable: true,
                         configurable: true
