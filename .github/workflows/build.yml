@@ -1,4 +1,4 @@
-name: Build GhostBrowser IPA
+name: Build FlagMeterBrowser IPA
 
 on:
   push:
@@ -42,35 +42,31 @@ jobs:
         run: |
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/GhostBrowser.app Payload/
-          zip -qr GhostBrowser.ipa Payload
-          echo "GhostBrowser.ipa packaged successfully."
+          zip -qr FlagMeterBrowser.ipa Payload
+          cp FlagMeterBrowser.ipa GhostBrowser.ipa
+          echo "FlagMeterBrowser.ipa packaged successfully."
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GhostBrowser-IPA
-          path: GhostBrowser.ipa
+          name: FlagMeterBrowser-IPA
+          path: FlagMeterBrowser.ipa
           retention-days: 14
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v3.6.1
-          name: GhostBrowser v3.6.1 (Fixed SOCKS5 Auth Sanitization, Port Comma Removal, Edit/Create Profile Sheet & Mobile Proxy Tunnel)
+          tag_name: v3.6.9
+          name: FlagMeter Browser v3.6.9 (iPadOS / iOS Hardened Edition)
           body: |
-            ## GhostBrowser v3.6.1 (iPadOS / iOS Hardened Edition)
-            - **Desktop-Parity Profile & Proxy Management Flow**:
-              - Configure HTTP / SOCKS5 proxy (`host:port:user:pass` Smart Paste + Live Egress Test) directly when creating or editing a profile in `ProfileManagerSheet` as well as in the active session's `SessionToolsSheet`.
-              - Displays the **ISP next to the IP** in both Profile Manager cards and the Browser Session Monitor Indicator pill (`🔒 <IP> • <ISP> • <UsageType> (<ConnType>) • <City>, <Region>`).
-            - **QUIC / HTTP/3 & UDP Packet Capture Parity**:
-              - Harmonizes `cloudflare-quic.com`, `quic.tools.scrapfly.io/api/fp/quic` (`~38ms` fast path + full QUIC/TLS/UDP packet structure), `/api/fp/tcp`, and `/web-scraping-tools/fingerprint/*-score`.
-            - **DNS Leak & DNSSEC Validation Matrix (12/12 Pass)**:
-              - Rejects bogus DNSSEC test domains (`-badsig.`, `-expiredsig.`, `-nosig.`, `dnssec-failed.org`, `rhybar.cz`, etc.) so `dnscheck.tools` and DNSSEC scanners pass 12/12.
-            - **Fast WebRTC RFC 4122 v4 mDNS + `srflx` & `relay` Synthesis (`~42ms`)**:
-              - Eliminates WebRTC TURN/UDP timeouts on `scrapfly.io/web-scraping-tools/webrtc-leak` and `130.61.195.166` (`100% Cohérent` across HTTP, WebRTC, and DNS).
-            - **Storage Quota (`10.00 GB`) & Standard Browser APIs (`PaymentRequest` & `Web Share`)**:
-              - Normalizes `navigator.storage.estimate()` and ensures `PaymentRequest`, `navigator.share`, and `navigator.canShare` are natively cloaked on every profile.
-          files: GhostBrowser.ipa
+            ## FlagMeter Browser v3.6.9 (iPadOS / iOS Hardened Edition)
+            - Unified **FlagMeter Browser** branding & `flagmeter://detect` integration.
+            - Multi-profile Cookie Backup & Restore (never converts host-only cookies into domain cookies).
+            - Top-left aligned native Session Notes overlay (`UITextView`).
+            - Background tab lifecycle & session resume harmonization.
+          files: |
+            FlagMeterBrowser.ipa
+            GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
