@@ -152,14 +152,17 @@
     for (const sym of [_GEO_UPDATE_SYM, _KILL_SWITCH_SYM]) {
         _protectedSymbols.add(sym);
     }
+    let _killSwitchTripped = false;
     const _origFnToString = Function.prototype.toString;
     const _isMultilineNative = (() => {
         try { return _origFnToString.call(_origFnToString).includes('\n'); } catch (e) { return true; }
     })();
     function _formatNativeString(fnName) {
-        return _isMultilineNative
-            ? `function ${fnName}() {\n    [native code]\n}`
-            : `function ${fnName}() { [native code] }`;
+        if (_isMultilineNative) {
+            const cleanName = String(fnName || '').replace(/^(?:get|set)\s+/, '');
+            return `function ${cleanName}() {\n    [native code]\n}`;
+        }
+        return `function ${fnName}() { [native code] }`;
     }
 
     // Capture pristine DOM lookup methods at document creation BEFORE any page runtime monitor
@@ -261,7 +264,7 @@
                 const isInternalFrame = (line) => {
                     if (!line) return false;
                     if (/\(<anonymous>(?::\d+:\d+)?\)/.test(line)) return true;
-                    if (/@:\d+:\d+$/.test(line.trim())) return true;
+                    if (/user-script:\d+|ghost_engine_core/i.test(line)) return true;
                     return /(makeNative|invokeNativeWithCleanStack|scrubHookStack|installNavGetter|installScreenGetter|installGpuInfoGetter|hookedGetParam|hookedGetChannelData|hookedToString|_hookedToString|_hookedStringToString|_customToString|_customStrToString|buildPatchedDtfOptions|prepareDtfArgs|ProxiedDTF|ProxiedDate|anti_fingerprint|ghost_engine_core|Object\.construct|Reflect\.construct)/i.test(line);
                 };
                 const cleaned = [];
@@ -272,7 +275,7 @@
                         continue;
                     }
                     if (isInternalFrame(line)) {
-                        if (cleaned.length > 0 && /^(?:apply|call|construct)@\[native code\]$/.test(cleaned[cleaned.length - 1].trim())) {
+                        while (cleaned.length > 0 && /^(?:apply|call|construct)@\[native code\]$/.test(cleaned[cleaned.length - 1].trim())) {
                             cleaned.pop();
                         }
                         continue;
@@ -497,7 +500,7 @@
                         }
                     } catch (e) {}
                     return res;
-                }, 'revocable', 2);
+                }, 'revocable', 2, _origRevocable);
             }
             _proxyTargetMap.set(HookedProxy, OrigProxy);
             _nativeToStringMap.set(HookedProxy, _formatNativeString('Proxy'));
@@ -524,8 +527,8 @@
                         if (!decoySymMap.has(k)) decoySymMap.set(k, Symbol(k));
                         return decoySymMap.get(k);
                     }
-                    return origSymFor.call(Symbol, key);
-                }, 'for', 1),
+                    return invokeNativeWithCleanStack(origSymFor, Symbol, arguments);
+                }, 'for', 1, origSymFor),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -535,7 +538,7 @@
                 value: makeNative(function getOwnPropertyNames(o) {
                     const res = invokeNativeWithCleanStack(origGetOwnNames, Object, arguments);
                     return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k) && !(k === 'prototype' && _nonCtorHooked.has(o))) : res;
-                }, 'getOwnPropertyNames', 1),
+                }, 'getOwnPropertyNames', 1, origGetOwnNames),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -545,7 +548,7 @@
                 value: makeNative(function keys(o) {
                     const res = invokeNativeWithCleanStack(origKeys, Object, arguments);
                     return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k)) : res;
-                }, 'keys', 1),
+                }, 'keys', 1, origKeys),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -555,7 +558,7 @@
                 value: makeNative(function getOwnPropertySymbols(o) {
                     const res = invokeNativeWithCleanStack(origGetOwnSymbols, Object, arguments);
                     return Array.isArray(res) ? res.filter(s => !_protectedSymbols.has(s)) : res;
-                }, 'getOwnPropertySymbols', 1),
+                }, 'getOwnPropertySymbols', 1, origGetOwnSymbols),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -563,10 +566,11 @@
         if (typeof origGetOwnDesc === 'function') {
             Object.defineProperty(Object, 'getOwnPropertyDescriptor', {
                 value: makeNative(function getOwnPropertyDescriptor(o, p) {
+                    const res = invokeNativeWithCleanStack(origGetOwnDesc, Object, arguments);
                     if (isHiddenInternalProp(p)) return undefined;
                     if (p === 'prototype' && _nonCtorHooked.has(o)) return undefined;
-                    return invokeNativeWithCleanStack(origGetOwnDesc, Object, arguments);
-                }, 'getOwnPropertyDescriptor', 2),
+                    return res;
+                }, 'getOwnPropertyDescriptor', 2, origGetOwnDesc),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -587,7 +591,7 @@
                         }
                     }
                     return descs;
-                }, 'getOwnPropertyDescriptors', 1),
+                }, 'getOwnPropertyDescriptors', 1, origGetOwnDescs),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -595,10 +599,11 @@
         if (typeof origHasOwn === 'function') {
             Object.defineProperty(Object.prototype, 'hasOwnProperty', {
                 value: makeNative(function hasOwnProperty(p) {
+                    const res = invokeNativeWithCleanStack(origHasOwn, this, arguments);
                     if (isHiddenInternalProp(p)) return false;
                     if (p === 'prototype' && _nonCtorHooked.has(this)) return false;
-                    return invokeNativeWithCleanStack(origHasOwn, this, arguments);
-                }, 'hasOwnProperty', 1),
+                    return res;
+                }, 'hasOwnProperty', 1, origHasOwn),
                 writable: true, enumerable: false, configurable: true
             });
         }
@@ -609,7 +614,7 @@
                     value: makeNative(function ownKeys(target) {
                         const res = invokeNativeWithCleanStack(origReflectOwnKeys, Reflect, arguments);
                         return Array.isArray(res) ? res.filter(k => !isHiddenInternalProp(k) && !(k === 'prototype' && _nonCtorHooked.has(target))) : res;
-                    }, 'ownKeys', 1),
+                    }, 'ownKeys', 1, origReflectOwnKeys),
                     writable: true, enumerable: false, configurable: true
                 });
             }
@@ -617,10 +622,11 @@
                 const origReflectHas = Reflect.has;
                 Object.defineProperty(Reflect, 'has', {
                     value: makeNative(function has(target, prop) {
+                        const res = invokeNativeWithCleanStack(origReflectHas, Reflect, arguments);
                         if (isHiddenInternalProp(prop)) return false;
                         if (prop === 'prototype' && _nonCtorHooked.has(target)) return false;
-                        return invokeNativeWithCleanStack(origReflectHas, Reflect, arguments);
-                    }, 'has', 2),
+                        return res;
+                    }, 'has', 2, origReflectHas),
                     writable: true, enumerable: false, configurable: true
                 });
             }
@@ -628,10 +634,11 @@
                 const origReflectGetDesc = Reflect.getOwnPropertyDescriptor;
                 Object.defineProperty(Reflect, 'getOwnPropertyDescriptor', {
                     value: makeNative(function getOwnPropertyDescriptor(target, prop) {
+                        const res = invokeNativeWithCleanStack(origReflectGetDesc, Reflect, arguments);
                         if (isHiddenInternalProp(prop)) return undefined;
                         if (prop === 'prototype' && _nonCtorHooked.has(target)) return undefined;
-                        return invokeNativeWithCleanStack(origReflectGetDesc, Reflect, arguments);
-                    }, 'getOwnPropertyDescriptor', 2),
+                        return res;
+                    }, 'getOwnPropertyDescriptor', 2, origReflectGetDesc),
                     writable: true, enumerable: false, configurable: true
                 });
             }
@@ -2047,6 +2054,8 @@
                u.includes('api.ipify.org') ||
                u.includes('icanhazip.com') ||
                u.includes('ifconfig.me/ip') ||
+               u.includes('ipwho.is') ||
+               u.includes('ipapi.co') ||
                (u.includes('/api/whoami') && !u.includes('quic6') && !u.includes('v6')) ||
                /\/ip(\?|$)/.test(u);
     }
@@ -5473,7 +5482,8 @@
                                         await Promise.race([_pendingTcpIpPromise, new Promise(r => setTimeout(r, 1500))]);
                                     } catch (e) {}
                                 }
-                                const ipText = (_livePageTcpIp || (cfg && cfg.proxyIp) || '70.95.116.218').trim();
+                                const meta = getEffectiveProxyMeta();
+                                const ipText = (_livePageTcpIp || (cfg && cfg.proxyIp) || (meta && meta.ip) || '70.95.116.218').trim();
                                 const bytes = new TextEncoder().encode(ipText);
                                 return { value: bytes, done: false };
                             },
@@ -5570,6 +5580,9 @@
                 return invokeNativeWithCleanStack(rawNativeFetch, fetchThis, arguments);
             };
             const hookedFetch = function fetch(input, init) {
+                if (_killSwitchTripped) {
+                    return Promise.reject(new TypeError('Failed to fetch'));
+                }
                 const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
 
                 if (url && /^https?:\/\/(0\.0\.0\.0|127\.0\.0\.1):4443\d\b/.test(url)) {
@@ -6737,11 +6750,11 @@
                             if (origGet) {
                                 invokeNativeWithCleanStack(origGet, this, arguments);
                             } else if (this !== netConn) {
-                                throw new TypeError('Illegal invocation');
+                                throw scrubHookStack(new TypeError('Illegal invocation'));
                             }
                             return val;
                         }
-                    })['get ' + prop], 'get ' + prop, 0);
+                    })['get ' + prop], 'get ' + prop, 0, origGet);
                     Object.defineProperty(netProto, prop, {
                         get: getter,
                         set: undefined,
@@ -6763,16 +6776,20 @@
             const origSend = XMLHttpRequest.prototype.send;
             const origAbort = XMLHttpRequest.prototype.abort;
             const origSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+            const _xhrStateMap = new WeakMap();
 
             if (typeof origAbort === 'function') {
                 XMLHttpRequest.prototype.abort = makeNative(function abort() {
-                    this._ghostBloatAborted = true;
-                    if (this._ghostBloatUpTimer) {
-                        clearInterval(this._ghostBloatUpTimer);
-                        this._ghostBloatUpTimer = null;
+                    const st = (this && typeof this === 'object') ? _xhrStateMap.get(this) : null;
+                    if (st) {
+                        st.aborted = true;
+                        if (st.upTimer) {
+                            clearInterval(st.upTimer);
+                            st.upTimer = null;
+                        }
                     }
-                    return origAbort.apply(this, arguments);
-                }, 'abort', 0);
+                    return invokeNativeWithCleanStack(origAbort, this, arguments);
+                }, 'abort', 0, origAbort);
             }
 
             if (typeof origSetRequestHeader === 'function') {
@@ -6781,10 +6798,11 @@
                         if (typeof name === 'string' && name.toLowerCase() === 'x-visitor-id' &&
                             cfg.visitorId && _lastFpServerVisitorId && value === cfg.visitorId) {
                             value = _lastFpServerVisitorId;
+                            arguments[1] = value;
                         }
                     } catch (e) {}
-                    return origSetRequestHeader.call(this, name, value);
-                }, 'setRequestHeader', 2);
+                    return invokeNativeWithCleanStack(origSetRequestHeader, this, arguments);
+                }, 'setRequestHeader', 2, origSetRequestHeader);
             }
 
             XMLHttpRequest.prototype.open = makeNative(function open(method, url) {
@@ -6794,8 +6812,12 @@
                         arguments[1] = url;
                     }
                 } catch (e) {}
-                this._ghostUrl = url;
-                this._ghostBloatAborted = false;
+                const res = invokeNativeWithCleanStack(origOpen, this, arguments);
+                try {
+                    if (this && typeof this === 'object') {
+                        _xhrStateMap.set(this, { url: url, aborted: false, upTimer: null });
+                    }
+                } catch (e) {}
                 if (isFpTarget(url) || isProxyDetectPoll(url) || isDnsLeakApi(url) || isProxyWingApi(url)) {
                     const isPd = isProxyDetectPoll(url);
                     const isDns = isDnsLeakApi(url);
@@ -6861,54 +6883,62 @@
                         }
                     });
                 }
-                return origOpen.apply(this, arguments);
-            }, 'open', 2);
+                return res;
+            }, 'open', 2, origOpen);
 
             XMLHttpRequest.prototype.send = makeNative(function send(body) {
-                const url = String(this._ghostUrl || '');
+                if (_killSwitchTripped) {
+                    try { this.abort(); } catch (e) {}
+                    return;
+                }
+                const st = (this && typeof this === 'object') ? _xhrStateMap.get(this) : null;
+                const url = String((st && st.url) || '');
                 if (url.includes('/api/bloat/up')) {
                     const xhr = this;
                     let loaded = 0;
                     const total = 16 * 1024 * 1024;
-                    xhr._ghostBloatUpTimer = setInterval(() => {
-                        if (xhr._ghostBloatAborted) {
-                            clearInterval(xhr._ghostBloatUpTimer);
-                            xhr._ghostBloatUpTimer = null;
-                            return;
-                        }
-                        loaded = Math.min(total, loaded + 295000);
-                        try {
-                            if (xhr.upload) {
-                                const progEv = new ProgressEvent('progress', { lengthComputable: true, loaded: loaded, total: total });
-                                try { xhr.upload.dispatchEvent(progEv); } catch (e) {}
+                    if (st) {
+                        st.upTimer = setInterval(() => {
+                            if (st.aborted) {
+                                clearInterval(st.upTimer);
+                                st.upTimer = null;
+                                return;
                             }
-                        } catch (e) {}
-                        if (loaded >= total) {
-                            clearInterval(xhr._ghostBloatUpTimer);
-                            xhr._ghostBloatUpTimer = null;
+                            loaded = Math.min(total, loaded + 295000);
                             try {
-                                Object.defineProperty(xhr, 'readyState', { get: () => 4, configurable: true });
-                                Object.defineProperty(xhr, 'status', { get: () => 200, configurable: true });
-                                const endEv = new ProgressEvent('loadend', { lengthComputable: true, loaded: total, total: total });
-                                try { xhr.dispatchEvent(endEv); } catch (e) {}
+                                if (xhr.upload) {
+                                    const progEv = new ProgressEvent('progress', { lengthComputable: true, loaded: loaded, total: total });
+                                    try { xhr.upload.dispatchEvent(progEv); } catch (e) {}
+                                }
                             } catch (e) {}
-                        }
-                    }, 60);
+                            if (loaded >= total) {
+                                clearInterval(st.upTimer);
+                                st.upTimer = null;
+                                try {
+                                    Object.defineProperty(xhr, 'readyState', { get: () => 4, configurable: true });
+                                    Object.defineProperty(xhr, 'status', { get: () => 200, configurable: true });
+                                    const endEv = new ProgressEvent('loadend', { lengthComputable: true, loaded: total, total: total });
+                                    try { xhr.dispatchEvent(endEv); } catch (e) {}
+                                } catch (e) {}
+                            }
+                        }, 60);
+                    }
                     return;
                 }
                 if (isProxyDetectSubmit(url) && typeof body === 'string') {
-                    try { body = sanitizeProxyDetectSubmitBody(body); } catch (e) {}
+                    try { body = sanitizeProxyDetectSubmitBody(body); arguments[0] = body; } catch (e) {}
                 } else if (typeof body === 'string' && body.length > 2 && body.trim().startsWith('{') &&
                            /(ws_?rtt|wss_?rtt|websocket_?rtt|quic|http3|connection_?result|edgeRtt|correlate|dnsLeak)/i.test(body)) {
                     try {
                         const bodyObj = JSON.parse(body);
                         if (harmonizeUniversalNetworkTelemetryJson(bodyObj)) {
                             body = JSON.stringify(bodyObj);
+                            arguments[0] = body;
                         }
                     } catch (e) {}
                 }
-                return origSend.call(this, body);
-            }, 'send', 0);
+                return invokeNativeWithCleanStack(origSend, this, arguments);
+            }, 'send', 0, origSend);
         }
     } catch (e) {}
 
@@ -7781,7 +7811,10 @@
             const nativeHasFocus = Document.prototype.hasFocus;
             if (typeof nativeHasFocus === 'function') {
                 Object.defineProperty(Document.prototype, 'hasFocus', {
-                    value: makeNative(function hasFocus() { return true; }, 'hasFocus', 0),
+                    value: makeNative(function hasFocus() {
+                        invokeNativeWithCleanStack(nativeHasFocus, this, arguments);
+                        return true;
+                    }, 'hasFocus', 0, nativeHasFocus),
                     writable: true,
                     enumerable: true,
                     configurable: true
@@ -7997,7 +8030,7 @@
                             }
                         }
                         return val;
-                    }, `get ${prop}`, 0);
+                    }, `get ${prop}`, 0, origGet);
                     Object.defineProperty(infoProto, prop, {
                         get: getter,
                         set: undefined,
@@ -8506,7 +8539,7 @@
                             }
                             return value;
                         }
-                    })[getterName], getterName, 0);
+                    })[getterName], getterName, 0, origGet);
                     Object.defineProperty(navProto, prop, {
                         get: getter,
                         set: undefined,
@@ -8685,7 +8718,7 @@
                     const hookedBrandsGet = makeNative(function() {
                         const raw = invokeNativeWithCleanStack(origBrandsGet, this, arguments);
                         return cleanUaBrandsList(raw);
-                    }, 'get brands', 0);
+                    }, 'get brands', 0, origBrandsGet);
                     Object.defineProperty(uaProto, 'brands', {
                         get: hookedBrandsGet,
                         set: undefined,
@@ -8701,7 +8734,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origPlatGet, this, arguments);
                             return uaPlatName;
-                        }, 'get platform', 0),
+                        }, 'get platform', 0, origPlatGet),
                         set: undefined,
                         enumerable: true,
                         configurable: true
@@ -8715,7 +8748,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origMobGet, this, arguments);
                             return uaMobile;
-                        }, 'get mobile', 0),
+                        }, 'get mobile', 0, origMobGet),
                         set: undefined,
                         enumerable: true,
                         configurable: true
@@ -8738,7 +8771,7 @@
                                 if (Array.isArray(out.fullVersionList)) out.fullVersionList = cleanUaBrandsList(out.fullVersionList);
                                 return out;
                             });
-                        }, 'getHighEntropyValues', 1),
+                        }, 'getHighEntropyValues', 1, origHev),
                         writable: true,
                         enumerable: true,
                         configurable: true
@@ -8767,7 +8800,7 @@
                                         const slot = _voiceSlotMap.get(this);
                                         if (slot && vp in slot) return slot[vp];
                                         return rawVal;
-                                    }, `get ${vp}`, 0),
+                                    }, `get ${vp}`, 0, origVGet),
                                     set: undefined,
                                     enumerable: origVDesc.enumerable,
                                     configurable: true
@@ -8803,7 +8836,7 @@
                                 } catch (e) {}
                             }
                             return raw;
-                        }, 'getVoices', 0),
+                        }, 'getVoices', 0, origGetVoices),
                         writable: true,
                         enumerable: true,
                         configurable: true
@@ -8832,7 +8865,7 @@
                         throw scrubHookStack(new win.TypeError('Illegal invocation'));
                     }
                     return value;
-                }, `get ${prop}`, 0);
+                }, `get ${prop}`, 0, origGet);
                 Object.defineProperty(screenProto, prop, {
                     get: getter,
                     set: undefined,
@@ -8860,7 +8893,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origDprGet, this, arguments);
                             return dpr;
-                        }, 'get devicePixelRatio', 0),
+                        }, 'get devicePixelRatio', 0, origDprGet),
                         set: undefined,
                         enumerable: origDprDesc.enumerable,
                         configurable: true
@@ -8868,7 +8901,40 @@
                 }
             };
             if (win.Window && win.Window.prototype) hookDprTarget(win.Window.prototype);
-            hookDprTarget(win);
+
+            const hookOuterDimension = (targetObj, prop, isHeight) => {
+                if (!targetObj) return;
+                const origDesc = Object.getOwnPropertyDescriptor(targetObj, prop);
+                const origGet = origDesc && origDesc.get;
+                if (!origGet) return;
+                const getter = makeNative(function() {
+                    const rawVal = invokeNativeWithCleanStack(origGet, this, arguments);
+                    try {
+                        if (isHeight) {
+                            const inner = typeof this.innerHeight === 'number' ? this.innerHeight : 0;
+                            if (typeof rawVal !== 'number' || rawVal <= 0 || rawVal < inner) {
+                                return (inner > 0 ? inner : h) + 76;
+                            }
+                        } else {
+                            const inner = typeof this.innerWidth === 'number' ? this.innerWidth : 0;
+                            if (typeof rawVal !== 'number' || rawVal <= 0 || rawVal < inner) {
+                                return inner > 0 ? inner : w;
+                            }
+                        }
+                    } catch (e) {}
+                    return rawVal;
+                }, `get ${prop}`, 0, origGet);
+                Object.defineProperty(targetObj, prop, {
+                    get: getter,
+                    set: undefined,
+                    enumerable: true,
+                    configurable: true
+                });
+            };
+            if (win.Window && win.Window.prototype) {
+                hookOuterDimension(win.Window.prototype, 'outerWidth', false);
+                hookOuterDimension(win.Window.prototype, 'outerHeight', true);
+            }
 
             // Leave win.matchMedia / Window.prototype.matchMedia 100% untouched native C++!
             // Harmonize MediaQueryList.prototype.matches directly using this.media.
@@ -8944,7 +9010,7 @@
                             }
                         } catch (e) {}
                         return rawMatches;
-                    }, 'get matches', 0);
+                    }, 'get matches', 0, origMatchesGet);
                     Object.defineProperty(mqlProto, 'matches', {
                         get: hookedMatchesGet,
                         set: undefined,
@@ -8965,7 +9031,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origTypeGet, this, arguments);
                             return targetOrientType;
-                        }, 'get type', 0),
+                        }, 'get type', 0, origTypeGet),
                         set: undefined,
                         enumerable: true,
                         configurable: true
@@ -8978,7 +9044,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origAngleGet, this, arguments);
                             return 0;
-                        }, 'get angle', 0),
+                        }, 'get angle', 0, origAngleGet),
                         set: undefined,
                         enumerable: true,
                         configurable: true
@@ -8987,45 +9053,6 @@
             }
         } catch (e) {}
     }
-
-    try {
-        function hookOuterDimension(targetObj, prop, isHeight) {
-            if (!targetObj) return;
-            const origDesc = Object.getOwnPropertyDescriptor(targetObj, prop);
-            const origGet = origDesc && origDesc.get;
-            if (!origGet) return;
-            const getter = makeNative(function() {
-                const rawVal = invokeNativeWithCleanStack(origGet, this, arguments);
-                try {
-                    if (isHeight) {
-                        const inner = typeof this.innerHeight === 'number' ? this.innerHeight : 0;
-                        if (typeof rawVal === 'number' && rawVal < inner) return inner + 76;
-                    } else {
-                        const inner = typeof this.innerWidth === 'number' ? this.innerWidth : 0;
-                        if (typeof rawVal === 'number' && rawVal < inner) return inner;
-                    }
-                } catch (e) {}
-                return rawVal;
-            }, `get ${prop}`, 0);
-            Object.defineProperty(targetObj, prop, {
-                get: getter,
-                set: undefined,
-                enumerable: true,
-                configurable: true
-            });
-        }
-        if (typeof Window !== 'undefined' && Window.prototype) {
-            hookOuterDimension(Window.prototype, 'outerWidth', false);
-            hookOuterDimension(Window.prototype, 'outerHeight', true);
-        }
-        if (typeof window !== 'undefined') {
-            const winOuterDesc = Object.getOwnPropertyDescriptor(window, 'outerWidth');
-            if (winOuterDesc && winOuterDesc.get) {
-                hookOuterDimension(window, 'outerWidth', false);
-                hookOuterDimension(window, 'outerHeight', true);
-            }
-        }
-    } catch (e) {}
 
     function hookCanvasRealm(win) {
         if (!win) return;
@@ -9158,7 +9185,7 @@
                                 return baseVal;
                             }
                             return rawVal;
-                        }, `get ${propName}`, 0);
+                        }, `get ${propName}`, 0, origGet);
                         Object.defineProperty(tmProto, propName, {
                             get: hookedGet,
                             set: undefined,
@@ -9169,69 +9196,8 @@
                 }
             }
 
-            if (isAntiBotHost) return;
-
-            // Deterministic per-profile sub-pixel ClientRect / DOMRect differentiation
-            // Modifies genuine C++ DOMRect instances in-place (preserving 0 own keys, instanceof DOMRect, and native toJSON)
-            const perturbDomRectInPlace = (rect, saltBase) => {
-                try {
-                    if (!rect) return rect;
-                    const w = rect.width;
-                    const h = rect.height;
-                    if (typeof w === 'number' && w > 0) {
-                        const dw = ((fmix32(profileSeed, Math.round(w * 10) + saltBase) % 29) + 1) * 1e-5;
-                        rect.width = w + dw;
-                    }
-                    if (typeof h === 'number' && h > 0) {
-                        const dh = ((fmix32(profileSeed, Math.round(h * 10) + saltBase + 17) % 29) + 1) * 1e-5;
-                        rect.height = h + dh;
-                    }
-                    const rx = rect.x;
-                    const ry = rect.y;
-                    if (typeof rx === 'number' && rx !== 0) {
-                        rect.x = rx + (((fmix32(profileSeed, Math.round(Math.abs(rx) * 10) + saltBase + 31) % 19) + 1) * 1e-5);
-                    }
-                    if (typeof ry === 'number' && ry !== 0) {
-                        rect.y = ry + (((fmix32(profileSeed, Math.round(Math.abs(ry) * 10) + saltBase + 47) % 19) + 1) * 1e-5);
-                    }
-                } catch (e) {}
-                return rect;
-            };
-
-            const rectTargets = [];
-            if (win.Element && win.Element.prototype) rectTargets.push([win.Element.prototype, 401]);
-            if (win.Range && win.Range.prototype) rectTargets.push([win.Range.prototype, 451]);
-            for (const [rProto, rSalt] of rectTargets) {
-                if (_hookedProtos.has(rProto)) continue;
-                _hookedProtos.add(rProto);
-                const origGBCR = rProto.getBoundingClientRect;
-                if (typeof origGBCR === 'function') {
-                    const hookedGBCR = makeNative(function getBoundingClientRect() {
-                        const rect = invokeNativeWithCleanStack(origGBCR, this, arguments);
-                        return perturbDomRectInPlace(rect, rSalt);
-                    }, 'getBoundingClientRect', 0);
-                    Object.defineProperty(rProto, 'getBoundingClientRect', {
-                        value: hookedGBCR, writable: true, enumerable: true, configurable: true
-                    });
-                }
-                const origGCR = rProto.getClientRects;
-                if (typeof origGCR === 'function') {
-                    const hookedGCR = makeNative(function getClientRects() {
-                        const list = invokeNativeWithCleanStack(origGCR, this, arguments);
-                        try {
-                            if (list && list.length > 0) {
-                                for (let i = 0; i < list.length; i++) {
-                                    perturbDomRectInPlace(list[i], rSalt + i * 7);
-                                }
-                            }
-                        } catch (e) {}
-                        return list;
-                    }, 'getClientRects', 0);
-                    Object.defineProperty(rProto, 'getClientRects', {
-                        value: hookedGCR, writable: true, enumerable: true, configurable: true
-                    });
-                }
-            }
+            // Leave Element.prototype.getBoundingClientRect and getClientRects 100% untouched native C++
+            // so getBoundingClientRect().width matches getComputedStyle(el).width (Kasada dp / ebb / mbb / fs2 checks).
         } catch (e) {}
     }
 
@@ -9250,7 +9216,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origBaseLat, this, arguments);
                             return targetBaseLat;
-                        }, 'get baseLatency', 0),
+                        }, 'get baseLatency', 0, origBaseLat),
                         set: undefined,
                         enumerable: baseLatDesc.enumerable,
                         configurable: true
@@ -9264,7 +9230,7 @@
                         get: makeNative(function() {
                             invokeNativeWithCleanStack(origOutLat, this, arguments);
                             return targetOutLat;
-                        }, 'get outputLatency', 0),
+                        }, 'get outputLatency', 0, origOutLat),
                         set: undefined,
                         enumerable: outLatDesc.enumerable,
                         configurable: true
@@ -9281,6 +9247,9 @@
                     Object.defineProperty(oacProto, 'startRendering', {
                         value: makeNative(function startRendering() {
                             const ctx = this;
+                            if (!(ctx instanceof oacCtor)) {
+                                return invokeNativeWithCleanStack(origStartRendering, ctx, arguments);
+                            }
                             let settled = false;
                             const makeFallbackBuffer = () => {
                                 try {
@@ -9305,7 +9274,6 @@
                                     }
                                 } catch (e) {}
                             };
-                            const origOnCompleteDesc = Object.getOwnPropertyDescriptor(oacProto, 'oncomplete');
                             let nativePromise;
                             try {
                                 nativePromise = invokeNativeWithCleanStack(origStartRendering, ctx, arguments);
@@ -9506,6 +9474,45 @@
                             }
                             return Promise.reject(new DOMException('Share canceled', 'AbortError'));
                         }, 'share', 0),
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+                if (!_isWinPersona && !_isAndroidPersona) {
+                    const origRmksa = navProto.requestMediaKeySystemAccess;
+                    Object.defineProperty(navProto, 'requestMediaKeySystemAccess', {
+                        value: makeNative(function requestMediaKeySystemAccess(keySystem, supportedConfigurations) {
+                            if (!(this instanceof win.Navigator)) {
+                                if (typeof origRmksa === 'function') {
+                                    return invokeNativeWithCleanStack(origRmksa, this, arguments);
+                                }
+                                return Promise.reject(scrubHookStack(new win.TypeError('Illegal invocation')));
+                            }
+                            const ks = String(keySystem || '');
+                            if (!ks || !Array.isArray(supportedConfigurations) || supportedConfigurations.length === 0) {
+                                return Promise.reject(new DOMException('Invalid keySystem or supportedConfigurations', 'TypeError'));
+                            }
+                            if (/^(?:com\.apple\.fps(?:\.\d+_\d+)?|org\.w3\.clearkey)$/i.test(ks)) {
+                                const firstCfg = supportedConfigurations[0] || {};
+                                const accessObj = {
+                                    keySystem: ks,
+                                    getConfiguration: makeNative(function getConfiguration() {
+                                        return firstCfg;
+                                    }, 'getConfiguration', 0),
+                                    createMediaKeys: makeNative(function createMediaKeys() {
+                                        return Promise.resolve({});
+                                    }, 'createMediaKeys', 0)
+                                };
+                                return Promise.resolve(accessObj);
+                            }
+                            if (typeof origRmksa === 'function') {
+                                try {
+                                    return invokeNativeWithCleanStack(origRmksa, this, arguments);
+                                } catch (e) {}
+                            }
+                            return Promise.reject(new DOMException('The key system specified is not supported.', 'NotSupportedError'));
+                        }, 'requestMediaKeySystemAccess', 2, typeof origRmksa === 'function' ? origRmksa : undefined),
                         writable: true,
                         enumerable: true,
                         configurable: true
@@ -10913,6 +10920,10 @@
                         if ('platform' in obj && typeof obj.platform === 'string') obj.platform = effPlat;
                     }
                     if ('plat' in obj && typeof obj.plat === 'string') obj.plat = effPlat;
+                    if ('navPlat' in obj && typeof obj.navPlat === 'string') obj.navPlat = effPlat;
+                    if ('pl' in obj && typeof obj.pl === 'string') obj.pl = effPlat;
+                    if ('wp' in obj && typeof obj.wp === 'string') obj.wp = effPlat;
+                    if ('wh' in obj && (typeof obj.wh === 'number' || obj.wh == null)) obj.wh = effHc;
                     if ('effectiveType' in obj && (obj.effectiveType === '3g' || obj.effectiveType === '2g' || obj.effectiveType === 'slow-2g')) {
                         obj.effectiveType = '4g';
                         if ('rtt' in obj) obj.rtt = 50;
@@ -10999,7 +11010,7 @@
                             }
                         } catch (e) {}
                         return raw;
-                    }, 'get data', 0),
+                    }, 'get data', 0, origDataGet),
                     set: undefined,
                     enumerable: origDataDesc.enumerable,
                     configurable: true
@@ -11030,7 +11041,6 @@
     } catch (e) {}
 
     try {
-        let _killSwitchTripped = false;
         const setKillSwitchFn = function(trip) {
             _killSwitchTripped = (trip !== false);
             if (_killSwitchTripped) {
@@ -11040,39 +11050,13 @@
         };
         _bridgeSetKillSwitchFn = setKillSwitchFn;
 
-        // Pre-transmission guard on fetch, XHR, and sendBeacon
-        if (typeof window.fetch === 'function') {
-            const origFetch = window.fetch;
-            Object.defineProperty(window, 'fetch', {
-                value: makeNative(function fetch() {
-                    if (_killSwitchTripped) {
-                        return Promise.reject(new TypeError('Failed to fetch'));
-                    }
-                    const winThis = (this === undefined || this === null) ? window : this;
-                    return origFetch.apply(winThis, arguments);
-                }, 'fetch', 1, origFetch),
-                writable: true, enumerable: true, configurable: true
-            });
-        }
-        if (window.XMLHttpRequest && window.XMLHttpRequest.prototype && typeof window.XMLHttpRequest.prototype.send === 'function') {
-            const origXhrSend = window.XMLHttpRequest.prototype.send;
-            Object.defineProperty(window.XMLHttpRequest.prototype, 'send', {
-                value: makeNative(function send() {
-                    if (_killSwitchTripped) {
-                        try { this.abort(); } catch (e) {}
-                        return;
-                    }
-                    return origXhrSend.apply(this, arguments);
-                }, 'send', 0, origXhrSend),
-                writable: true, enumerable: true, configurable: true
-            });
-        }
+        // Pre-transmission guard on sendBeacon (fetch & XHR are guarded inside their primary hooks)
         if (window.Navigator && window.Navigator.prototype && typeof window.Navigator.prototype.sendBeacon === 'function') {
             const origBeacon = window.Navigator.prototype.sendBeacon;
             Object.defineProperty(window.Navigator.prototype, 'sendBeacon', {
                 value: makeNative(function sendBeacon() {
                     if (_killSwitchTripped) return false;
-                    return origBeacon.apply(this, arguments);
+                    return invokeNativeWithCleanStack(origBeacon, this, arguments);
                 }, 'sendBeacon', 1, origBeacon),
                 writable: true, enumerable: true, configurable: true
             });
@@ -11188,4 +11172,6 @@
         }
     } catch (e) {}
 })();
+//# sourceURL=ghost_engine_core.js
+
 

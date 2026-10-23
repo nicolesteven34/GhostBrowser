@@ -197,7 +197,9 @@
                 comp.threshold.setValueAtTime(-50, ctx.currentTime);
                 comp.knee.setValueAtTime(40, ctx.currentTime);
                 comp.ratio.setValueAtTime(12, ctx.currentTime);
-                comp.reduction.setValueAtTime(-20, ctx.currentTime);
+                if (comp.reduction && typeof comp.reduction.setValueAtTime === 'function') {
+                    comp.reduction.setValueAtTime(-20, ctx.currentTime);
+                }
                 comp.attack.setValueAtTime(0, ctx.currentTime);
                 comp.release.setValueAtTime(0.25, ctx.currentTime);
 

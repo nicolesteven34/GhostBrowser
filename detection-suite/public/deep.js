@@ -996,7 +996,7 @@ postMessage({nonce:n,ms:Math.round(performance.now()-t0),hash:hex(w)});};`;
     try {
       for (let i = 0; i < 4; i++) {
         const t = performance.now();
-        const r = await withTimeout(fetch(url(i), { cache: 'no-store', mode: 'cors', credentials: 'omit' }), 8000, null);
+        const r = await withTimeout(fetch(url(i), { cache: 'no-store', mode: 'cors', credentials: 'omit' }), 2500, null);
         if (!r) throw new Error('timeout');
         const j = await r.json();
         out.timings.push(+(performance.now() - t).toFixed(2));
@@ -1017,7 +1017,7 @@ postMessage({nonce:n,ms:Math.round(performance.now()-t0),hash:hex(w)});};`;
   // ===========================================================================
   D.dnsLeak = async function () {
     try {
-      const r = await withTimeout(fetch('https://edns.ip-api.com/json?_=' + Date.now(), { cache: 'no-store', credentials: 'omit' }), 15000, null);
+      const r = await withTimeout(fetch('https://edns.ip-api.com/json?_=' + Date.now(), { cache: 'no-store', credentials: 'omit' }), 2500, null);
       if (!r) return { error: 'timeout' };
       const j = await r.json();
       return { ip: j.dns && j.dns.ip, geo: j.dns && j.dns.geo, edns: j.edns || null };

@@ -430,7 +430,7 @@
     window.__SHARED_EDGE_NET_PROMISE__ = pNet;
     const pIP = getJSON(`/api/deep/ip?pv=${S.pv}`).catch((e) => ({ error: e.message }));
     const pPow = D.pow(S.pow);
-    const pRtc = D.util.withTimeout(D.webrtc(ownStunHost, S.stunPort || 3478), 7000, { supported: true, error: 'timeout' });
+    const pRtc = D.util.withTimeout(D.webrtc(ownStunHost, S.stunPort || 3478), 2500, { supported: true, error: 'timeout' });
     if (S.dnsZone && S.dnsToken) D.dnsProbe(S.dnsToken, S.dnsZone);
 
     // client probes

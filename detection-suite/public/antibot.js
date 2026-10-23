@@ -1289,8 +1289,8 @@
 
     // Hardware Environment Probes (1 concurrency + 1 memory + 1 battery)
     async function auditHardwareEnvironment() {
-        const cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 8;
-        const memory = typeof navigator !== 'undefined' ? navigator.deviceMemory : 8;
+        const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 8;
+        const memory = (typeof navigator !== 'undefined' && navigator.deviceMemory) ? navigator.deviceMemory : 8;
         let battery = null;
         if (typeof navigator !== 'undefined' && typeof navigator.getBattery === 'function') {
             try {

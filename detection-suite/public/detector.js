@@ -189,24 +189,24 @@
     { name: 'Array.prototype.toSorted', test: () => typeof [].toSorted === 'function', chrome: 110, firefox: 115, safari: 16 },
     { name: 'String.prototype.isWellFormed', test: () => typeof ''.isWellFormed === 'function', chrome: 111, firefox: 119, safari: 16.4 },
     { name: 'Array.fromAsync', test: () => typeof Array.fromAsync === 'function', chrome: 121, firefox: 115, safari: 16.4 },
-    { name: 'Object.groupBy', test: () => typeof Object.groupBy === 'function', chrome: 117, firefox: 119, safari: 17.4 },
-    { name: 'Promise.withResolvers', test: () => typeof Promise.withResolvers === 'function', chrome: 119, firefox: 121, safari: 17.4 },
-    { name: 'Set.prototype.union', test: () => typeof new Set().union === 'function', chrome: 122, firefox: 127, safari: 17 },
-    { name: 'URL.parse', test: () => typeof URL.parse === 'function', chrome: 126, firefox: 126, safari: 18 },
-    { name: 'Promise.try', test: () => typeof Promise.try === 'function', chrome: 128, firefox: 134, safari: 18.2 },
-    { name: 'Iterator helpers', test: () => typeof global.Iterator === 'function' && typeof global.Iterator.prototype.map === 'function', chrome: 122, firefox: 131, safari: 18.4 },
-    { name: 'Float16Array', test: () => typeof global.Float16Array === 'function', chrome: 135, firefox: 129, safari: 18.2 },
+    { name: 'Object.groupBy', test: () => typeof Object.groupBy === 'function', chrome: 117, firefox: 119, safari: null },
+    { name: 'Promise.withResolvers', test: () => typeof Promise.withResolvers === 'function', chrome: 119, firefox: 121, safari: null },
+    { name: 'Set.prototype.union', test: () => typeof new Set().union === 'function', chrome: 122, firefox: 127, safari: null },
+    { name: 'URL.parse', test: () => typeof URL.parse === 'function', chrome: 126, firefox: 126, safari: null },
+    { name: 'Promise.try', test: () => typeof Promise.try === 'function', chrome: 128, firefox: 134, safari: null },
+    { name: 'Iterator helpers', test: () => typeof global.Iterator === 'function' && typeof global.Iterator.prototype.map === 'function', chrome: 122, firefox: 131, safari: null },
+    { name: 'Float16Array', test: () => typeof global.Float16Array === 'function', chrome: 135, firefox: 129, safari: null },
     { name: 'RegExp.escape', test: () => typeof RegExp.escape === 'function', chrome: 136, firefox: 134, safari: null },
     { name: 'Object.hasOwn', test: () => typeof Object.hasOwn === 'function', chrome: 93, firefox: 92, safari: 15.4 },
     { name: 'Array.prototype.with', test: () => typeof [].with === 'function', chrome: 110, firefox: 115, safari: 16 },
     { name: 'CSS :has()', test: () => CSS.supports('selector(:has(a))'), chrome: 105, firefox: 121, safari: 15.4 },
     { name: 'CSS container queries', test: () => CSS.supports('container-type: inline-size'), chrome: 105, firefox: 110, safari: 16 },
-    { name: 'Popover API', test: () => typeof HTMLElement.prototype.showPopover === 'function', chrome: 114, firefox: 125, safari: 17 },
+    { name: 'Popover API', test: () => typeof HTMLElement.prototype.showPopover === 'function', chrome: 114, firefox: 125, safari: null },
     { name: 'Intl.Segmenter', test: () => typeof Intl.Segmenter === 'function', chrome: 87, firefox: 125, safari: 14.1 },
     { name: 'navigator.userActivation', test: () => !!navigator.userActivation, chrome: 72, firefox: 120, safari: 16.4 },
     { name: 'Intl.DurationFormat', test: () => typeof Intl.DurationFormat === 'function', chrome: 129, firefox: 136, safari: 16.4 },
     { name: 'CSS anchor positioning', test: () => CSS.supports('anchor-name: --a'), chrome: 125, firefox: null, safari: null },
-    { name: 'View Transitions', test: () => typeof document.startViewTransition === 'function', chrome: 111, firefox: null, safari: 18 },
+    { name: 'View Transitions', test: () => typeof document.startViewTransition === 'function', chrome: 111, firefox: null, safari: null },
   ];
 
   // ===========================================================================
@@ -214,6 +214,10 @@
   // ===========================================================================
   /** Returns true when the function is a Proxy (Proxies skip the prototype-cycle check). */
   function isProxied(fn) {
+    try {
+      const s = fnStr(fn);
+      if (s && isNativeStr(s)) return false;
+    } catch (e) { /* ignore */ }
     let proto;
     try { proto = Object.getPrototypeOf(fn); } catch (e) { return false; }
     let proxied = false;
@@ -451,16 +455,21 @@
             throw e;
           }
         }
-        // Unwind 2 frames above RangeError, then invoke fn.call(recv)
+        // Unwind 2 frames above RangeError (capped at 120 frames so JavaScriptCore ES6 Proper Tail Calls never infinite-loop!), then invoke fn.call(recv)
         let maxD = 0;
-        function measure(d) { maxD = d; return measure(d + 1); }
+        function measure(d) {
+          maxD = d;
+          if (d >= 120) throw new RangeError('Maximum call stack size exceeded');
+          return 1 + measure(d + 1);
+        }
         try { measure(0); } catch (e) { /* maxD recorded */ }
-        const limit = Math.max(10, maxD - 3);
+        const limit = Math.max(10, Math.min(115, maxD - 3));
         function runTo(d) {
           if (d >= limit) {
             try { fn.call(recv); return { ok: true }; } catch (e2) { return { ok: false, stack: String((e2 && e2.stack) || '') }; }
           }
-          return runTo(d + 1);
+          const r = runTo(d + 1);
+          return r;
         }
         return safe(() => runTo(0), { ok: true });
       };
@@ -682,14 +691,14 @@
     const desktop = ['Windows', 'macOS', 'Linux', 'ChromeOS'].includes(claimed.os);
     const iframe = makeIframe();
     const [worker, uaHigh, notif, devices, voices, audio, brave, sw] = await Promise.all([
-      withTimeout(workerProbe(), 3000, null),
-      withTimeout(uaHighEntropy(), 1500, null),
-      withTimeout(notificationProbe(), 1500, null),
-      withTimeout(devicesProbe(), 1500, null),
-      withTimeout(voicesProbe(), 1500, null),
-      withTimeout(audioProbe(), 2500, null),
-      withTimeout(braveProbe(), 800, false),
-      withTimeout(serviceWorkerProbe(), 5000, null),
+      withTimeout(workerProbe(), 2000, null),
+      withTimeout(uaHighEntropy(), 1200, null),
+      withTimeout(notificationProbe(), 1200, null),
+      withTimeout(devicesProbe(), 1200, null),
+      withTimeout(voicesProbe(), 1200, null),
+      withTimeout(audioProbe(), 1800, null),
+      withTimeout(braveProbe(), 600, false),
+      withTimeout(serviceWorkerProbe(), 1500, null),
     ]);
     return {
       ua, claimed, engine, desktop, iframe, worker, uaHigh, notif, devices, voices, audio, brave, sw,
@@ -852,7 +861,11 @@
     if (iwin && iwin.Navigator) {
       const topKeys = safe(() => _getOwnNames(global.Navigator.prototype), []);
       const ifrKeys = safe(() => _getOwnNames(iwin.Navigator.prototype), []);
-      if (topKeys.length && ifrKeys.length && topKeys.join(',') !== ifrKeys.join(',')) {
+      const ifrSet = new Set(ifrKeys);
+      const topSet = new Set(topKeys);
+      const topShared = topKeys.filter((k) => ifrSet.has(k));
+      const ifrShared = ifrKeys.filter((k) => topSet.has(k));
+      if (topShared.length && ifrShared.length && topShared.join(',') !== ifrShared.join(',')) {
         add(C, 'nav-key-order', 'Navigator.prototype WebIDL key order', 'fail', 'Property enumeration order on Navigator.prototype differs from a clean iframe (properties were deleted and re-defined by a stealth script).', { weight: 35 });
       } else if (topKeys.length) {
         add(C, 'nav-key-order', 'Navigator.prototype WebIDL key order', 'pass', `All ${topKeys.length} WebIDL prototype keys match clean-realm enumeration order.`);

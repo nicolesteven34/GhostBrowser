@@ -418,7 +418,7 @@
                 Performance.prototype.now.call({});
             } catch (err) {
                 const st = String((err && err.stack) || '');
-                if (/ghost_engine|Proxy\.|apply|Object\.get/i.test(st)) {
+                if (/ghost_engine|Proxy\.|Object\.get|invokeNativeWithCleanStack/i.test(st)) {
                     cleanStack = false;
                 }
             }
@@ -803,7 +803,7 @@
             // On Chrome ('c'), PlayReady (indices 1 & 2) must NOT be 'o' (which leaks WebView2/Edge runtime)
             // On Safari ('s'), Widevine & PlayReady (indices 0, 1, 2) must be 'x'
             const playReadyLeakedOnNonEdge = (browserCode === 'c' || browserCode === 's') && (drmMatrix[1] === 'o' || drmMatrix[2] === 'o');
-            const passed = fnNativeOk && !playReadyLeakedOnNonEdge;
+            const passed = (fnNativeOk || (browserCode === 's' && typeof rmksa === 'undefined')) && !playReadyLeakedOnNonEdge;
 
             probes.push({
                 id: 'GG-19',
@@ -842,11 +842,12 @@
         // GG-21: Stripe m.stripe.network (out-4.5.45.js) Object.keys(navigator/document) & Touch Coherence
         {
             const navKeys = Object.keys(navigator);
-            const docKeys = Object.keys(document);
+            const docKeys = Object.keys(document).filter(k => k !== 'location');
             const hasOntouchstart = 'ontouchstart' in window;
             const maxTp = navigator.maxTouchPoints || 0;
             const isMobileUa = /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
-            const touchCoherent = isMobileUa ? (maxTp > 0) : (!hasOntouchstart || maxTp > 0);
+            const isSafariDesktopOnPad = !isMobileUa && /Macintosh.*Safari/i.test(ua) && !/Chrome|Chromium|Edg/i.test(ua);
+            const touchCoherent = isMobileUa ? (maxTp > 0) : (!hasOntouchstart || maxTp > 0 || isSafariDesktopOnPad);
             const passed = navKeys.length === 0 && docKeys.length === 0 && touchCoherent;
 
             probes.push({

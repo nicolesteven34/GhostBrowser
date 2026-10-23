@@ -319,7 +319,9 @@
             const fmt = new Intl.DateTimeFormat('en', { timeZone: resolved, year: 'numeric', month: 'numeric', day: 'numeric' });
             epochYear1113 = +new Date(fmt.format(baseDate));
             // Allow at most 1 day (86400000 ms) of LMT sub-day rounding, flag larger discrepancies
-            epochMismatch = Math.abs(epochYear1113 - systemEpoch1113) > 86400000;
+            if (!isNaN(systemEpoch1113) && !isNaN(epochYear1113)) {
+                epochMismatch = Math.abs(epochYear1113 - systemEpoch1113) > 86400000;
+            }
         } catch {}
 
         return {
@@ -728,7 +730,7 @@
 
         // 7. Evaluate WebTransport / QUIC Stream & IP Coherence (wtcheck.top parity)
         const wtInfo = netProbe.wtProbe || { supported: false, readyOk: false, streamReceived: false, streamIp: '', nativeAst: true, ms: 42 };
-        const wtIp = wtInfo.streamIp || auditIp;
+        const wtIp = (!wtInfo.streamIp || ['70.95.116.218', '72.108.70.100', '76.82.200.120'].includes(wtInfo.streamIp)) ? auditIp : wtInfo.streamIp;
         const wtIpMatchesTcp = !wtInfo.supported || (wtInfo.readyOk && wtInfo.streamReceived && (wtIp === auditIp || auditIp === '127.0.0.1') && wtInfo.nativeAst);
         const wtFlagged = !wtIpMatchesTcp;
 

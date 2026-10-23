@@ -33,15 +33,6 @@
     },
     {
         "trigger": {
-            "url-filter": ".*(fingerprintjs\\.com|fpjs\\.sh|fpcdn\\.io).*",
-            "unless-domain": ["fingerprint.com", "fingerprintjs.com", "fingerprint-scan.com"]
-        },
-        "action": {
-            "type": "block"
-        }
-    },
-    {
-        "trigger": {
             "url-filter": ".*(hotjar\\.com|mouseflow\\.com|crazyegg\\.com|fullstory\\.com).*"
         },
         "action": {
@@ -78,15 +69,6 @@
         },
         "action": {
             "type": "block"
-        }
-    },
-    {
-        "trigger": {
-            "url-filter": ".*",
-            "load-type": ["third-party"]
-        },
-        "action": {
-            "type": "block-cookies"
         }
     }
 ]

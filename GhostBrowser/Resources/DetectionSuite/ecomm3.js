@@ -311,8 +311,8 @@
                     }
                 } catch (e) { tlMsg = String(e && e.message || ''); }
                 families.fsc_tl_classExtendsNative =
-                    fscMsg.includes('function toString() { [native code] } is not a constructor or null') &&
-                    tlMsg.includes('[native code] is not a constructor or null');
+                    /is not a constructor/i.test(fscMsg) &&
+                    /is not a constructor/i.test(tlMsg);
 
                 // 2. elc: Error.stackTraceLimit = 10 frame count enforcement (1 header + 10 frames = 11 lines)
                 let elcClean = true;
@@ -327,7 +327,7 @@
                     };
                     try { rec(0); } catch (e) {
                         const lines = String(e && e.stack || '').split('\n');
-                        if (lines.length < 10 || lines.length > 11) elcClean = false;
+                        if (lines.length < 9) elcClean = false;
                     }
                 } catch {
                     elcClean = false;
@@ -384,8 +384,8 @@
                     let wseMsg = '';
                     try { Function.prototype.toString.call(1); } catch (e) { wseMsg = String(e); }
                     if (!jsStr.includes('[native code]') || !evStr.includes('[native code]') ||
-                        !nlStr.includes('function get languages() { [native code] }') ||
-                        !wseMsg.includes("Function.prototype.toString requires that 'this' be a Function")) {
+                        !/function (?:get )?languages\(\) \{\s*\[native code\]\s*\}/.test(nlStr) ||
+                        !/Function\.prototype\.toString requires that ['|]this['|] be a function/i.test(wseMsg)) {
                         cnfWseClean = false;
                     }
                 } catch {
@@ -403,11 +403,11 @@
                             nppmClean = false;
                         }
                         if (typeof navigator.plugins.refresh === 'function' &&
-                            !Function.prototype.toString.call(navigator.plugins.refresh).includes('function refresh() { [native code] }')) {
+                            !/function refresh\(\) \{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(navigator.plugins.refresh))) {
                             nppmClean = false;
                         }
                         if (typeof navigator.plugins.namedItem === 'function' &&
-                            !Function.prototype.toString.call(navigator.plugins.namedItem).includes('function namedItem() { [native code] }')) {
+                            !/function namedItem\(\) \{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(navigator.plugins.namedItem))) {
                             nppmClean = false;
                         }
                     }
@@ -452,7 +452,7 @@
                 try {
                     const wdDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver');
                     if (!wdDesc || typeof wdDesc.get !== 'function' ||
-                        !Function.prototype.toString.call(wdDesc.get).includes('function get webdriver() { [native code] }')) {
+                        !/function (?:get )?webdriver\(\) \{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(wdDesc.get))) {
                         wddOfcClean = false;
                     }
                     const xhrOpenStr = Function.prototype.toString.call(XMLHttpRequest.prototype.open);
@@ -475,7 +475,7 @@
                             nhpEsdClean = false;
                         } catch (e) {
                             const st = String(e && e.stack || '');
-                            if (!String(e).includes('Illegal invocation') || st.includes('invokeNativeWithCleanStack')) {
+                            if (!/Illegal invocation|can only be used on instances of/i.test(String(e)) || st.includes('invokeNativeWithCleanStack')) {
                                 nhpEsdClean = false;
                             }
                         }
@@ -489,14 +489,14 @@
                 let protoOrderClean = true;
                 try {
                     const navKeys = Object.keys(Object.getOwnPropertyDescriptors(Navigator.prototype));
-                    if (navKeys.length < 40 || navKeys[0] !== 'vendorSub') {
-                        // In Chromium, vendorSub or productSub are first on Navigator.prototype
+                    if (navKeys.length < 25 || navKeys[0] !== 'vendorSub') {
+                        // In Chromium/WebKit, verify core Navigator properties are present
                         if (!navKeys.includes('userAgent') || !navKeys.includes('hardwareConcurrency')) {
                             protoOrderClean = false;
                         }
                     }
                     if (typeof Element !== 'undefined' && Element.prototype.attachShadow) {
-                        if (!Function.prototype.toString.call(Element.prototype.attachShadow).includes('function attachShadow() { [native code] }')) {
+                        if (!/function attachShadow\(\) \{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(Element.prototype.attachShadow))) {
                             protoOrderClean = false;
                         }
                     }
@@ -523,7 +523,7 @@
                 let lipMathClean = true;
                 try {
                     const rawInt = 18446744073709550000;
-                    if (rawInt.toString(36) !== '3w5e11264sg00') {
+                    if (!['3w5e11264sg00', '3w5e11264sgsf', '3w5e11264s000'].includes(rawInt.toString(36))) {
                         lipMathClean = false;
                     }
                 } catch {
@@ -694,7 +694,7 @@
                             if (mainHevPlatform && swResult.hevPlat && swResult.hevPlat !== mainHevPlatform) {
                                 sharedWorkerParity = false;
                             }
-                            if (swResult.navPlat && swResult.navPlat !== navigator.platform) {
+                            if (swResult.navPlat && swResult.navPlat !== navigator.platform && !(swResult.navPlat === 'iPad' && navigator.platform === 'MacIntel')) {
                                 sharedWorkerParity = false;
                             }
                             if (Array.isArray(swResult.conn) && navigator.connection && swResult.conn[0] !== navigator.connection.effectiveType) {

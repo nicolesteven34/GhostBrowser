@@ -64,11 +64,19 @@ let _auditScanCounter = 0;
 
 function _yieldVisualFrame(ms = 85) {
     return new Promise(resolve => {
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => setTimeout(resolve, ms));
-        } else {
-            setTimeout(resolve, ms);
-        }
+        let settled = false;
+        const done = () => {
+            if (!settled) {
+                settled = true;
+                resolve();
+            }
+        };
+        setTimeout(done, Math.max(16, ms));
+        try {
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => setTimeout(done, Math.min(ms, 25)));
+            }
+        } catch (e) {}
     });
 }
 
@@ -1262,8 +1270,75 @@ async function runFullAudit() {
             `Completed full multi-stage client, active-edge TLS/JA4, DNS :53, STUN :3478 & hardware verification in ${totalElapsed}ms`
         );
 
+        try {
+            let ecomm3Res = window.__LAST_ECOMMERCE3_DATA || window.__LAST_ECOMM3_DATA || null;
+            if (!ecomm3Res && window.ECommerce3Benchmark && typeof window.ECommerce3Benchmark.runFullAudit === 'function') {
+                ecomm3Res = await window.ECommerce3Benchmark.runFullAudit(networkData);
+                window.__LAST_ECOMMERCE3_DATA = ecomm3Res;
+            }
+            fetch('/api/ipad-audit-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'unified_full_audit',
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    visitorId: clientResults?.visitorId,
+                    botScore: clientResults?.botScore,
+                    tamperingDetected: clientResults?.tamperingDetected,
+                    tamperingReasons: clientResults?.tamperingReasons || [],
+                    network: {
+                        ip: networkData?.ip,
+                        isp: networkData?.isp,
+                        asn: networkData?.asn,
+                        country: networkData?.country,
+                        city: networkData?.city,
+                        timezone: networkData?.timezone,
+                        proxyScore: networkData?.proxyScore,
+                        vpnScore: networkData?.vpnScore,
+                        overallRisk: networkData?.overallRisk
+                    },
+                    fpComSuspectScore: currentFpComData?.suspectScore,
+                    antiBotAnomalyScore: window.__LAST_ANTIBOT_DATA?.anomalyScore,
+                    fpScanBotScore: currentFpsData?.botScore,
+                    ecomm3Summary: ecomm3Res ? {
+                        riskScore: ecomm3Res.riskScore,
+                        overallScore: ecomm3Res.overallScore,
+                        passedSystems: ecomm3Res.passedSystems,
+                        totalSystems: ecomm3Res.totalSystems,
+                        kasadaVm120: ecomm3Res.kasadaVm120 ? {
+                            passed: ecomm3Res.kasadaVm120.passed,
+                            passedProbes: ecomm3Res.kasadaVm120.passedProbes,
+                            totalProbes: ecomm3Res.kasadaVm120.totalProbes,
+                            totalCollectors: ecomm3Res.kasadaVm120.totalCollectors
+                        } : null,
+                        akamaiSbsd120: ecomm3Res.akamaiSbsd120 ? {
+                            passed: ecomm3Res.akamaiSbsd120.passed,
+                            passedProbes: ecomm3Res.akamaiSbsd120.passedProbes,
+                            totalProbes: ecomm3Res.akamaiSbsd120.totalProbes,
+                            totalCollectors: ecomm3Res.akamaiSbsd120.totalCollectors
+                        } : null
+                    } : null
+                })
+            }).catch(() => {});
+        } catch (_) {}
+
     } catch (err) {
         console.error('Audit execution error:', err);
+        try {
+            fetch('/api/ipad-audit-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'unified_full_audit_error',
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    error: String(err && err.message || err),
+                    stack: String(err && err.stack || '')
+                })
+            }).catch(() => {});
+        } catch (_) {}
         await completeVisualAudit(
             'Audit Completed with Warnings',
             err.message || 'Finished diagnostic checks'
@@ -1283,12 +1358,19 @@ function closeRawModal() {
 }
 
 // Auto-run on page load
-window.addEventListener('DOMContentLoaded', () => {
+function _bootGhostUnifiedAudit() {
+    if (window.__GHOST_UNIFIED_BOOTED__) return;
+    window.__GHOST_UNIFIED_BOOTED__ = true;
     try { renderComprehensiveDeepFpScrapflySection(); } catch (e) {}
     try { renderComprehensiveDnsSection(); } catch (e) {}
     try { renderComprehensiveWebrtcMultiStunSection(); } catch (e) {}
     runFullAudit();
-});
+}
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', _bootGhostUnifiedAudit);
+} else {
+    _bootGhostUnifiedAudit();
+}
 
 // =============================================================
 // FINGERPRINT.COM (FINGERPRINT PRO) RENDERING & FILTERING

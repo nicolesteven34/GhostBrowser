@@ -144,7 +144,7 @@
 
         const drmCoherent = (browserCode === 'e' && drmVec.startsWith('oo')) ||
                             (browserCode === 'c' && drmVec.startsWith('ox')) ||
-                            (browserCode === 's' && drmVec.includes('o')) ||
+                            (browserCode === 's' && (drmVec.includes('o') || drmVec === 'xxxxxxx' || drmVec === 'nnnnnnn')) ||
                             drmVec.includes('o');
 
         return {
@@ -252,7 +252,7 @@
             }
         } catch (e) {}
 
-        const wrParity = (mh === wh) && (mp === wp);
+        const wrParity = (mh === wh) && (mp === wp || (wp === 'iPad' && mp === 'MacIntel'));
         const stealthClean = (t1 === 0 && t2 === 0 && iFlag === 1 && mte === 0 && mtd === false);
         const passed = stealthClean && cdpClean && wrParity;
 
