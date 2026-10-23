@@ -383,7 +383,15 @@ public class ProfileManager: ObservableObject {
         return candidate
     }
 
+    private var restoredCookieProfileIDs: Set<UUID> = []
+
+    private static func isEphemeralOrChallengeCookie(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        return lower == "bl_sid" || lower == "bl_js" || lower == "ak_bmsc" || lower == "bm_sv" || lower == "bm_sz" || lower == "__cf_bm"
+    }
+
     public func clearProfileData(id: UUID) {
+        restoredCookieProfileIDs.remove(id)
         UserDefaults.standard.removeObject(forKey: "ghost_vault_cookies_\(id.uuidString)")
         clearProfileHistory(id: id)
         if #available(iOS 17.0, *) {
@@ -401,6 +409,10 @@ public class ProfileManager: ObservableObject {
         cookieStore.getAllCookies { cookies in
             var serializedList: [[String: Any]] = []
             for c in cookies {
+                // Never back up ephemeral session cookies (expiresDate == nil) or per-pageview anti-bot challenge cookies
+                guard let exp = c.expiresDate, !Self.isEphemeralOrChallengeCookie(c.name) else {
+                    continue
+                }
                 var dict: [String: Any] = [:]
                 dict["name"] = c.name
                 dict["value"] = c.value
@@ -408,9 +420,7 @@ public class ProfileManager: ObservableObject {
                 dict["path"] = c.path
                 dict["isSecure"] = c.isSecure
                 dict["isHTTPOnly"] = c.isHTTPOnly
-                if let exp = c.expiresDate {
-                    dict["expires"] = exp.timeIntervalSince1970
-                }
+                dict["expires"] = exp.timeIntervalSince1970
                 if let sameSite = c.sameSitePolicy {
                     dict["sameSite"] = sameSite.rawValue
                 }
@@ -423,34 +433,72 @@ public class ProfileManager: ObservableObject {
     }
 
     public func restoreCookies(for profileID: UUID, into cookieStore: WKHTTPCookieStore) {
-        guard let data = UserDefaults.standard.data(forKey: "ghost_vault_cookies_\(profileID.uuidString)"),
-              let rawList = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] else {
+        // Only run once per profile session so secondary tabs do not mutate the shared cookie jar mid-session
+        if restoredCookieProfileIDs.contains(profileID) {
             return
         }
-        for dict in rawList {
-            guard let name = dict["name"] as? String,
-                  let value = dict["value"] as? String,
-                  let domain = dict["domain"] as? String,
-                  let path = dict["path"] as? String else {
-                continue
+        restoredCookieProfileIDs.insert(profileID)
+
+        cookieStore.getAllCookies { existingCookies in
+            var existingKeys = Set<String>()
+            var grouped: [String: [HTTPCookie]] = [:]
+            for c in existingCookies {
+                let normHost = c.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).lowercased()
+                let key = "\(c.name.lowercased())||\(normHost)||\(c.path)"
+                grouped[key, default: []].append(c)
+                if c.name.caseInsensitiveCompare("bl_sid") == .orderedSame && c.domain.hasPrefix(".") {
+                    cookieStore.delete(c, completionHandler: nil)
+                }
             }
-            var props: [HTTPCookiePropertyKey: Any] = [
-                .name: name,
-                .value: value,
-                .domain: domain,
-                .path: path
-            ]
-            if let isSecure = dict["isSecure"] as? Bool, isSecure {
-                props[.secure] = "TRUE"
+            for (key, items) in grouped {
+                if items.count > 1, items.contains(where: { !$0.domain.hasPrefix(".") }) {
+                    for dup in items where dup.domain.hasPrefix(".") {
+                        cookieStore.delete(dup, completionHandler: nil)
+                    }
+                }
+                existingKeys.insert(key)
             }
-            if let expiresSec = dict["expires"] as? Double {
-                props[.expires] = Date(timeIntervalSince1970: expiresSec)
+
+            guard let data = UserDefaults.standard.data(forKey: "ghost_vault_cookies_\(profileID.uuidString)"),
+                  let rawList = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] else {
+                return
             }
-            if let sameSiteRaw = dict["sameSite"] as? String {
-                props[.sameSitePolicy] = sameSiteRaw
-            }
-            if let cookie = HTTPCookie(properties: props) {
-                cookieStore.setCookie(cookie)
+            let now = Date()
+            for dict in rawList {
+                guard let name = dict["name"] as? String,
+                      !Self.isEphemeralOrChallengeCookie(name),
+                      let value = dict["value"] as? String,
+                      let domain = dict["domain"] as? String,
+                      let path = dict["path"] as? String,
+                      let expiresSec = dict["expires"] as? Double else {
+                    continue
+                }
+                let expDate = Date(timeIntervalSince1970: expiresSec)
+                if expDate <= now {
+                    continue
+                }
+                let normHost = domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")).lowercased()
+                let normKey = "\(name.lowercased())||\(normHost)||\(path)"
+                if existingKeys.contains(normKey) {
+                    continue
+                }
+                var props: [HTTPCookiePropertyKey: Any] = [
+                    .name: name,
+                    .value: value,
+                    .domain: domain,
+                    .path: path,
+                    .expires: expDate
+                ]
+                if let isSecure = dict["isSecure"] as? Bool, isSecure {
+                    props[.secure] = "TRUE"
+                }
+                if let sameSiteRaw = dict["sameSite"] as? String {
+                    props[.sameSitePolicy] = sameSiteRaw
+                }
+                if let cookie = HTTPCookie(properties: props) {
+                    cookieStore.setCookie(cookie)
+                    existingKeys.insert(normKey)
+                }
             }
         }
     }

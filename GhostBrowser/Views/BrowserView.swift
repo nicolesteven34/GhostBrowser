@@ -521,22 +521,6 @@ public struct BrowserView: UIViewRepresentable {
             }
         }
 
-        public func loadLocalDetectPage() {
-            guard let webView = self.webView else { return }
-            if let detectURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "DetectionSuite") ??
-                               Bundle.main.url(forResource: "index", withExtension: "html") {
-                self.currentLoadedURL = "ghost://detect"
-                self.parent.pageTitle = "GhostDetect Lab"
-                if self.parent.currentURLString != "ghost://detect" {
-                    DispatchQueue.main.async {
-                        self.parent.currentURLString = "ghost://detect"
-                    }
-                }
-                let dirURL = detectURL.deletingLastPathComponent()
-                webView.loadFileURL(detectURL, allowingReadAccessTo: dirURL)
-            }
-        }
-
         public func loadURL(_ urlString: String, forceReload: Bool = false) {
             guard let webView = self.webView else { return }
 
@@ -545,10 +529,12 @@ public struct BrowserView: UIViewRepresentable {
                 return
             }
 
-            if urlString == "ghost://detect" || urlString == "local://detect" || urlString == "ghost://integrity" {
+            if urlString == "ghost://detect" || urlString == "local://detect" || urlString == "ghost://integrity" || urlString.contains("detect.ghost") {
                 loadURL("https://flagmeter.com", forceReload: forceReload)
                 return
             }
+
+            ProxyService.shared.ensureFreshRouteIfIdle(for: parent.privacyProfile, userInitiatedReload: forceReload)
 
             if urlString.hasPrefix("ghost-action://") {
                 if urlString.contains("regenerate") {
@@ -642,7 +628,7 @@ public struct BrowserView: UIViewRepresentable {
                 let fullUrl = url.absoluteString
                 DispatchQueue.main.async {
                     if fullUrl.contains("detect") || fullUrl.contains("integrity") {
-                        self.loadLocalDetectPage()
+                        self.loadURL("https://flagmeter.com")
                     } else {
                         self.loadLocalStartPage()
                     }
@@ -717,10 +703,10 @@ public struct BrowserView: UIViewRepresentable {
                     lastNavigationFailed = false
                     ProxyService.shared.forceRestartBridge(for: parent.privacyProfile)
                 } else {
-                    ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: parent.privacyProfile)
+                    ProxyService.shared.ensureFreshRouteIfIdle(for: parent.privacyProfile, userInitiatedReload: true)
                 }
             } else {
-                ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: parent.privacyProfile)
+                ProxyService.shared.ensureFreshRouteIfIdle(for: parent.privacyProfile, userInitiatedReload: false)
             }
 
             let target = (currentLoadedURL?.isEmpty == false ? currentLoadedURL : parent.currentURLString) ?? ""

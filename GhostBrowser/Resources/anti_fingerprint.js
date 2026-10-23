@@ -6361,7 +6361,25 @@
                 }
 
                 if (isTcpIpCheckEndpoint(url)) {
-                    const p = nativeFetch.apply(this, arguments);
+                    const uCheck = String(url || '');
+                    const p = nativeFetch.apply(this, arguments).catch((err) => {
+                        if (uCheck.includes('ipwho.is')) {
+                            const meta = getEffectiveProxyMeta();
+                            const fallbackJson = JSON.stringify({
+                                ip: meta.ip,
+                                success: true,
+                                type: 'IPv4',
+                                country: meta.country || 'United States',
+                                country_code: meta.countryCode || 'US',
+                                region: meta.region || '',
+                                city: meta.city || '',
+                                connection: { asn: 14593, org: meta.isp || 'ISP', isp: meta.isp || 'ISP' },
+                                timezone: { id: (cfg && cfg.timezone) || 'America/Chicago' }
+                            });
+                            return new Response(fallbackJson, { status: 200, statusText: 'OK', headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+                        }
+                        throw err;
+                    });
                     _pendingTcpIpPromise = p.then(async (res) => {
                         try {
                             const txt = (await res.clone().text()).trim();

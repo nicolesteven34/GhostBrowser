@@ -333,6 +333,25 @@ public final class ProxyService {
         sharedDataStores.removeValue(forKey: key)
     }
 
+    /// Checks whether the active SOCKS5 tunnel sat idle long enough for upstream carrier/Starlink NAT
+    /// or Apple's out-of-process `com.apple.WebKit.Networking` socket pool to go stale.
+    /// If idle (or if user explicitly tapped Reload after >= 20s of inactivity), rotates the local loopback
+    /// bridge port while preserving the Stale-While-Revalidate DNS cache so the next navigation is 0ms fresh.
+    public func ensureFreshRouteIfIdle(for profile: PrivacyProfile, userInitiatedReload: Bool = false) {
+        guard profile.proxyEnabled, !profile.proxyHost.isEmpty else { return }
+        if let bridge = activeDnsBridge {
+            let idleSec = bridge.secondsSinceLastTraffic
+            let threshold: TimeInterval = userInitiatedReload ? 20.0 : 75.0
+            if !bridge.isListening || bridge.hasRecentUpstreamFailure || idleSec >= threshold {
+                forceRestartBridge(for: profile)
+                return
+            }
+        }
+        if let store = activeDataStores.allObjects.first ?? sharedDataStores.values.first {
+            applyProxy(to: store, profile: profile)
+        }
+    }
+
     /// Applies native C++ Network.ProxyConfiguration to WKWebsiteDataStore on iOS 17+
     /// and routes SOCKS5 traffic through a persistent LocalSocks5DnsBridge shared across all open tabs.
     public func applyProxy(to dataStore: WKWebsiteDataStore, profile: PrivacyProfile) {
@@ -903,12 +922,19 @@ public final class LocalSocks5DnsBridge {
     private var detectedAsn: String
     private let queue = DispatchQueue(label: "com.ghostbrowser.socks5dnsbridge", attributes: .concurrent)
     private let cacheLock = NSLock()
-    private var dnsCache: [String: (ip: String?, expires: Date)] = [:]
+    private static let sharedCacheLock = NSLock()
+    private static var sharedDnsCache: [String: (ip: String?, freshUntil: Date, staleUntil: Date)] = [:]
+    private static var didLoadPersistentDnsCache: Bool = false
+    private static var lastPersistentDnsSaveTime: TimeInterval = 0
+    private static let persistentDnsCacheKey = "ghost_persistent_dns_cache_v2"
     private var port53ConsecutiveFailures: Int = 0
     private var port53BlockedByProxy: Bool = true
     private var listener: NWListener?
+    private var keepWarmTimer: DispatchSourceTimer?
     private var currentBoundPort: UInt16 = 0
     private var isStopped: Bool = false
+    private var lastTrafficDate: Date = Date()
+    private var recentUpstreamFailure: Bool = false
     private var activeConnections: [ObjectIdentifier: NWConnection] = [:]
     public var onUnexpectedStop: (() -> Void)?
 
@@ -916,6 +942,90 @@ public final class LocalSocks5DnsBridge {
         cacheLock.lock()
         defer { cacheLock.unlock() }
         return !isStopped && listener != nil && currentBoundPort > 0
+    }
+
+    public var secondsSinceLastTraffic: TimeInterval {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        return Date().timeIntervalSince(lastTrafficDate)
+    }
+
+    public var hasRecentUpstreamFailure: Bool {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        return recentUpstreamFailure
+    }
+
+    private static func makeLowLatencyTcpParams() -> NWParameters {
+        let tcpOpts = NWProtocolTCP.Options()
+        tcpOpts.noDelay = true
+        tcpOpts.enableKeepalive = true
+        tcpOpts.keepaliveIdle = 18
+        tcpOpts.keepaliveInterval = 6
+        tcpOpts.keepaliveCount = 3
+        tcpOpts.connectionTimeout = 7
+        return NWParameters(tls: nil, tcp: tcpOpts)
+    }
+
+    private static func ensurePersistentDnsCacheLoadedLocked() {
+        guard !didLoadPersistentDnsCache else { return }
+        didLoadPersistentDnsCache = true
+        guard let dict = UserDefaults.standard.dictionary(forKey: persistentDnsCacheKey) as? [String: String] else {
+            return
+        }
+        let now = Date()
+        for (host, ip) in dict where !host.isEmpty && !ip.isEmpty {
+            if sharedDnsCache[host] == nil {
+                sharedDnsCache[host] = (ip, now.addingTimeInterval(600), now.addingTimeInterval(86400))
+            }
+        }
+    }
+
+    private static func savePersistentDnsCacheThrottled() {
+        let nowTs = Date().timeIntervalSince1970
+        Self.sharedCacheLock.lock()
+        if nowTs - lastPersistentDnsSaveTime < 4.0 {
+            Self.sharedCacheLock.unlock()
+            return
+        }
+        lastPersistentDnsSaveTime = nowTs
+        var snapshot: [String: String] = [:]
+        let now = Date()
+        for (host, entry) in sharedDnsCache {
+            if let ip = entry.ip, !ip.isEmpty, entry.staleUntil > now {
+                snapshot[host] = ip
+                if snapshot.count >= 600 { break }
+            }
+        }
+        Self.sharedCacheLock.unlock()
+        DispatchQueue.global(qos: .utility).async {
+            UserDefaults.standard.set(snapshot, forKey: persistentDnsCacheKey)
+        }
+    }
+
+    private func getCachedDnsEntry(_ lowerHost: String) -> (ip: String?, freshUntil: Date, staleUntil: Date)? {
+        Self.sharedCacheLock.lock()
+        defer { Self.sharedCacheLock.unlock() }
+        Self.ensurePersistentDnsCacheLoadedLocked()
+        return Self.sharedDnsCache[lowerHost]
+    }
+
+    private func setCachedDnsEntry(_ lowerHost: String, ip: String?, freshTtl: TimeInterval, staleTtl: TimeInterval) {
+        let now = Date()
+        Self.sharedCacheLock.lock()
+        Self.ensurePersistentDnsCacheLoadedLocked()
+        Self.sharedDnsCache[lowerHost] = (ip, now.addingTimeInterval(freshTtl), now.addingTimeInterval(staleTtl))
+        Self.sharedCacheLock.unlock()
+        if let ip = ip, !ip.isEmpty {
+            Self.savePersistentDnsCacheThrottled()
+        }
+    }
+
+    private func markTrafficActivity() {
+        cacheLock.lock()
+        lastTrafficDate = Date()
+        recentUpstreamFailure = false
+        cacheLock.unlock()
     }
 
     public init(
@@ -1009,18 +1119,77 @@ public final class LocalSocks5DnsBridge {
 
         listener.start(queue: queue)
         _ = readySem.wait(timeout: .now() + 2.0)
+        startKeepWarmTimer()
         return boundPort
+    }
+
+    private func startKeepWarmTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + 30.0, repeating: 35.0)
+        timer.setEventHandler { [weak self] in
+            guard let self = self, self.isListening else { return }
+            if self.secondsSinceLastTraffic >= 28.0 {
+                self.performUpstreamKeepWarmPing()
+            }
+        }
+        cacheLock.lock()
+        keepWarmTimer?.cancel()
+        keepWarmTimer = timer
+        cacheLock.unlock()
+        timer.resume()
+    }
+
+    private func performUpstreamKeepWarmPing() {
+        guard let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else { return }
+        let conn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
+        var done = false
+        func finish(_ ok: Bool) {
+            guard !done else { return }
+            done = true
+            conn.cancel()
+            if !ok {
+                self.cacheLock.lock()
+                self.recentUpstreamFailure = true
+                self.cacheLock.unlock()
+            }
+        }
+        queue.asyncAfter(deadline: .now() + 4.5) {
+            finish(false)
+        }
+        conn.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .ready:
+                let hasAuth = !self.username.isEmpty
+                let greeting: [UInt8] = hasAuth ? [0x05, 0x02, 0x02, 0x00] : [0x05, 0x01, 0x00]
+                conn.send(content: Data(greeting), completion: .contentProcessed { err in
+                    guard err == nil else { finish(false); return }
+                    conn.receive(minimumIncompleteLength: 2, maximumLength: 2) { data, _, _, rErr in
+                        let ok = (data?.count ?? 0) >= 2 && rErr == nil && data?[0] == 0x05
+                        finish(ok)
+                    }
+                })
+            case .failed, .cancelled:
+                finish(false)
+            default:
+                break
+            }
+        }
+        conn.start(queue: queue)
     }
 
     public func stop() {
         cacheLock.lock()
         isStopped = true
         currentBoundPort = 0
+        let t = keepWarmTimer
+        keepWarmTimer = nil
         let l = listener
         listener = nil
         let conns = Array(activeConnections.values)
         activeConnections.removeAll()
         cacheLock.unlock()
+        t?.cancel()
         l?.cancel()
         for c in conns {
             c.forceCancel()
@@ -1215,12 +1384,20 @@ public final class LocalSocks5DnsBridge {
         let lowerHost = targetHost.lowercased()
         cacheLock.lock()
         let bypassPort53 = port53BlockedByProxy
-        let cachedEntry = dnsCache[lowerHost]
         cacheLock.unlock()
+        let cachedEntry = getCachedDnsEntry(lowerHost)
+        let now = Date()
 
-        if let cached = cachedEntry, cached.expires > Date(), let cachedIp = cached.ip, !cachedIp.isEmpty {
-            connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
-            return
+        if let cached = cachedEntry, let cachedIp = cached.ip, !cachedIp.isEmpty {
+            if now < cached.freshUntil {
+                connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
+                return
+            } else if now < cached.staleUntil {
+                // Stale-While-Revalidate (SWR): connect immediately in 0ms using cached IP and refresh in background
+                resolveIpv4Fallback(domain: targetHost, forceRefresh: true) { _ in }
+                connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
+                return
+            }
         }
 
         if bypassPort53 || !isDnsResolverProbeHostname(targetHost) {
@@ -1259,13 +1436,18 @@ public final class LocalSocks5DnsBridge {
 
     private func resolveDomainViaTunnelIspDns(domain: String, completion: @escaping (Bool, String?) -> Void) {
         let lower = domain.lowercased()
-        cacheLock.lock()
-        if let cached = dnsCache[lower], cached.expires > Date() {
-            cacheLock.unlock()
-            completion(true, cached.ip)
-            return
+        let now = Date()
+        var didComplete = false
+        if let cached = getCachedDnsEntry(lower) {
+            if now < cached.freshUntil {
+                completion(true, cached.ip)
+                return
+            } else if now < cached.staleUntil, let staleIp = cached.ip, !staleIp.isEmpty {
+                didComplete = true
+                completion(true, staleIp)
+                // Continue below asynchronously to revalidate
+            }
         }
-        cacheLock.unlock()
 
         let servers = ispDnsServers()
         func tryServer(attempt: Int) {
@@ -1276,7 +1458,10 @@ public final class LocalSocks5DnsBridge {
                     port53BlockedByProxy = true
                 }
                 cacheLock.unlock()
-                completion(false, nil)
+                if !didComplete {
+                    didComplete = true
+                    completion(false, nil)
+                }
                 return
             }
             let dnsIp = servers[attempt]
@@ -1285,9 +1470,16 @@ public final class LocalSocks5DnsBridge {
                     self?.cacheLock.lock()
                     self?.port53ConsecutiveFailures = 0
                     self?.verifiedDnsServers.insert(dnsIp)
-                    self?.dnsCache[lower] = (ip, Date().addingTimeInterval(ip != nil ? 180 : 15))
                     self?.cacheLock.unlock()
-                    completion(true, ip)
+                    if ip != nil {
+                        self?.setCachedDnsEntry(lower, ip: ip, freshTtl: 1800, staleTtl: 86400)
+                    } else {
+                        self?.setCachedDnsEntry(lower, ip: nil, freshTtl: 20, staleTtl: 20)
+                    }
+                    if !didComplete {
+                        didComplete = true
+                        completion(true, ip)
+                    }
                 } else {
                     tryServer(attempt: attempt + 1)
                 }
@@ -1301,7 +1493,7 @@ public final class LocalSocks5DnsBridge {
             completion(false, nil)
             return
         }
-        let conn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: .tcp)
+        let conn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         var finished = false
         func finish(_ handled: Bool, _ ip: String?) {
             guard !finished else { return }
@@ -1509,15 +1701,20 @@ public final class LocalSocks5DnsBridge {
         })
     }
 
-    private func resolveIpv4Fallback(domain: String, completion: @escaping (String?) -> Void) {
+    private func resolveIpv4Fallback(domain: String, forceRefresh: Bool = false, completion: @escaping (String?) -> Void) {
         let lower = domain.lowercased()
-        cacheLock.lock()
-        if let cached = dnsCache[lower], cached.expires > Date(), let ip = cached.ip, !ip.isEmpty {
-            cacheLock.unlock()
-            completion(ip)
-            return
+        let now = Date()
+        var didComplete = false
+        if !forceRefresh, let cached = getCachedDnsEntry(lower), let ip = cached.ip, !ip.isEmpty {
+            if now < cached.freshUntil {
+                completion(ip)
+                return
+            } else if now < cached.staleUntil {
+                didComplete = true
+                completion(ip)
+                // Revalidate in background below
+            }
         }
-        cacheLock.unlock()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var hints = addrinfo(
@@ -1543,12 +1740,13 @@ public final class LocalSocks5DnsBridge {
                 freeaddrinfo(res)
             }
             if let ip = resolvedIp {
-                self?.cacheLock.lock()
-                self?.dnsCache[lower] = (ip, Date().addingTimeInterval(300))
-                self?.cacheLock.unlock()
+                self?.setCachedDnsEntry(lower, ip: ip, freshTtl: 1800, staleTtl: 86400)
             }
-            self?.queue.async {
-                completion(resolvedIp)
+            if !didComplete {
+                didComplete = true
+                self?.queue.async {
+                    completion(resolvedIp)
+                }
             }
         }
     }
@@ -1558,11 +1756,14 @@ public final class LocalSocks5DnsBridge {
             unregisterAndCancel(clientConn)
             return
         }
-        let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: .tcp)
+        let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(upConn)
         var handshaked = false
         queue.asyncAfter(deadline: .now() + 8.0) { [weak self] in
             if !handshaked {
+                self?.cacheLock.lock()
+                self?.recentUpstreamFailure = true
+                self?.cacheLock.unlock()
                 self?.unregisterAndCancel(upConn)
                 self?.unregisterAndCancel(clientConn)
             }
@@ -1596,6 +1797,7 @@ public final class LocalSocks5DnsBridge {
                         return
                     }
                     handshaked = true
+                    self.markTrafficActivity()
                     clientConn.send(content: Data([0x05, 0x00, 0x00, 0x01, 127, 0, 0, 1, 0, 0]), completion: .contentProcessed { [weak self] err in
                         guard let self = self, err == nil else {
                             self?.unregisterAndCancel(clientConn)
@@ -1609,11 +1811,19 @@ public final class LocalSocks5DnsBridge {
             case .waiting:
                 self.queue.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                     if !handshaked {
+                        self?.cacheLock.lock()
+                        self?.recentUpstreamFailure = true
+                        self?.cacheLock.unlock()
                         self?.unregisterAndCancel(upConn)
                         self?.unregisterAndCancel(clientConn)
                     }
                 }
             case .failed, .cancelled:
+                if !handshaked {
+                    self.cacheLock.lock()
+                    self.recentUpstreamFailure = true
+                    self.cacheLock.unlock()
+                }
                 self.unregisterAndCancel(upConn)
                 self.unregisterAndCancel(clientConn)
             default:
@@ -1626,6 +1836,7 @@ public final class LocalSocks5DnsBridge {
     private func pipe(from source: NWConnection, to destination: NWConnection) {
         source.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, err in
             if let data = data, !data.isEmpty {
+                self?.markTrafficActivity()
                 destination.send(content: data, isComplete: isComplete, completion: .contentProcessed { [weak self] sendErr in
                     if sendErr != nil || err != nil {
                         self?.unregisterAndCancel(source)

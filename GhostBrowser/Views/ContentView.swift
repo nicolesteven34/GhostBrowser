@@ -16,6 +16,7 @@ public struct ContentView: View {
     @State private var sessionToolsInitialTab: SessionToolsSheet.ToolTab = .proxy
     @State private var showWipeAlert: Bool = false
     @State private var showHistoryDropdown: Bool = false
+    @State private var showSessionNotesWindow: Bool = false
     @FocusState private var isAddressBarFocused: Bool
 
     // Real Identity Rotation Toast Notification
@@ -97,6 +98,20 @@ public struct ContentView: View {
             // Per-Profile Omnibox History & Autocomplete Dropdown
             if showHistoryDropdown && !filteredProfileHistory.isEmpty {
                 omniboxHistoryDropdownView
+            }
+
+            // Native Floating Session Notes / Scratchpad Window (100% outside WebKit/DOM)
+            if showSessionNotesWindow {
+                SessionNotesOverlayView(
+                    profileID: profileManager.activeProfile.id,
+                    profileName: profileManager.activeProfile.name,
+                    themeColorHex: profileManager.activeProfile.themeColorHex,
+                    currentURL: activeTab?.urlString ?? "",
+                    isPresented: $showSessionNotesWindow
+                )
+                .padding(.top, 96)
+                .zIndex(997)
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
             }
 
             // In-App Toast Banner on Identity / Profile Changes
@@ -418,6 +433,20 @@ public struct ContentView: View {
                         .clipShape(Circle())
                 }
 
+                // Native Session Notes / Scratchpad Window Button (100% Native UI, Invisible to DOM)
+                Button(action: {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                        showSessionNotesWindow.toggle()
+                    }
+                }) {
+                    Image(systemName: "note.text")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(showSessionNotesWindow ? .black : .yellow)
+                        .padding(8)
+                        .background(showSessionNotesWindow ? Color.yellow : Color.yellow.opacity(0.15))
+                        .clipShape(Circle())
+                }
+
                 // Proxy, Media & Sensors HUD (SOCKS5 Proxy, Virtual Camera, Mock GPS & Evergreen Engine Updates)
                 Button(action: {
                     sessionToolsInitialTab = .proxy
@@ -504,111 +533,126 @@ public struct ContentView: View {
         .background(Color(.systemBackground))
     }
 
-    // MARK: - Safari Horizontal Tab Bar
+    // MARK: - Safari Horizontal Tab Bar (High-Sensitivity Touch Targets for iPadOS/iOS)
     private var safariTabBar: some View {
         HStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     ForEach(tabs) { tab in
                         tabItemView(for: tab)
                     }
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.vertical, 5)
             }
 
-            // Tab Bar Plus Button
+            // Tab Bar Plus Button (Full 38x38pt High-Sensitivity Touch Target)
             Button(action: {
                 addNewTab()
             }) {
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 30, height: 28)
-                    .background(Color(.systemGray5).opacity(0.7))
-                    .cornerRadius(7)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.primary)
+                    .frame(width: 34, height: 34)
+                    .background(Color(.systemGray5).opacity(0.85))
+                    .cornerRadius(8)
+                    .frame(width: 42, height: 40)
+                    .contentShape(Rectangle())
             }
-            .padding(.trailing, 10)
+            .buttonStyle(.plain)
+            .padding(.trailing, 6)
         }
+        .frame(minHeight: 46)
         .background(Color(.systemGray6).opacity(0.75))
     }
 
-    // MARK: - Individual Tab Capsule View
+    // MARK: - Individual Tab Capsule View (Split Sibling Buttons for Zero Gesture Conflict & 38x38pt Close Target)
     @ViewBuilder
     private func tabItemView(for tab: BrowserTab) -> some View {
         let isActive = (tab.id == activeTabID)
         let themeColor = Color(hex: profileManager.activeProfile.themeColorHex)
 
-        HStack(spacing: 8) {
-            // Tab Status Icon / Loading Spinner / Favicon
-            if tab.isLoading {
-                ProgressView()
-                    .scaleEffect(0.65)
-                    .frame(width: 14, height: 14)
-            } else if tab.urlString == "local://startpage" {
-                Image(systemName: "shield.lefthalf.filled")
-                    .font(.system(size: 12))
-                    .foregroundColor(isActive ? themeColor : .secondary)
-            } else if let favURL = tab.faviconURL {
-                AsyncImage(url: favURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 14, height: 14)
-                            .cornerRadius(3)
-                    default:
+        HStack(spacing: 0) {
+            // 1. Main Tab Selection Button (Full-Pill Touch Area)
+            Button(action: {
+                selectTab(id: tab.id)
+            }) {
+                HStack(spacing: 8) {
+                    // Tab Status Icon / Loading Spinner / Favicon
+                    if tab.isLoading {
+                        ProgressView()
+                            .scaleEffect(0.65)
+                            .frame(width: 15, height: 15)
+                    } else if tab.urlString == "local://startpage" {
+                        Image(systemName: "shield.lefthalf.filled")
+                            .font(.system(size: 13))
+                            .foregroundColor(isActive ? themeColor : .secondary)
+                    } else if let favURL = tab.faviconURL {
+                        AsyncImage(url: favURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 15, height: 15)
+                                    .cornerRadius(3)
+                            default:
+                                Image(systemName: "globe")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(isActive ? themeColor : .secondary)
+                            }
+                        }
+                        .frame(width: 15, height: 15)
+                    } else {
                         Image(systemName: "globe")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
                             .foregroundColor(isActive ? themeColor : .secondary)
                     }
+
+                    // Truncated Tab Title
+                    Text(tabDisplayTitle(tab))
+                        .font(.system(size: 13, weight: isActive ? .semibold : .medium))
+                        .foregroundColor(isActive ? .primary : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(minWidth: 72, maxWidth: 165, alignment: .leading)
                 }
-                .frame(width: 14, height: 14)
-            } else {
-                Image(systemName: "globe")
-                    .font(.system(size: 12))
-                    .foregroundColor(isActive ? themeColor : .secondary)
+                .padding(.leading, 12)
+                .padding(.trailing, 6)
+                .frame(height: 38)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
-            // Truncated Tab Title
-            Text(tabDisplayTitle(tab))
-                .font(.system(size: 12, weight: isActive ? .semibold : .regular))
-                .foregroundColor(isActive ? .primary : .secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: 160, alignment: .leading)
-
-            // Close Tab Button
+            // 2. Dedicated Close Tab Button (38x38pt Hit-Test Target with 22x22pt Visual Circle)
             Button(action: {
                 withAnimation(.easeInOut(duration: 0.18)) {
                     closeTab(id: tab.id)
                 }
             }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(isActive ? .primary.opacity(0.7) : .secondary.opacity(0.7))
-                    .frame(width: 18, height: 18)
-                    .background(Color.secondary.opacity(0.12))
-                    .clipShape(Circle())
+                ZStack {
+                    Circle()
+                        .fill(isActive ? Color.secondary.opacity(0.18) : Color.secondary.opacity(0.12))
+                        .frame(width: 22, height: 22)
+
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(isActive ? .primary.opacity(0.85) : .secondary.opacity(0.85))
+                }
+                .frame(width: 38, height: 38)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(BorderlessButtonStyle())
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isActive ? Color(.systemBackground) : Color(.systemGray5).opacity(0.5))
+            RoundedRectangle(cornerRadius: 9)
+                .fill(isActive ? Color(.systemBackground) : Color(.systemGray5).opacity(0.55))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isActive ? themeColor.opacity(0.35) : Color.clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(isActive ? themeColor.opacity(0.45) : Color.secondary.opacity(0.15), lineWidth: 1)
         )
-        .shadow(color: isActive ? Color.black.opacity(0.06) : Color.clear, radius: 2, x: 0, y: 1)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selectTab(id: tab.id)
-        }
+        .shadow(color: isActive ? Color.black.opacity(0.08) : Color.clear, radius: 2, x: 0, y: 1)
     }
 
     // MARK: - Per-Profile Omnibox History & Autocomplete Dropdown
