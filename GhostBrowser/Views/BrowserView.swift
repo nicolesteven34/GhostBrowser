@@ -459,7 +459,7 @@ public struct BrowserView: UIViewRepresentable {
                         self.parent.privacyProfile.regenerateRealisticIdentity()
                     } else if target == "ghost-action://rotateseed" {
                         self.parent.privacyProfile.rotateIdentitySeed()
-                    } else if target == "ghost://detect" || target == "local://detect" || target == "ghost://integrity" {
+                    } else if target == "flagmeter://detect" || target == "ghost://detect" || target == "local://detect" || target == "ghost://integrity" {
                         self.loadURL("https://flagmeter.com")
                     } else {
                         self.loadURL(target)
@@ -529,7 +529,7 @@ public struct BrowserView: UIViewRepresentable {
                 return
             }
 
-            if urlString == "ghost://detect" || urlString == "local://detect" || urlString == "ghost://integrity" || urlString.contains("detect.ghost") {
+            if urlString == "flagmeter://detect" || urlString == "ghost://detect" || urlString == "local://detect" || urlString == "ghost://integrity" || urlString.contains("detect.ghost") {
                 loadURL("https://flagmeter.com", forceReload: forceReload)
                 return
             }

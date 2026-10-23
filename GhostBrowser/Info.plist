@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>GhostBrowser</string>
+    <string>FlagMeter Browser</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -17,19 +17,19 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>3.6.8</string>
+    <string>3.6.9</string>
     <key>CFBundleVersion</key>
-    <string>31</string>
+    <string>32</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSCameraUsageDescription</key>
-    <string>GhostBrowser requires camera access for WebRTC and media capture.</string>
+    <string>FlagMeter Browser requires camera access for WebRTC and media capture.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>GhostBrowser requires microphone access for WebRTC and audio capture.</string>
+    <string>FlagMeter Browser requires microphone access for WebRTC and audio capture.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>GhostBrowser allows selecting photos and videos for the virtual camera stream.</string>
+    <string>FlagMeter Browser allows selecting photos and videos for the virtual camera stream.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>GhostBrowser uses location services if enabled.</string>
+    <string>FlagMeter Browser uses location services if enabled.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>

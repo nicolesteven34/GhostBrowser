@@ -227,7 +227,7 @@ public struct ProfileManagerSheet: View {
                                         HStack(spacing: 5) {
                                             Image(systemName: "checkmark.shield.fill")
                                                 .font(.system(size: 12, weight: .semibold))
-                                            Text("FlagMeter • GhostDetect")
+                                            Text("Launch FlagMeter")
                                                 .font(.system(size: 12, weight: .semibold))
                                         }
                                         .padding(.horizontal, 10)
@@ -375,7 +375,7 @@ public struct ProfileManagerSheet: View {
                 }
             }
             .searchable(text: $searchQuery, prompt: "Search profiles, IP, ISP, city, or device...")
-            .navigationTitle("Antidetect Browser Profiles")
+            .navigationTitle("FlagMeter Browser Profiles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
