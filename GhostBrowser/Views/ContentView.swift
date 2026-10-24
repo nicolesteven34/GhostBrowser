@@ -197,6 +197,20 @@ public struct ContentView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
+        } else if lower.hasPrefix("flagmeter://") {
+            let scheme = String(url.prefix(12))
+            let rest = String(url.dropFirst(12))
+            HStack(spacing: 0) {
+                Text(scheme)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(red: 0.19, green: 0.82, blue: 0.35))
+                    .shadow(color: Color(red: 0.19, green: 0.82, blue: 0.35).opacity(0.45), radius: 3, x: 0, y: 0)
+                Text(rest)
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         } else if lower.hasPrefix("ghost://") {
             let scheme = String(url.prefix(8))
             let rest = String(url.dropFirst(8))
@@ -279,7 +293,7 @@ public struct ContentView: View {
 
                 // Safari Search & Address Bar with Green-Lit https:// & Per-Profile History Dropdown Trigger
                 let lowerURL = inputURLText.lowercased()
-                let isEncryptedHTTPS = lowerURL.hasPrefix("https://") || lowerURL.hasPrefix("ghost://")
+                let isEncryptedHTTPS = lowerURL.hasPrefix("https://") || lowerURL.hasPrefix("flagmeter://") || lowerURL.hasPrefix("ghost://")
                 let isUnencryptedHTTP = lowerURL.hasPrefix("http://")
 
                 HStack(spacing: 8) {
@@ -406,7 +420,7 @@ public struct ContentView: View {
                         onLaunchGhostDetect: {
                             if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
                                 tabs[index].urlString = "https://flagmeter.com"
-                                tabs[index].title = "FlagMeter — GhostDetect Lab"
+                                tabs[index].title = "FlagMeter Pro"
                                 inputURLText = "https://flagmeter.com"
                                 profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                             }
@@ -416,11 +430,11 @@ public struct ContentView: View {
 
                 Spacer(minLength: 4)
 
-                // FlagMeter / GhostDetect Unified Integrity Suite Quick-Launch Button
+                // FlagMeter Pro Unified Integrity Suite Quick-Launch Button
                 Button(action: {
                     if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
                         tabs[index].urlString = "https://flagmeter.com"
-                        tabs[index].title = "FlagMeter — GhostDetect Lab"
+                        tabs[index].title = "FlagMeter Pro"
                         inputURLText = "https://flagmeter.com"
                         profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                     }

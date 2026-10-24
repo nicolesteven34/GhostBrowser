@@ -736,11 +736,11 @@ public struct BrowserView: UIViewRepresentable {
             parent.isLoading = true
             if let url = webView.url?.absoluteString {
                 if url.hasPrefix("file://") && (url.contains("DetectionSuite") || url.hasSuffix("/index.html")) {
-                    currentLoadedURL = "ghost://detect"
-                    if parent.currentURLString != "ghost://detect" {
-                        parent.currentURLString = "ghost://detect"
+                    currentLoadedURL = "flagmeter://detect"
+                    if parent.currentURLString != "flagmeter://detect" {
+                        parent.currentURLString = "flagmeter://detect"
                     }
-                    parent.pageTitle = "GhostDetect Lab"
+                    parent.pageTitle = "FlagMeter Pro"
                     return
                 }
                 if !url.contains("startpage.html") && url != "about:blank" {

@@ -2052,10 +2052,12 @@
         const u = typeof url === 'string' ? url : (url && url.url ? url.url : '');
         return u.includes('checkip.amazonaws.com') ||
                u.includes('api.ipify.org') ||
+               u.includes('api64.ipify.org') ||
                u.includes('icanhazip.com') ||
                u.includes('ifconfig.me/ip') ||
                u.includes('ipwho.is') ||
                u.includes('ipapi.co') ||
+               u.includes('/api/network') ||
                (u.includes('/api/whoami') && !u.includes('quic6') && !u.includes('v6')) ||
                /\/ip(\?|$)/.test(u);
     }
@@ -6362,11 +6364,64 @@
 
                 if (isTcpIpCheckEndpoint(url)) {
                     const uCheck = String(url || '');
-                    const p = nativeFetch.apply(this, arguments).catch((err) => {
+                    const getKnownIpv4 = () => {
+                        const cands = [
+                            _livePageTcpIp,
+                            (typeof window !== 'undefined' && window.__SERVER__ && window.__SERVER__.ip) ? window.__SERVER__.ip : '',
+                            (cfg && cfg.proxyIp) ? cfg.proxyIp : ''
+                        ];
+                        for (let i = 0; i < cands.length; i++) {
+                            const s = String(cands[i] || '').trim();
+                            if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(s)) return s;
+                        }
+                        return '';
+                    };
+                    const p = nativeFetch.apply(this, arguments).then(async (res) => {
+                        try {
+                            const txt = (await res.clone().text()).trim();
+                            if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(txt)) {
+                                _livePageTcpIp = txt;
+                                if (typeof window !== 'undefined' && window.__SERVER__ && typeof window.__SERVER__ === 'object') {
+                                    window.__SERVER__.ip = txt;
+                                }
+                            } else if (/^[0-9a-fA-F:]+$/.test(txt) && txt.includes(':')) {
+                                const v4 = getKnownIpv4();
+                                if (v4) {
+                                    _livePageTcpIp = v4;
+                                    return new Response(v4, { status: res.status, statusText: res.statusText, headers: res.headers });
+                                }
+                                _livePageTcpIp = txt;
+                            } else if (txt.startsWith('{')) {
+                                const parsed = JSON.parse(txt);
+                                if (parsed && typeof parsed.ip === 'string') {
+                                    const pIp = parsed.ip.trim();
+                                    if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(pIp)) {
+                                        _livePageTcpIp = pIp;
+                                        if (typeof window !== 'undefined' && window.__SERVER__ && typeof window.__SERVER__ === 'object') {
+                                            window.__SERVER__.ip = pIp;
+                                        }
+                                    } else if (pIp.includes(':')) {
+                                        const v4 = getKnownIpv4();
+                                        if (v4) {
+                                            _livePageTcpIp = v4;
+                                            parsed.ip = v4;
+                                            if (parsed.type) parsed.type = 'IPv4';
+                                            return new Response(JSON.stringify(parsed), {
+                                                status: res.status,
+                                                statusText: res.statusText,
+                                                headers: { 'Content-Type': 'application/json; charset=utf-8' }
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {}
+                        return res;
+                    }).catch((err) => {
                         if (uCheck.includes('ipwho.is')) {
                             const meta = getEffectiveProxyMeta();
                             const fallbackJson = JSON.stringify({
-                                ip: meta.ip,
+                                ip: getKnownIpv4() || meta.ip,
                                 success: true,
                                 type: 'IPv4',
                                 country: meta.country || 'United States',
@@ -6380,19 +6435,7 @@
                         }
                         throw err;
                     });
-                    _pendingTcpIpPromise = p.then(async (res) => {
-                        try {
-                            const txt = (await res.clone().text()).trim();
-                            if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(txt) || (/^[0-9a-fA-F:]+$/.test(txt) && txt.includes(':'))) {
-                                _livePageTcpIp = txt;
-                            } else if (txt.startsWith('{')) {
-                                const parsed = JSON.parse(txt);
-                                if (parsed && typeof parsed.ip === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(parsed.ip.trim())) {
-                                    _livePageTcpIp = parsed.ip.trim();
-                                }
-                            }
-                        } catch (e) {}
-                    }).catch(() => {});
+                    _pendingTcpIpPromise = p.then(() => {}).catch(() => {});
                     return p;
                 }
 
@@ -6982,6 +7025,9 @@
 
             function getEffectiveProxyIp() {
                 try {
+                    if (_livePageTcpIp && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(_livePageTcpIp.trim())) {
+                        return _livePageTcpIp.trim();
+                    }
                     if (typeof window !== 'undefined') {
                         if (window.__SERVER__ && typeof window.__SERVER__.ip === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(window.__SERVER__.ip.trim())) {
                             _livePageTcpIp = window.__SERVER__.ip.trim();
@@ -8966,13 +9012,20 @@
                 if (origMatchesDesc && origMatchesDesc.get) {
                     const origMatchesGet = origMatchesDesc.get;
                     const origMediaGet = origMediaDesc && origMediaDesc.get;
+                    const isTouchPersona = (typeof cfg.maxTouchPoints === 'number' ? cfg.maxTouchPoints : (_isWinPersona || _isMacPersona ? 0 : 5)) > 0;
                     const hookedMatchesGet = makeNative(function() {
                         const rawMatches = invokeNativeWithCleanStack(origMatchesGet, this, arguments);
                         try {
                             const mediaStr = origMediaGet ? invokeNativeWithCleanStack(origMediaGet, this, []) : '';
-                            if (typeof mediaStr === 'string' && /\b(?:(?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|-webkit-(?:min-|max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\b/i.test(mediaStr)) {
+                            if (typeof mediaStr === 'string' && /(?:(?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|(?:-(?:webkit|moz|o|ms)-)?(?:min-|max-|-moz-min-|-moz-max-)?device-pixel-ratio|(?:min-|max-)?color(?!-)|(?:any-)?(?:pointer|hover)|touch-enabled)/i.test(mediaStr)) {
                                 const evalClause = (kind, numStr, unit) => {
-                                    const val = parseFloat(numStr);
+                                    let val = NaN;
+                                    if (typeof numStr === 'string' && numStr.includes('/')) {
+                                        const parts = numStr.split('/');
+                                        val = parseFloat(parts[0]) / (parseFloat(parts[1]) || 1);
+                                    } else {
+                                        val = parseFloat(numStr);
+                                    }
                                     if (Number.isNaN(val)) return null;
                                     const k = kind.toLowerCase();
                                     if (k === 'color' || k === 'min-color' || k === 'max-color') {
@@ -8985,8 +9038,8 @@
                                         const u = (unit || 'dppx').toLowerCase();
                                         if (u === 'dpi') dppxVal = val / 96;
                                         else if (u === 'dpcm') dppxVal = val / (96 / 2.54);
-                                        if (k.startsWith('min-') || k.startsWith('-webkit-min-')) return dpr >= dppxVal;
-                                        if (k.startsWith('max-') || k.startsWith('-webkit-max-')) return dpr <= dppxVal;
+                                        if (k.includes('min-')) return dpr >= dppxVal;
+                                        if (k.includes('max-')) return dpr <= dppxVal;
                                         return Math.abs(dpr - dppxVal) < 0.02;
                                     }
                                     const targetDim = k.endsWith('height') ? h : w;
@@ -9002,11 +9055,28 @@
                                 };
                                 let touched = false;
                                 let allTrue = true;
-                                const clauseRe = /\(\s*((?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|-webkit-(?:min-|max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\s*:\s*([0-9.]+)\s*(px|em|rem|in|cm|mm|dppx|dpi|dpcm|x)?\s*\)/gi;
-                                const stripped = mediaStr.replace(clauseRe, (full, kind, numStr, unit) => {
+                                const clauseRe = /\(\s*((?:min-|max-)?device-(?:width|height)|(?:min-|max-)?resolution|(?:-(?:webkit|moz|o|ms)-)?(?:min-|max-|-moz-min-|-moz-max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\s*:\s*([0-9.]+(?:\s*\/\s*[0-9.]+)?)\s*(px|em|rem|in|cm|mm|dppx|dpi|dpcm|x)?\s*\)/gi;
+                                const pointerRe = /\(\s*(any-pointer|pointer|any-hover|hover)\s*:\s*(fine|coarse|hover|none)\s*\)/gi;
+                                const touchRe = /\(\s*(?:-(?:webkit|moz|o|ms)-)?touch-enabled(?:\s*:\s*([0-9]+))?\s*\)/gi;
+                                let stripped = mediaStr.replace(clauseRe, (full, kind, numStr, unit) => {
                                     const ok = evalClause(kind, numStr, unit);
                                     if (ok === null) return full;
                                     touched = true;
+                                    if (!ok) allTrue = false;
+                                    return '';
+                                });
+                                stripped = stripped.replace(pointerRe, (full, prop, val) => {
+                                    const p = prop.toLowerCase();
+                                    const v = val.toLowerCase();
+                                    touched = true;
+                                    const ok = p.endsWith('pointer') ? (isTouchPersona ? v === 'coarse' : v === 'fine') : (isTouchPersona ? v === 'none' : v === 'hover');
+                                    if (!ok) allTrue = false;
+                                    return '';
+                                });
+                                stripped = stripped.replace(touchRe, (full, numStr) => {
+                                    touched = true;
+                                    const wantEnabled = numStr === undefined ? true : parseInt(numStr, 10) > 0;
+                                    const ok = isTouchPersona === wantEnabled;
                                     if (!ok) allTrue = false;
                                     return '';
                                 });
@@ -9014,9 +9084,20 @@
                                     if (!/[(),]/.test(stripped) && !/\bnot\b/i.test(stripped)) {
                                         return allTrue;
                                     }
-                                    const rewritten = mediaStr.replace(clauseRe, (full, kind, numStr, unit) => {
+                                    let rewritten = mediaStr.replace(clauseRe, (full, kind, numStr, unit) => {
                                         const ok = evalClause(kind, numStr, unit);
                                         if (ok === null) return full;
+                                        return ok ? '(color)' : '(max-color: -1)';
+                                    });
+                                    rewritten = rewritten.replace(pointerRe, (full, prop, val) => {
+                                        const p = prop.toLowerCase();
+                                        const v = val.toLowerCase();
+                                        const ok = p.endsWith('pointer') ? (isTouchPersona ? v === 'coarse' : v === 'fine') : (isTouchPersona ? v === 'none' : v === 'hover');
+                                        return ok ? '(color)' : '(max-color: -1)';
+                                    });
+                                    rewritten = rewritten.replace(touchRe, (full, numStr) => {
+                                        const wantEnabled = numStr === undefined ? true : parseInt(numStr, 10) > 0;
+                                        const ok = isTouchPersona === wantEnabled;
                                         return ok ? '(color)' : '(max-color: -1)';
                                     });
                                     if (origMatchMedia) {
@@ -9497,8 +9578,10 @@
                         configurable: true
                     });
                 }
-                if (!_isWinPersona && !_isAndroidPersona) {
+                {
                     const origRmksa = navProto.requestMediaKeySystemAccess;
+                    const isEdgePersona = /Edg\//.test(cfg.userAgent || '');
+                    const isAppleOrmacSafariPersona = !_isWinPersona && !_isAndroidPersona && (!/Chrome\//.test(cfg.userAgent || '') || /iPhone|iPad|iPod/.test(cfg.userAgent || ''));
                     Object.defineProperty(navProto, 'requestMediaKeySystemAccess', {
                         value: makeNative(function requestMediaKeySystemAccess(keySystem, supportedConfigurations) {
                             if (!(this instanceof win.Navigator)) {
@@ -9511,7 +9594,8 @@
                             if (!ks || !Array.isArray(supportedConfigurations) || supportedConfigurations.length === 0) {
                                 return Promise.reject(new DOMException('Invalid keySystem or supportedConfigurations', 'TypeError'));
                             }
-                            if (/^(?:com\.apple\.fps(?:\.\d+_\d+)?|org\.w3\.clearkey)$/i.test(ks)) {
+                            const notSupErr = () => new DOMException('The key system specified is not supported.', 'NotSupportedError');
+                            const makeSynthAccess = () => {
                                 const firstCfg = supportedConfigurations[0] || {};
                                 const accessObj = {
                                     keySystem: ks,
@@ -9523,13 +9607,28 @@
                                     }, 'createMediaKeys', 0)
                                 };
                                 return Promise.resolve(accessObj);
+                            };
+                            if (/^(?:com\.apple\.fps|com\.apple\.fairplay)/i.test(ks)) {
+                                return isAppleOrmacSafariPersona ? makeSynthAccess() : Promise.reject(notSupErr());
                             }
-                            if (typeof origRmksa === 'function') {
+                            if (/^com\.widevine\.alpha/i.test(ks)) {
+                                return isAppleOrmacSafariPersona ? Promise.reject(notSupErr()) : makeSynthAccess();
+                            }
+                            if (/^com\.microsoft\.playready/i.test(ks)) {
+                                return (_isWinPersona && isEdgePersona) ? makeSynthAccess() : Promise.reject(notSupErr());
+                            }
+                            if (/^(?:webkit-)?org\.w3\.clearkey$/i.test(ks)) {
+                                return makeSynthAccess();
+                            }
+                            if (/^com\.adobe\.primetime/i.test(ks)) {
+                                return Promise.reject(notSupErr());
+                            }
+                            if (typeof origRmksa === 'function' && isAppleOrmacSafariPersona) {
                                 try {
                                     return invokeNativeWithCleanStack(origRmksa, this, arguments);
                                 } catch (e) {}
                             }
-                            return Promise.reject(new DOMException('The key system specified is not supported.', 'NotSupportedError'));
+                            return Promise.reject(notSupErr());
                         }, 'requestMediaKeySystemAccess', 2, typeof origRmksa === 'function' ? origRmksa : undefined),
                         writable: true,
                         enumerable: true,
@@ -11187,6 +11286,115 @@
                     });
                 }
             }
+        }
+    } catch (e) {}
+
+    // In-Realm WorkerGlobalScope Prelude via Blob + URL.createObjectURL
+    // Ensures encrypted Worker payloads (Cloudflare Turnstile, DataDome, Akamai v3.5 SharedWorker)
+    // read harmonized WorkerNavigator / OffscreenCanvas WebGL inside WorkerGlobalScope BEFORE
+    // encrypting their telemetry, without hooking window.Worker.
+    try {
+        if (typeof window !== 'undefined' && typeof window.Blob === 'function' && typeof window.URL === 'function' && typeof window.URL.createObjectURL === 'function') {
+            const OrigBlob = window.Blob;
+            const origCreateObjectURL = window.URL.createObjectURL;
+            const _blobPartsMap = new WeakMap();
+
+            const wUa = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+            const wAppVer = (typeof navigator !== 'undefined' && navigator.appVersion) ? navigator.appVersion : '';
+            const wPlat = cfg.platform || ((typeof navigator !== 'undefined' && navigator.platform) ? navigator.platform : 'MacIntel');
+            const wHwc = Number(cfg.hardwareConcurrency) || 10;
+            const wDm = cfg.deviceMemory ? Math.min(8, Number(cfg.deviceMemory)) : 8;
+            const wLang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
+            const wLangs = (typeof navigator !== 'undefined' && Array.isArray(navigator.languages) && navigator.languages.length) ? Array.from(navigator.languages) : [wLang, 'en'];
+            const wGlVendor = cfg.webglVendor || 'Apple Inc.';
+            const wGlRenderer = cfg.webglRenderer || 'Apple GPU';
+            const wWorkerCfgJson = JSON.stringify({
+                ua: wUa,
+                appVer: wAppVer,
+                plat: wPlat,
+                hwc: wHwc,
+                dm: wDm,
+                lang: wLang,
+                langs: wLangs,
+                glVendor: wGlVendor,
+                glRenderer: wGlRenderer
+            });
+
+            const workerPreludeStr = `(function(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(!d||!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d.set,enumerable:d.enumerable,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return origGp.call(this,p);}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);}catch(e){}})();\n`;
+
+            const BlobProxy = makeNative(new Proxy(OrigBlob, {
+                construct(target, args, newTarget) {
+                    const instance = Reflect.construct(target, args, newTarget);
+                    try {
+                        if (args && args.length > 0 && Array.isArray(args[0])) {
+                            const opts = (args.length > 1 && args[1] && typeof args[1] === 'object') ? args[1] : undefined;
+                            _blobPartsMap.set(instance, {
+                                parts: args[0].slice(),
+                                type: (opts && typeof opts.type === 'string') ? opts.type : '',
+                                options: opts
+                            });
+                        }
+                    } catch (e) {}
+                    return instance;
+                },
+                apply(target, thisArg, args) {
+                    return invokeNativeWithCleanStack(target, thisArg, args);
+                }
+            }), 'Blob', 0, OrigBlob);
+
+            Object.defineProperty(OrigBlob.prototype, 'constructor', {
+                value: BlobProxy,
+                writable: true,
+                enumerable: false,
+                configurable: true
+            });
+            Object.defineProperty(window, 'Blob', {
+                value: BlobProxy,
+                writable: true,
+                enumerable: false,
+                configurable: true
+            });
+
+            const hookedCreateObjectURL = makeNative(({
+                createObjectURL(obj) {
+                    try {
+                        const entry = obj && _blobPartsMap.get(obj);
+                        if (entry && Array.isArray(entry.parts) && entry.parts.length > 0) {
+                            const mime = (entry.type || '').toLowerCase().trim();
+                            const isCandidateMime = (mime === '' || mime.includes('javascript') || mime.includes('ecmascript') || mime === 'text/plain');
+                            if (isCandidateMime) {
+                                let sample = '';
+                                for (let i = 0; i < entry.parts.length && sample.length < 4096; i++) {
+                                    const p = entry.parts[i];
+                                    if (typeof p === 'string') {
+                                        sample += p.slice(0, 4096 - sample.length);
+                                    } else if (p && typeof TextDecoder !== 'undefined' && (p instanceof ArrayBuffer || ArrayBuffer.isView(p))) {
+                                        const u8 = p instanceof ArrayBuffer ? new Uint8Array(p, 0, Math.min(p.byteLength, 4096)) : new Uint8Array(p.buffer, p.byteOffset, Math.min(p.byteLength, 4096));
+                                        sample += new TextDecoder('utf-8', { fatal: false }).decode(u8);
+                                    }
+                                }
+                                const trimmed = sample.trimStart();
+                                const isNonJs = /^(?:<!doctype|<html|<svg|<xml|\{\s*"|\[\s*\{|%PDF|\x89PNG|\xFF\xD8\xFF|GIF8|RIFF|\x00asm)/i.test(trimmed);
+                                const hasJsToken = /\b(?:self|onmessage|postMessage|addEventListener|Worker|navigator|importScripts|OffscreenCanvas|WebGL|function|return|var|let|const)\b|=>/.test(sample);
+                                if (!isNonJs && hasJsToken) {
+                                    const patchedBlob = entry.options
+                                        ? new OrigBlob([workerPreludeStr, ...entry.parts], entry.options)
+                                        : new OrigBlob([workerPreludeStr, ...entry.parts]);
+                                    return invokeNativeWithCleanStack(origCreateObjectURL, this, [patchedBlob]);
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                    return invokeNativeWithCleanStack(origCreateObjectURL, this, arguments);
+                }
+            }).createObjectURL, 'createObjectURL', 1, origCreateObjectURL);
+
+            Object.defineProperty(window.URL, 'createObjectURL', {
+                value: hookedCreateObjectURL,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
         }
     } catch (e) {}
 })();

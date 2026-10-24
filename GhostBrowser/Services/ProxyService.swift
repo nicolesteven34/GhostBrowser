@@ -1401,7 +1401,15 @@ public final class LocalSocks5DnsBridge {
         }
 
         if bypassPort53 || !isDnsResolverProbeHostname(targetHost) {
-            connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: true)
+            // Pin dual-stack upstream SOCKS5 proxies to IPv4 (ATYP=0x01) so HTTP egress never flips to IPv6 while WebRTC/DNS use IPv4
+            resolveIpv4Fallback(domain: targetHost) { [weak self] ipv4 in
+                guard let self = self else { return }
+                if let resolvedIpv4 = ipv4, !resolvedIpv4.isEmpty {
+                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: resolvedIpv4, targetPort: targetPort, allowIpv4Fallback: false)
+                } else {
+                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: true)
+                }
+            }
             return
         }
 

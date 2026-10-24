@@ -42,7 +42,10 @@ jobs:
         run: |
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/GhostBrowser.app Payload/
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'FlagMeter Browser'" Payload/GhostBrowser.app/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName 'FlagMeter Browser'" Payload/GhostBrowser.app/Info.plist || true
           zip -qr FlagMeterBrowser.ipa Payload
+          cp FlagMeterBrowser.ipa "FlagMeter Browser.ipa"
           cp FlagMeterBrowser.ipa GhostBrowser.ipa
           echo "FlagMeterBrowser.ipa packaged successfully."
 
@@ -50,23 +53,26 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FlagMeterBrowser-IPA
-          path: FlagMeterBrowser.ipa
+          path: |
+            FlagMeterBrowser.ipa
+            FlagMeter Browser.ipa
           retention-days: 14
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v3.6.9
-          name: FlagMeter Browser v3.6.9 (iPadOS / iOS Hardened Edition)
+          tag_name: v3.7.0
+          name: FlagMeter Browser v3.7.0 (iPadOS / iOS Hardened Edition)
           body: |
-            ## FlagMeter Browser v3.6.9 (iPadOS / iOS Hardened Edition)
-            - Unified **FlagMeter Browser** branding & `flagmeter://detect` integration.
-            - Multi-profile Cookie Backup & Restore (never converts host-only cookies into domain cookies).
-            - Top-left aligned native Session Notes overlay (`UITextView`).
-            - Background tab lifecycle & session resume harmonization.
+            ## FlagMeter Browser v3.7.0 (iPadOS / iOS Hardened Edition)
+            - Updated **FlagMeter Browser** 3D Glowing Neon-Cyan Shield & Compass icon across all iPhone/iPad idioms & Home Screen.
+            - Explicit `FlagMeter Browser` display & bundle name (`CFBundleDisplayName` & `CFBundleName`).
+            - Aligned Start Page `FlagMeter Pro` shortcut icon and top toolbar layout.
+            - Hardened Dual-Stack IPv4/IPv6 & CGNAT WebRTC/UDP/DNS egress coherence across refreshes.
           files: |
             FlagMeterBrowser.ipa
+            FlagMeter Browser.ipa
             GhostBrowser.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

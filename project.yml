@@ -15,6 +15,8 @@ targets:
       base:
         PRODUCT_NAME: "GhostBrowser"
         PRODUCT_BUNDLE_IDENTIFIER: "com.local.privacy.GhostBrowser"
+        INFOPLIST_KEY_CFBundleDisplayName: "FlagMeter Browser"
+        INFOPLIST_KEY_CFBundleName: "FlagMeter Browser"
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: "GhostBrowser/Info.plist"
         GENERATE_INFOPLIST: "NO"
