@@ -1319,7 +1319,24 @@ async function runFullAudit() {
                             totalProbes: ecomm3Res.akamaiSbsd120.totalProbes,
                             totalCollectors: ecomm3Res.akamaiSbsd120.totalCollectors
                         } : null
-                    } : null
+                    } : null,
+                    googleIntegritySummary: window.__LAST_GOOGLE_INTEGRITY_DATA ? {
+                        passedCount: window.__LAST_GOOGLE_INTEGRITY_DATA.passedCount,
+                        totalCount: window.__LAST_GOOGLE_INTEGRITY_DATA.totalCount,
+                        failedProbes: (window.__LAST_GOOGLE_INTEGRITY_DATA.probes || []).filter(p => !p.passed).map(p => ({ id: p.id, metric: p.metric }))
+                    } : null,
+                    scoringDoctrineSummary: window.__LAST_SCORING_DOCTRINE_REPORT ? {
+                        passedCount: (window.__LAST_SCORING_DOCTRINE_REPORT.engines || []).filter(e => e.passed).length,
+                        totalCount: (window.__LAST_SCORING_DOCTRINE_REPORT.engines || []).length,
+                        failedEngines: (window.__LAST_SCORING_DOCTRINE_REPORT.engines || []).filter(e => !e.passed).map(e => ({ id: e.id, telemetry: e.telemetry }))
+                    } : null,
+                    stage8Risks: {
+                        uncoveredFails: window.__LAST_UNCOVERED_AUDIT?.failCount || 0,
+                        ecommerceRisk: window.__LAST_ECOMMERCE_DATA?.riskScore || 0,
+                        shoppingRisk: window.__LAST_SHOPPING_DATA?.riskScore || 0,
+                        ecommerce3Risk: window.__LAST_ECOMMERCE3_DATA?.riskScore || 0,
+                        paymentsRisk: window.__LAST_PAYMENTS_DATA?.riskScore || 0
+                    }
                 })
             }).catch(() => {});
         } catch (_) {}

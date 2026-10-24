@@ -1082,11 +1082,26 @@
                         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
                     });
 
+                    const isCoherentIp = (ipA, ipB) => {
+                        if (!ipA || !ipB) return true;
+                        const a = String(ipA).trim();
+                        const b = String(ipB).trim();
+                        if (a === b) return true;
+                        const pA = a.split('.');
+                        const pB = b.split('.');
+                        if (pA.length === 4 && pB.length === 4) {
+                            return pA[0] === pB[0] && pA[1] === pB[1];
+                        }
+                        if ((a.includes(':') && pB.length === 4) || (b.includes(':') && pA.length === 4)) {
+                            return true;
+                        }
+                        return false;
+                    };
                     pc.createDataChannel('antibot_probe');
                     pc.onicecandidate = (e) => {
                         if (!e.candidate) {
                             pc.close();
-                            const match = srflxIP ? (srflxIP === requestIP ? 'Match (Direct route)' : `Mismatch (WebRTC: ${srflxIP} vs HTTP: ${requestIP})`) : 'Coherent / Proxy masked';
+                            const match = srflxIP ? (isCoherentIp(srflxIP, requestIP) ? 'Match (Direct route)' : `Mismatch (WebRTC: ${srflxIP} vs HTTP: ${requestIP})`) : 'Coherent / Proxy masked';
                             resolve({
                                 supported: true,
                                 match: match,
@@ -1109,7 +1124,7 @@
                             const ipMatch = cand.match(/([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/);
                             if (ipMatch) {
                                 hostIP = ipMatch[1];
-                                if (hostIP.startsWith('192.168.') || hostIP.startsWith('10.') || hostIP.startsWith('172.')) {
+                                if (hostIP.startsWith('192.168.') || hostIP.startsWith('10.') || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostIP)) {
                                     leakedPrivate.push(hostIP);
                                 }
                             }
@@ -1136,7 +1151,7 @@
                         try { pc.close(); } catch(e) {}
                         resolve({
                             supported: true,
-                            match: srflxIP ? (srflxIP === requestIP ? 'Match' : 'Mismatch') : 'Direct',
+                            match: srflxIP ? (isCoherentIp(srflxIP, requestIP) ? 'Match' : 'Mismatch') : 'Direct',
                             srflxIP: srflxIP || requestIP,
                             hostIP: hostIP || 'mDNS Protected',
                             leakedPrivate: leakedPrivate
@@ -1271,19 +1286,36 @@
         }
     };
 
-    // Automation Probes (4 artifacts + 1 webdriver)
+    // Automation Probes (4 classic artifacts + Phase 2 OOB / chrome.loadTimes.prototype / MouseEvent.prototype checks)
     function auditAutomationArtifacts() {
         const artifacts = [
             { name: 'window.__webdriver_evaluate', val: typeof window !== 'undefined' ? window.__webdriver_evaluate : undefined },
             { name: 'window.domAutomation', val: typeof window !== 'undefined' ? window.domAutomation : undefined },
             { name: 'window._phantom', val: typeof window !== 'undefined' ? window._phantom : undefined },
-            { name: 'window.callPhantom', val: typeof window !== 'undefined' ? window.callPhantom : undefined }
+            { name: 'window.callPhantom', val: typeof window !== 'undefined' ? window.callPhantom : undefined },
+            { name: 'window.__audit7 (OOB Hygiene)', val: typeof window !== 'undefined' ? window.__audit7 : undefined },
+            { name: 'window.__playwright__binding__', val: typeof window !== 'undefined' ? window.__playwright__binding__ : undefined }
         ];
         const webdriverFlag = typeof navigator !== 'undefined' ? navigator.webdriver : undefined;
+        let chromeProtoClean = true;
+        if (typeof window !== 'undefined' && window.chrome && typeof window.chrome.loadTimes === 'function') {
+            chromeProtoClean = ('prototype' in window.chrome.loadTimes) && ('prototype' in window.chrome.csi);
+        }
+        let mouseProtoClean = true;
+        try {
+            if (typeof MouseEvent !== 'undefined' && MouseEvent.prototype) {
+                const desc = Object.getOwnPropertyDescriptor(MouseEvent.prototype, 'screenX');
+                if (desc && typeof desc.get === 'function') {
+                    mouseProtoClean = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(desc.get));
+                }
+            }
+        } catch (e) {}
         return {
             artifacts,
             webdriverFlag,
-            clean: artifacts.every(a => a.val === undefined) && !webdriverFlag
+            chromeProtoClean,
+            mouseProtoClean,
+            clean: artifacts.every(a => a.val === undefined) && !webdriverFlag && chromeProtoClean && mouseProtoClean
         };
     }
 

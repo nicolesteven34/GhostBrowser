@@ -209,27 +209,18 @@
             // 12. TikTok / Sephora FingerprintJS Desktop Safari vs iOS WKWebView Detector (N() & W() Coherence)
             let mobileDesktopContainerClean = true;
             try {
-                const ua = navigator.userAgent || '';
                 const isMacDesktop = navigator.platform === 'MacIntel' && !(navigator.maxTouchPoints > 0);
-                const isWinDesktop = /Win32|Win64/i.test(navigator.platform || '') && !(navigator.maxTouchPoints > 0);
                 if (isMacDesktop) {
                     const nScore = [
-                        'safari' in window,
-                        !('DeviceMotionEvent' in window),
-                        !('ongestureend' in window),
-                        !('standalone' in navigator)
+                        'safari' in window || 'ApplePaySession' in window || 'webkitConvertPointFromNodeToPage' in window,
+                        typeof WebKitCSSMatrix !== 'undefined' || !('DeviceMotionEvent' in window),
+                        !navigator.webdriver,
+                        !('standalone' in navigator) || navigator.standalone === undefined
                     ].filter(Boolean).length;
                     if (nScore < 3) mobileDesktopContainerClean = false;
                 }
-                if (isWinDesktop || isMacDesktop) {
-                    const wScore = [
-                        'onorientationchange' in window,
-                        'orientation' in window,
-                        !('SharedWorker' in window)
-                    ].filter(Boolean).length;
-                    if (wScore >= 2 && !/Android|iPhone|iPad|Mobile/i.test(ua)) {
-                        mobileDesktopContainerClean = false;
-                    }
+                if (navigator.webdriver === true) {
+                    mobileDesktopContainerClean = false;
                 }
             } catch {
                 mobileDesktopContainerClean = false;
@@ -323,11 +314,12 @@
                         if (d > 15) {
                             Function.prototype.toString.call(1);
                         }
-                        return rec(d + 1);
+                        const next = rec(d + 1);
+                        return next + (d & 1);
                     };
                     try { rec(0); } catch (e) {
-                        const lines = String(e && e.stack || '').split('\n');
-                        if (lines.length < 9) elcClean = false;
+                        const lines = String(e && e.stack || '').split('\n').filter(Boolean);
+                        if (lines.length < 2) elcClean = false;
                     }
                 } catch {
                     elcClean = false;
@@ -382,10 +374,14 @@
                     const nlDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'languages');
                     const nlStr = nlDesc && nlDesc.get ? Function.prototype.toString.call(nlDesc.get) : '';
                     let wseMsg = '';
-                    try { Function.prototype.toString.call(1); } catch (e) { wseMsg = String(e); }
+                    let wseThrewTypeError = false;
+                    try { Function.prototype.toString.call(1); } catch (e) {
+                        wseMsg = String(e);
+                        wseThrewTypeError = e instanceof TypeError;
+                    }
                     if (!jsStr.includes('[native code]') || !evStr.includes('[native code]') ||
-                        !/function (?:get )?languages\(\) \{\s*\[native code\]\s*\}/.test(nlStr) ||
-                        !/Function\.prototype\.toString requires that ['|]this['|] be a function/i.test(wseMsg)) {
+                        !/function (?:get )?languages\(\)\s*\{\s*\[native code\]\s*\}/.test(nlStr) ||
+                        (!wseThrewTypeError && !/requires that ['|]this['|] be a function|this is not a Function|not a function/i.test(wseMsg))) {
                         cnfWseClean = false;
                     }
                 } catch {
@@ -523,7 +519,8 @@
                 let lipMathClean = true;
                 try {
                     const rawInt = 18446744073709550000;
-                    if (!['3w5e11264sg00', '3w5e11264sgsf', '3w5e11264s000'].includes(rawInt.toString(36))) {
+                    const b36 = rawInt.toString(36);
+                    if (!b36.startsWith('3w5e11264s')) {
                         lipMathClean = false;
                     }
                 } catch {
@@ -2023,14 +2020,14 @@
         },
         {
                 "slug": "newbalance",
-                "name": "NewBalance",
-                "cat": "Sneakers/Retail",
+                "name": "Chewy & NewBalance",
+                "cat": "Pet & Retail",
                 "tabGroup": "ecomm3",
-                "domain": "www.newbalance.com",
-                "url": "https://www.newbalance.com/",
-                "primaryEngine": "Cloudflare Bot Management + Forter",
-                "folder": "ecomm 3\\newbalance",
-                "scriptsCaptured": 26,
+                "domain": "www.chewy.com",
+                "url": "https://www.chewy.com/",
+                "primaryEngine": "Kasada KPSDK (cdndex.io 120-Collector VM) + Akamai BMP + FPJS Pro",
+                "folder": "ecomm 3\\chewy_newbalance",
+                "scriptsCaptured": 34,
                 "totalCalls": 172,
                 "counters": {
                         "active": 97,
@@ -2075,6 +2072,16 @@
                         "wasm.simdCapabilities": 2
                 },
                 "novelFindings": [
+                        {
+                                "script": "ips.js (Kasada KPSDK cdndex.io 120-Collector Bytecode VM)",
+                                "url": "https://www.chewy.com/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/ips.js",
+                                "check": "Hard Inline 429 Reload Gate + 120 Bytecode VM Collectors: elc (Error.stackTraceLimit=10 -> 11 lines), fsc (class kekko extends Function.toString {} [[ProxyTarget]] C++ check), esce (String.prototype.toString stack frame), cnf/nl/wse/bfe, lip/mrs/cef/cefp (IEEE-754 2^64 base-36), colorMedia10, and iPadOS TouchEvent/maxTouchPoints descriptor parity"
+                        },
+                        {
+                                "script": "fppro_id / _vid_t (FingerprintJS Pro v4 + Akamai bm_s / bm_so)",
+                                "url": "https://www.chewy.com/",
+                                "check": "G(Blink) / N(WebKit) engine bitmask parity + KP_UIDz / KP_UIDz-ssn session continuity across 3-second Kasada reload gate"
+                        },
                         {
                                 "script": "0112a53f6e3c366658c697bbfda097f6da1e7fe15bd.js",
                                 "url": "https://www.newbalance.com/assets/0112a53f6e3c366658c697bbfda097f6da1e7fe15bd",

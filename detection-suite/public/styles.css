@@ -138,6 +138,19 @@ html[data-theme="cream-dusk"] {
 .fm-botlens-tier-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
+.fm-tier3-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+@media (max-width: 1200px) {
+  .fm-tier3-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 560px) {
+  .fm-tier3-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
 .fm-dual-special-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -193,7 +206,7 @@ html[data-theme="cream-dusk"] {
 
 @media (max-width: 860px) {
   .fm-dual-special-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .fm-sensor-indicator {
     display: none;

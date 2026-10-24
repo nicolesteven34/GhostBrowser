@@ -1650,6 +1650,306 @@
             });
         } catch (e) {}
 
+        // --------------------------------------------------------------------
+        // PROBE UF-17: Phase 2 Gap #1 — Blob + URL.createObjectURL Worker Realm
+        //   (WorkerNavigator.webdriver, userAgentData Brand Filter & OffscreenCanvas GPU Parity)
+        // --------------------------------------------------------------------
+        try {
+            let mainVendor = '', mainRenderer = '';
+            try {
+                const c = document.createElement('canvas');
+                const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+                if (gl) {
+                    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+                    mainVendor = String(gl.getParameter(dbg ? dbg.UNMASKED_VENDOR_WEBGL : 37445) || '');
+                    mainRenderer = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : 37446) || '');
+                }
+            } catch (e) {}
+
+            const blobWorkerAudit = await new Promise((resolve) => {
+                const timer = setTimeout(() => resolve({ timeout: true }), 1400);
+                try {
+                    const code = `
+                        (async function() {
+                            try {
+                                let wVendor = '', wRenderer = '';
+                                if (typeof OffscreenCanvas !== 'undefined') {
+                                    const oc = new OffscreenCanvas(16, 16);
+                                    const gl = oc.getContext('webgl') || oc.getContext('webgl2');
+                                    if (gl) {
+                                        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+                                        wVendor = String(gl.getParameter(dbg ? dbg.UNMASKED_VENDOR_WEBGL : 37445) || '');
+                                        wRenderer = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : 37446) || '');
+                                    }
+                                }
+                                let brands = [];
+                                let fvl = [];
+                                if (self.navigator.userAgentData) {
+                                    brands = (self.navigator.userAgentData.brands || []).map(b => b.brand);
+                                    if (typeof self.navigator.userAgentData.getHighEntropyValues === 'function') {
+                                        const hev = await self.navigator.userAgentData.getHighEntropyValues(['fullVersionList']);
+                                        fvl = (hev.fullVersionList || []).map(b => b.brand);
+                                    }
+                                }
+                                self.postMessage({
+                                    webdriver: self.navigator.webdriver,
+                                    cores: self.navigator.hardwareConcurrency,
+                                    ua: self.navigator.userAgent,
+                                    wVendor,
+                                    wRenderer,
+                                    brands,
+                                    fvl
+                                });
+                            } catch (err) {
+                                self.postMessage({ error: String(err) });
+                            }
+                        })();
+                    `;
+                    const blob = new Blob([code], { type: 'application/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    const w = new Worker(url);
+                    w.onmessage = (ev) => {
+                        clearTimeout(timer);
+                        try { w.terminate(); URL.revokeObjectURL(url); } catch (err) {}
+                        resolve(ev.data || {});
+                    };
+                    w.onerror = (err) => {
+                        clearTimeout(timer);
+                        try { w.terminate(); URL.revokeObjectURL(url); } catch (e) {}
+                        resolve({ error: String(err && err.message || 'worker_err') });
+                    };
+                } catch (err) {
+                    clearTimeout(timer);
+                    resolve({ error: String(err) });
+                }
+            });
+
+            const wdLeak = blobWorkerAudit.webdriver === true;
+            const brandLeak = [...(blobWorkerAudit.brands || []), ...(blobWorkerAudit.fvl || [])].some(b => /webview/i.test(String(b)));
+            const gpuMismatch = Boolean(blobWorkerAudit.wRenderer && mainRenderer && blobWorkerAudit.wRenderer !== mainRenderer);
+            const failed = wdLeak || brandLeak || gpuMismatch;
+
+            probes.push({
+                id: 'UF-17',
+                category: 'js_engine',
+                categoryLabel: 'Cat A • JS Engine & Cross-Realm (Phase 2 100-Site Gap)',
+                title: 'Blob + URL.createObjectURL Worker GlobalScope (webdriver, userAgentData Brands & OffscreenCanvas GPU Parity)',
+                source: 'Cloudflare Turnstile (axs.com/ssense.com) • Akamai v3.5 (united.com) • Sardine AI Worker Probe',
+                threat: 'CRITICAL',
+                expected: `Worker(URL.createObjectURL(Blob)) reports webdriver===false, 0 "WebView2" brands, and OffscreenCanvas GPU === Main (${mainRenderer.slice(0, 36)})`,
+                measured: `w.webdriver=${blobWorkerAudit.webdriver} • WebView2BrandLeak=${brandLeak} • WorkerGPU="${(blobWorkerAudit.wRenderer || mainRenderer).slice(0, 36)}"`,
+                liveStatus: failed ? 'FAIL' : 'PASS',
+                edgeStatus: 'FAIL (Without _blobPartsMap URL.createObjectURL interception, Blob Workers execute in raw unhooked V8 isolate, leaking WebView2 brand & host GPU/cores!)',
+                safariStatus: 'FAIL (Without _blobPartsMap URL.createObjectURL interception, Blob Workers execute in raw WKWebView Worker thread without persona prelude!)',
+                explanation: 'During the 100-Website 7-Layer Audit, Cloudflare Turnstile (axs.com, eventim.us, ssense.com) and Akamai v3.5 (united.com, mintmobile.com) spawned Workers via new Worker(URL.createObjectURL(new Blob([code]))). Without intercepting Blob construction and URL.createObjectURL, the Worker thread runs without the persona GlobalScope prelude.',
+                remediation: 'Intercept new Blob(parts) and URL.createObjectURL(blob) via _blobPartsMap to prepend the full WorkerNavigator + OffscreenCanvas + NavigatorUAData brand-filter prelude into every Blob Worker.'
+            });
+        } catch (e) {}
+
+        // --------------------------------------------------------------------
+        // PROBE UF-18: Phase 2 Gap #2 — window.chrome Prototype & Runtime API Fidelity
+        //   ('prototype' in chrome.loadTimes, 'prototype' in chrome.csi, chrome.app, chrome.runtime)
+        // --------------------------------------------------------------------
+        try {
+            let chromeFidelityClean = true;
+            let measuredDetail = '';
+            if (isApplePersona) {
+                chromeFidelityClean = typeof window.chrome === 'undefined';
+                measuredDetail = `typeof window.chrome="${typeof window.chrome}" (Safari Persona Expected: undefined)`;
+            } else {
+                const hasChrome = typeof window.chrome === 'object' && window.chrome !== null;
+                const ltHasProto = Boolean(hasChrome && typeof window.chrome.loadTimes === 'function' && ('prototype' in window.chrome.loadTimes));
+                const csiHasProto = Boolean(hasChrome && typeof window.chrome.csi === 'function' && ('prototype' in window.chrome.csi));
+                const hasApp = Boolean(hasChrome && typeof window.chrome.app === 'object' && window.chrome.app !== null);
+                const hasRuntime = Boolean(hasChrome && typeof window.chrome.runtime === 'object' && window.chrome.runtime !== null);
+                chromeFidelityClean = hasChrome && ltHasProto && csiHasProto && hasApp && hasRuntime;
+                measuredDetail = `loadTimes.prototype=${ltHasProto} • csi.prototype=${csiHasProto} • chrome.app=${hasApp} • chrome.runtime=${hasRuntime}`;
+            }
+
+            probes.push({
+                id: 'UF-18',
+                category: 'js_engine',
+                categoryLabel: 'Cat A • JS Engine & Cross-Realm (Phase 2 100-Site Gap)',
+                title: 'window.chrome Object & Constructor Prototype Fidelity (loadTimes.prototype, csi.prototype, app & runtime)',
+                source: 'DataDome v5.11.1 tags.js (seatgeek.com / crowdcontrol.stubhub.com / dd.neimanmarcus.com)',
+                threat: 'CRITICAL',
+                expected: isApplePersona
+                    ? 'typeof window.chrome === "undefined" on Apple Safari/WebKit personas'
+                    : '("prototype" in chrome.loadTimes) === true && ("prototype" in chrome.csi) === true && chrome.app/runtime objects present',
+                measured: measuredDetail,
+                liveStatus: chromeFidelityClean ? 'PASS' : 'FAIL',
+                edgeStatus: 'FAIL (Defining chrome.loadTimes / chrome.csi with arrow functions or method shorthand omits .prototype, tripping DataDome tags.js!)',
+                safariStatus: 'PASS (window.chrome is undefined on Apple Safari personas)',
+                explanation: 'Uncovered during Batch 2 & Batch 4 of the 100-Site Audit (seatgeek.com, stubhub.com, neimanmarcus.com): DataDome tags.js explicitly evaluates ("prototype" in window.chrome.loadTimes) and ("prototype" in window.chrome.csi) alongside window.chrome.app.getDetails and window.chrome.runtime.sendMessage.',
+                remediation: 'Construct window.chrome.loadTimes and window.chrome.csi using standard function() {} declarations (preserving .prototype) with complete chrome.app and chrome.runtime objects.'
+            });
+        } catch (e) {}
+
+        // --------------------------------------------------------------------
+        // PROBE UF-19: Phase 2 Gap #3 — Native MouseEvent.prototype & PointerEvent.prototype Purity
+        // --------------------------------------------------------------------
+        try {
+            const eventProps = ['screenX', 'screenY', 'clientX', 'clientY'];
+            let hookedGetters = [];
+            let stackLeak = '';
+            if (typeof MouseEvent !== 'undefined' && MouseEvent.prototype) {
+                for (const prop of eventProps) {
+                    const desc = Object.getOwnPropertyDescriptor(MouseEvent.prototype, prop);
+                    if (desc && typeof desc.get === 'function') {
+                        const fnStr = Function.prototype.toString.call(desc.get);
+                        if (!/\{\s*\[native code\]\s*\}/.test(fnStr)) {
+                            hookedGetters.push(prop);
+                        }
+                        try {
+                            desc.get.call({});
+                        } catch (err) {
+                            const st = String(err && err.stack || '');
+                            const m = st.match(/at\s+(?:Object\.)?get\s+\w+\s*\([^\n]+/i);
+                            if (m && !/\[native code\]/i.test(m[0])) stackLeak = m[0].trim();
+                        }
+                    }
+                }
+            }
+            const failed = hookedGetters.length > 0 || Boolean(stackLeak);
+
+            probes.push({
+                id: 'UF-19',
+                category: 'js_engine',
+                categoryLabel: 'Cat A • JS Engine & Cross-Realm (Phase 2 100-Site Gap)',
+                title: 'MouseEvent.prototype & PointerEvent.prototype Coordinate Accessor C++ Purity',
+                source: 'Kasada KPSDK ips.js (hyatt.com / twitch.tv / razer.com) • DataDome Kinematics Auditor',
+                threat: 'CRITICAL',
+                expected: 'MouseEvent.prototype.screenX/screenY/clientX/clientY getters are 100% untouched C++ native accessors with 0 wrapper frames',
+                measured: `HookedGetters=[${hookedGetters.join(', ') || 'none'}] • InvalidReceiverStack="${stackLeak || 'clean native TypeError'}"`,
+                liveStatus: failed ? 'FAIL' : 'PASS',
+                edgeStatus: 'PASS (Zero JS property wrappers on MouseEvent.prototype or PointerEvent.prototype; OS-level human input dispatches genuine C++ events)',
+                safariStatus: 'PASS (Zero JS property wrappers on MouseEvent.prototype or TouchEvent.prototype)',
+                explanation: 'During our 100-Website Audit on Kasada (hyatt.com, twitch.tv, razer.com) and DataDome (seatgeek.com), we verified that hooking MouseEvent.prototype.screenX/screenY in JS causes immediate prototype descriptor and exception stack failures.',
+                remediation: 'Keep MouseEvent.prototype, PointerEvent.prototype, and Event.prototype.isTrusted 100% untouched in JS and drive interactions via genuine OS/WebView input dispatch.'
+            });
+        } catch (e) {}
+
+        // --------------------------------------------------------------------
+        // PROBE UF-20: Phase 2 Gap #4 — 7-Layer Enclave Tri-Anchor Storage & WASM Coherence
+        // --------------------------------------------------------------------
+        try {
+            let lsOk = false, ssOk = false, idbOk = false, cacheOk = false, wasmOk = false;
+            try {
+                localStorage.setItem('__fm_tri_probe', '1');
+                lsOk = localStorage.getItem('__fm_tri_probe') === '1';
+                localStorage.removeItem('__fm_tri_probe');
+            } catch (e) {}
+            try {
+                sessionStorage.setItem('__fm_tri_probe', '1');
+                ssOk = sessionStorage.getItem('__fm_tri_probe') === '1';
+                sessionStorage.removeItem('__fm_tri_probe');
+            } catch (e) {}
+            try {
+                idbOk = await new Promise((resolve) => {
+                    const t = setTimeout(() => resolve(false), 600);
+                    try {
+                        const req = indexedDB.open('__fm_tri_anchor_db', 1);
+                        req.onsuccess = () => {
+                            clearTimeout(t);
+                            try { req.result.close(); indexedDB.deleteDatabase('__fm_tri_anchor_db'); } catch (e) {}
+                            resolve(true);
+                        };
+                        req.onerror = () => { clearTimeout(t); resolve(false); };
+                    } catch (e) { clearTimeout(t); resolve(false); }
+                });
+            } catch (e) {}
+            try {
+                cacheOk = typeof caches === 'object' && caches !== null;
+            } catch (e) {}
+            try {
+                // Minimal valid 8-byte WebAssembly binary header (\0asm v1)
+                const wasmBytes = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+                const mod = await WebAssembly.instantiate(wasmBytes);
+                wasmOk = Boolean(mod && mod.instance);
+            } catch (e) {}
+
+            const failed = !(lsOk && ssOk && idbOk && wasmOk);
+
+            probes.push({
+                id: 'UF-20',
+                category: 'os_container',
+                categoryLabel: 'Cat B • OS & Host Container Leaks (Phase 2 100-Site Gap)',
+                title: '7-Layer Enclave Tri-Anchor Storage (LS ↔ SS ↔ IndexedDB ↔ CacheStorage) & WebAssembly Execution',
+                source: 'MaxMind minFraud (__mmapiwsDb) • Sardine AI (_immortal|deviceToken) • Snapchat kameleon.wasm / Discord libdiscore.wasm',
+                threat: 'HIGH',
+                expected: 'Simultaneous read/write across localStorage, sessionStorage, IndexedDB, CacheStorage & WebAssembly.instantiate()',
+                measured: `LS=${lsOk} • SS=${ssOk} • IndexedDB=${idbOk} • CacheStorage=${cacheOk} • WASM_Instantiate=${wasmOk}`,
+                liveStatus: failed ? 'FAIL' : 'PASS',
+                edgeStatus: 'PASS (All 7 storage & WASM enclave layers active and isolated per profile)',
+                safariStatus: 'PASS (All 7 storage & WASM enclave layers active in non-ephemeral WKWebsiteDataStore)',
+                explanation: 'Uncovered in Batch 1, Batch 8 & Batch 10 of the 100-Site Audit: MaxMind minFraud (__mmapiwsid + __mmapiwsDb IndexedDB) and Sardine AI (_immortal|deviceToken) cross-anchor tokens across Cookie, localStorage, and IndexedDB simultaneously, while Snapchat (kameleon.wasm) and Discord (libdiscore.wasm) execute binary WASM attestation.',
+                remediation: 'Ensure persistent per-profile IndexedDB, localStorage, sessionStorage, CacheStorage, and WebAssembly JIT compilation are enabled with zero ephemeral-mode blocks.'
+            });
+        } catch (e) {}
+
+        // --------------------------------------------------------------------
+        // PROBE UF-21: Phase 2 Gap #5 — Private State Token (PAT) Surface & Sec-GPC / Brave Hygiene
+        // --------------------------------------------------------------------
+        try {
+            const gpcVal = navigator.globalPrivacyControl;
+            const hasBraveGlobal = typeof window.brave !== 'undefined';
+            const hasDuckDuckGo = typeof window.duckduckgo !== 'undefined';
+            const pstSupported = typeof document.hasPrivateToken === 'function' || typeof document.hasRedemptionRecord === 'function';
+            const gpcLeak = gpcVal !== undefined;
+            const failed = gpcLeak || hasBraveGlobal || hasDuckDuckGo;
+
+            probes.push({
+                id: 'UF-21',
+                category: 'wkwebview_webview2',
+                categoryLabel: 'Cat C • WKWebView vs Safari & WebView2 vs Edge (Phase 2 100-Site Gap)',
+                title: 'Private State Token (RFC 9577 PAT) Attestation Surface & Privacy-Extension Global Hygiene',
+                source: 'Anthropic Claude (pst-issuer.hcaptcha.com) • Cloudflare Turnstile PAT • eBay Extension Auditor',
+                threat: 'HIGH',
+                expected: 'navigator.globalPrivacyControl === undefined, window.brave === undefined, and clean PAT API surface',
+                measured: `hasPrivateToken=${pstSupported} • globalPrivacyControl=${String(gpcVal)} • window.brave=${hasBraveGlobal}`,
+                liveStatus: failed ? 'FAIL' : 'PASS',
+                edgeStatus: 'PASS (Stock Edge/Chrome PAT surface active; 0 Brave/GPC/extension global leaks)',
+                safariStatus: 'PASS (Stock Apple WebKit surface; 0 Brave/GPC/extension global leaks)',
+                explanation: 'During Batch 9 (claude.ai, openai.com, cloudflare.com), hCaptcha Enterprise and Cloudflare Turnstile probed RFC 9577 Private State Token (document.hasPrivateToken) and checked for anti-tracking browser globals (navigator.globalPrivacyControl, window.brave).',
+                remediation: 'Preserve native Private State Token APIs on Chromium personas and ensure navigator.globalPrivacyControl and window.brave remain undefined.'
+            });
+        } catch (e) {}
+
+        // --------------------------------------------------------------------
+        // PROBE UF-22: Phase 2 Gap #6 — OOB Inspection Hygiene (0 Residual Audit Globals & Native Network APIs)
+        // --------------------------------------------------------------------
+        try {
+            const auditGlobals = ['__audit7', '__ghostInspect', '__ghost_inspect', '__playwright__binding__', '__pwInitScripts', '__puppeteer_evaluation_script__']
+                .filter(k => k in window);
+            const fetchExtraProps = typeof window.fetch === 'function'
+                ? Object.getOwnPropertyNames(window.fetch).filter(k => k !== 'length' && k !== 'name')
+                : [];
+            const xhrSendStr = (typeof XMLHttpRequest !== 'undefined' && XMLHttpRequest.prototype && XMLHttpRequest.prototype.send)
+                ? Function.prototype.toString.call(XMLHttpRequest.prototype.send)
+                : '';
+            const beaconStr = (typeof Navigator !== 'undefined' && Navigator.prototype && Navigator.prototype.sendBeacon)
+                ? Function.prototype.toString.call(Navigator.prototype.sendBeacon)
+                : '';
+            const netApisClean = /\[native code\]/.test(xhrSendStr) && /\[native code\]/.test(beaconStr) && fetchExtraProps.length === 0;
+            const failed = auditGlobals.length > 0 || !netApisClean;
+
+            probes.push({
+                id: 'UF-22',
+                category: 'network_dpi',
+                categoryLabel: 'Cat D • Network, WebRTC & Timing Side-Channels (Phase 2 100-Site Gap)',
+                title: 'Out-of-Band (OOB) Inspection Hygiene — Zero Residual Audit Globals & Native Fetch/XHR/Beacon Descriptors',
+                source: 'F5 Shape Defense (/di/swadc/beacon on southwest.com) • Vanguard PingOne (kraken.com) • Kasada KPSDK',
+                threat: 'CRITICAL',
+                expected: '0 residual inspection globals (__audit7, __pwInitScripts) on window, and 100% native fetch / XHR.send / sendBeacon descriptors',
+                measured: `AuditGlobals=[${auditGlobals.join(', ') || 'none'}] • fetchExtraProps=${fetchExtraProps.length} • XHR/Beacon=[native code] (${netApisClean})`,
+                liveStatus: failed ? 'FAIL' : 'PASS',
+                edgeStatus: 'PASS (100% Out-of-Band host inspection; 0 in-page inspection hooks or globals in ghost_engine_core.js)',
+                safariStatus: 'PASS (100% Out-of-Band host inspection; 0 in-page inspection hooks or globals in anti_fingerprint.js)',
+                explanation: 'In-page telemetry hooks on window.fetch, XMLHttpRequest.prototype.send, or document.cookie (such as temporary __audit7 collectors) are caught by F5 Shape (/di/swadc/beacon), Kasada ips.js, and PingOne Vanguard.',
+                remediation: 'Perform all forensic telemetry harvesting 100% Out-of-Band (OOB) from the host process so the production browser engine contains zero inspection hooks.'
+            });
+        } catch (e) {}
+
         // When liveStatus === 'PASS', update edgeStatus & safariStatus to reflect Phase 2 Hardened verification
         probes.forEach(p => {
             if (p.liveStatus === 'PASS') {
@@ -1697,7 +1997,7 @@
         const allClean = audit.failCount === 0;
         window.__LAST_UNCOVERED_AUDIT = audit;
         const subLabelText = allClean
-            ? `✓ 16/16 Vectors Hardened (0 Gaps)`
+            ? `✓ ${audit.totalProbes}/${audit.totalProbes} Vectors Hardened (0 Gaps)`
             : `✗ ${audit.failCount} Live Gaps Exposed (${audit.edgeFailCount} Edge • ${audit.safariFailCount} Safari)`;
         if (typeof window.updateNavTabStatus === 'function') {
             window.updateNavTabStatus('tabUncoveredBtn', allClean, subLabelText);
@@ -1709,12 +2009,17 @@
             window.recomputeStage8SubsystemBadge();
         }
 
+        const catACount = audit.probes.filter(p => p.category === 'js_engine').length;
+        const catBCount = audit.probes.filter(p => p.category === 'os_container').length;
+        const catCCount = audit.probes.filter(p => p.category === 'wkwebview_webview2').length;
+        const catDCount = audit.probes.filter(p => p.category === 'network_dpi').length;
+
         const filterButtons = [
-            { id: 'all', label: `All Novel Probes (${audit.probes.length})` },
-            { id: 'js_engine', label: `Cat A: JS Engine & Cross-Realm (6)` },
-            { id: 'os_container', label: `Cat B: OS & Host Container Leaks (4)` },
-            { id: 'wkwebview_webview2', label: `Cat C: WKWebView vs Safari / WebView2 (3)` },
-            { id: 'network_dpi', label: `Cat D: Network, WebRTC & Timing (3)` }
+            { id: 'all', label: `All Novel & Phase-2 Gap Probes (${audit.probes.length})` },
+            { id: 'js_engine', label: `Cat A: JS Engine & Cross-Realm (${catACount})` },
+            { id: 'os_container', label: `Cat B: OS, Storage & Enclave (${catBCount})` },
+            { id: 'wkwebview_webview2', label: `Cat C: WKWebView / WebView2 & PAT (${catCCount})` },
+            { id: 'network_dpi', label: `Cat D: Network, OOB & Timing (${catDCount})` }
         ].map(b => {
             const active = b.id === filterCat;
             const accent = allClean ? '#10b981' : '#f43f5e';
@@ -1775,17 +2080,17 @@
                     <div style="max-width: 780px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
                             <span style="background: ${allClean ? '#059669' : '#e11d48'}; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 5px; letter-spacing: 0.6px;">
-                                PART III &bull; UNCOVERED FRONTIER &amp; ZERO-DAY CONTAINER AUDIT LAB
+                                PART III &bull; UNCOVERED FRONTIER &amp; PHASE-2 100-SITE GAP AUDIT LAB
                             </span>
                             <span class="${allClean ? 'badge-pass' : 'badge-fail'}" style="font-size: 11.5px; padding: 3px 10px;">
-                                ${allClean ? '✓ PHASE 2 HARDENED • ALL 16 VECTORS VERIFIED CLEAN (0 GAPS)' : 'PHASE 1 BENCHMARK (UNHARDENED FOR THESE 16 NEW VECTORS)'}
+                                ${allClean ? `✓ PHASE 2 HARDENED • ALL ${audit.totalProbes} VECTORS VERIFIED CLEAN (0 GAPS)` : `PHASE 1 BENCHMARK (${audit.failCount} GAPS DETECTED)`}
                             </span>
                         </div>
                         <h2 style="font-size: 20px; font-weight: 800; color: #f8fafc; margin-bottom: 6px;">
-                            16 Newly Researched JS Engine, Cross-Realm, OS Container &amp; Network Timing Vectors
+                            22 Researched JS Engine, Blob Worker Realm, chrome.loadTimes Prototype, 7-Layer Enclave &amp; OOB Hygiene Vectors
                         </h2>
                         <p style="font-size: 12.5px; color: #cbd5e1; line-height: 1.55;">
-                            <strong>Zero Overlap with Part I &amp; Part II:</strong> This module audits 16 cutting-edge detection vectors sourced from <em>Camoufox, Patchright, CreepJS, BotD, FingerprintJS Pro v4, DataDome, Kasada, Akamai BMP v3, and academic timer/shader papers</em> across both <strong>Windows Edge/WebView2</strong> and <strong>iPadOS Safari/WKWebView</strong>. All 16 vectors are now hardened in Phase 2 with zero regressions.
+                            <strong>Includes All 6 Real Gaps Uncovered During the 100-Website 7-Layer Audit (<code>UF-17</code>–<code>UF-22</code>):</strong> Live self-audits for <code>Blob</code> + <code>URL.createObjectURL</code> Worker GlobalScope &amp; <code>OffscreenCanvas</code> GPU parity, DataDome's <code>"prototype" in window.chrome.loadTimes</code> / <code>csi</code> check, native <code>MouseEvent.prototype</code> C++ accessor purity, 7-Layer Enclave Tri-Anchor storage + WASM instantiation, RFC 9577 Private State Tokens, and Out-of-Band (OOB) zero-hook hygiene.
                         </p>
                         <div style="font-size: 11.5px; color: #94a3b8; margin-top: 8px;">
                             Active Runtime: <code style="color: #00e5ff;">${audit.runtimeLabel}</code> &bull; Audited in <strong>${audit.durationMs} ms</strong> @ ${audit.timestamp}
@@ -1797,16 +2102,16 @@
                         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid ${allClean ? 'rgba(16, 185, 129, 0.5)' : 'rgba(244, 63, 94, 0.5)'}; border-radius: 10px; padding: 12px; text-align: center;">
                             <div style="font-size: 10px; font-weight: 800; color: ${allClean ? '#6ee7b7' : '#fda4af'}; text-transform: uppercase;">LIVE RUNTIME GAPS</div>
                             <div style="font-size: 26px; font-weight: 900; color: ${allClean ? '#34d399' : '#f87171'}; margin: 4px 0;">${audit.failCount} / ${audit.totalProbes}</div>
-                            <div style="font-size: 10.5px; color: #94a3b8;">${allClean ? '100% Clean (16/16 Pass)' : 'Failed in This Browser'}</div>
+                            <div style="font-size: 10.5px; color: #94a3b8;">${allClean ? `100% Clean (${audit.totalProbes}/${audit.totalProbes} Pass)` : 'Failed in This Browser'}</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 10px; padding: 12px; text-align: center;">
                             <div style="font-size: 10px; font-weight: 800; color: #38bdf8; text-transform: uppercase;">EDGE / WINDOWS</div>
-                            <div style="font-size: 26px; font-weight: 900; color: ${audit.edgeFailCount === 0 ? '#34d399' : '#fb923c'}; margin: 4px 0;">${16 - audit.edgeFailCount} / 16</div>
+                            <div style="font-size: 26px; font-weight: 900; color: ${audit.edgeFailCount === 0 ? '#34d399' : '#fb923c'}; margin: 4px 0;">${audit.totalProbes - audit.edgeFailCount} / ${audit.totalProbes}</div>
                             <div style="font-size: 10.5px; color: #94a3b8;">${audit.edgeFailCount === 0 ? 'Hardened Pass' : 'Proven Failures'}</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 10px; padding: 12px; text-align: center;">
                             <div style="font-size: 10px; font-weight: 800; color: #c084fc; text-transform: uppercase;">SAFARI / IPADOS</div>
-                            <div style="font-size: 26px; font-weight: 900; color: ${audit.safariFailCount === 0 ? '#34d399' : '#f472b6'}; margin: 4px 0;">${16 - audit.safariFailCount} / 16</div>
+                            <div style="font-size: 26px; font-weight: 900; color: ${audit.safariFailCount === 0 ? '#34d399' : '#f472b6'}; margin: 4px 0;">${audit.totalProbes - audit.safariFailCount} / ${audit.totalProbes}</div>
                             <div style="font-size: 10.5px; color: #94a3b8;">${audit.safariFailCount === 0 ? 'Hardened Pass' : 'Proven Failures'}</div>
                         </div>
                     </div>
@@ -1821,12 +2126,12 @@
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <button class="btn-primary" style="background: linear-gradient(135deg, #059669, #0284c7); border: none; padding: 7px 14px; font-size: 12px;" onclick="window.runUncoveredFrontierAudit()">
-                            🛡️ Re-Verify All 16 Hardened Vectors
+                            🛡️ Re-Verify All ${audit.totalProbes} Hardened Vectors
                         </button>
                     </div>
                 </div>
 
-                <!-- 16-Vector Detailed Audit Table -->
+                <!-- 22-Vector Detailed Audit Table -->
                 <div class="table-container" style="overflow-x: auto;">
                     <table class="vector-table" style="width: 100%; border-collapse: collapse;">
                         <thead>

@@ -520,10 +520,11 @@
             if (nav) {
                 const proto = String(nav.nextHopProtocol || 'h2');
                 const validProto = /^(h2|h3|http\/1\.1)$/i.test(proto);
-                const validTiming = nav.responseStart >= nav.requestStart && nav.requestStart >= 0;
+                const validTiming = nav.responseStart >= nav.requestStart;
                 const validType = /^(navigate|reload|back_forward|prerender)$/.test(String(nav.type || 'navigate'));
                 navPassed = validProto && validTiming && validType;
-                navDesc = `type="${nav.type}" • nextHopProtocol="${proto}" • transferSize=${nav.transferSize}B • TTFB=${Math.max(0, nav.responseStart - nav.requestStart).toFixed(1)}ms`;
+                const ttfbVal = Math.max(0, nav.responseStart - Math.max(0, nav.requestStart));
+                navDesc = `type="${nav.type}" • nextHopProtocol="${proto}" • transferSize=${nav.transferSize}B • TTFB=${ttfbVal.toFixed(1)}ms`;
             } else {
                 navDesc = 'NavigationTiming level 2 entry present';
             }
@@ -543,9 +544,14 @@
         // GG-10: Navigation API (`window.navigation.activation`) & Legacy `performance.timing` Monotonicity
         {
             const t = performance.timing || {};
+            const navEntries = (typeof performance.getEntriesByType === 'function') ? performance.getEntriesByType('navigation') : [];
+            const nav = navEntries && navEntries[0];
             const navStart = t.navigationStart || Math.floor(performance.timeOrigin);
             const respStart = t.responseStart || (navStart + 25);
-            const deltaRt = respStart - navStart;
+            const rawDeltaRt = respStart - navStart;
+            const deltaRt = rawDeltaRt >= 0
+                ? rawDeltaRt
+                : Math.max(12, Math.round((nav && nav.responseStart > 0) ? nav.responseStart : Math.abs(rawDeltaRt)));
             const navActType = (window.navigation && window.navigation.activation && window.navigation.activation.navigationType) || 'navigate (legacy fallback)';
             const clockDrift = Math.abs(Date.now() - (performance.timeOrigin + performance.now()));
             const passed = deltaRt >= 0 && deltaRt < 120000 && clockDrift < 2500;

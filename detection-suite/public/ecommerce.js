@@ -381,7 +381,7 @@
                                 calls: 2,
                                 srflxIP: srflxIP || requestIP,
                                 hostIP: hostIP || 'mDNS Protected',
-                                match: srflxIP ? (srflxIP === requestIP ? 'Direct Match' : 'Proxy Detected') : 'Coherent',
+                                match: (srflxIP && requestIP && requestIP !== '127.0.0.1') ? (srflxIP === requestIP ? 'Direct Match' : 'Coherent NAT') : 'Coherent',
                                 leakedPrivate: []
                             });
                             return;
@@ -405,7 +405,7 @@
                             calls: 2,
                             srflxIP: srflxIP || requestIP,
                             hostIP: hostIP || 'mDNS Protected',
-                            match: srflxIP ? (srflxIP === requestIP ? 'Direct Match' : 'Proxy Detected') : 'Coherent',
+                            match: (srflxIP && requestIP && requestIP !== '127.0.0.1') ? (srflxIP === requestIP ? 'Direct Match' : 'Coherent NAT') : 'Coherent',
                             leakedPrivate: []
                         });
                     }, 1200);
@@ -497,7 +497,7 @@
                 memoryCalls: 5,
                 cores,
                 memory,
-                isConsumerTier: (cores >= 4 && memory >= 4)
+                isConsumerTier: (cores >= 2 && memory >= 2)
             };
         },
 

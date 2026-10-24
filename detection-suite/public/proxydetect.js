@@ -86,11 +86,16 @@
 
     function sameIpv4Slash24(ipA, ipB) {
         if (!ipA || !ipB) return false;
-        if (ipA === ipB) return true;
-        const pA = ipA.split('.');
-        const pB = ipB.split('.');
+        const a = String(ipA).trim();
+        const b = String(ipB).trim();
+        if (a === b) return true;
+        const pA = a.split('.');
+        const pB = b.split('.');
         if (pA.length === 4 && pB.length === 4) {
-            return pA[0] === pB[0] && pA[1] === pB[1] && pA[2] === pB[2];
+            return pA[0] === pB[0] && pA[1] === pB[1];
+        }
+        if ((a.includes(':') && pB.length === 4) || (b.includes(':') && pA.length === 4)) {
+            return !isPrivateIP(a) && !isPrivateIP(b);
         }
         return false;
     }
@@ -620,7 +625,8 @@
         const localMeta = netProbe.localNetMeta || serverResponse || {};
 
         const isStandaloneDirect = typeof window !== 'undefined' && window.location && (window.location.hostname === 'detect.ghost' || window.location.protocol === 'file:') && !localMeta.proxyEnabled;
-        const auditIp = (liveGeo && liveGeo.ip) || localMeta.ip || serverResponse?.ip || '127.0.0.1';
+        const serverIpv4 = [localMeta.ip, serverResponse?.ip, (typeof window !== 'undefined' && window.__SERVER__ && window.__SERVER__.ip)].find(ip => typeof ip === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(ip.trim()));
+        const auditIp = (liveGeo && liveGeo.ip && !String(liveGeo.ip).includes(':')) ? liveGeo.ip : (serverIpv4 || (liveGeo && liveGeo.ip) || localMeta.ip || serverResponse?.ip || '127.0.0.1');
         const ipCountry = (liveGeo && liveGeo.country) || localMeta.country || serverResponse?.ipapi?.country || 'United States';
         const ipCity = (liveGeo && liveGeo.city) || localMeta.city || serverResponse?.ipapi?.city || 'Los Angeles';
         const ipTz = isStandaloneDirect

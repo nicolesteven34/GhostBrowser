@@ -6,9 +6,12 @@
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#070b12">
     <meta name="format-detection" content="telephone=no">
-    <title>FlagMeter &bull; GhostDetect &amp; BotLens Unified Browser, Silicon &amp; Active Network Telemetry Lab</title>
-    <link rel="stylesheet" href="/style.css?v=4&amp;pv={{PV}}">
-    <link rel="stylesheet" href="/styles.css?v=4&amp;pv={{PV}}">
+    <title>FlagMeter Pro &bull; Unified Browser, Silicon &amp; Active Network Telemetry Lab</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="stylesheet" href="/style.css?v=5&amp;pv={{PV}}">
+    <link rel="stylesheet" href="/styles.css?v=5&amp;pv={{PV}}">
     <style>
         .tab-view { display: none !important; flex-direction: column; gap: 22px; }
         .tab-view.active { display: flex !important; }
@@ -39,26 +42,7 @@
         <header class="header fm-header">
             <a href="/" class="brand fm-brand" style="text-decoration: none;">
                 <div class="fm-logo-mark" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="fmGradMain" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-                                <stop offset="0%" stop-color="#00e5ff"/>
-                                <stop offset="55%" stop-color="#3b82f6"/>
-                                <stop offset="100%" stop-color="#10b981"/>
-                            </linearGradient>
-                            <linearGradient id="fmGradCore" x1="8" y1="8" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-                                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
-                                <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.05"/>
-                            </linearGradient>
-                        </defs>
-                        <!-- Outer Hexagonal Telemetry Shield -->
-                        <path d="M16 2.5L28 8.5V16.5C28 23.2 22.8 28.1 16 29.8C9.2 28.1 4 23.2 4 16.5V8.5L16 2.5Z" fill="url(#fmGradCore)" stroke="url(#fmGradMain)" stroke-width="2" stroke-linejoin="round"/>
-                        <!-- Orbital Radar Arc -->
-                        <path d="M10.2 15.5C10.2 12.3 12.8 9.7 16 9.7C19.2 9.7 21.8 12.3 21.8 15.5" stroke="#00e5ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2.5 2.5"/>
-                        <!-- Precision Signal Needle & Pulse Bars -->
-                        <path d="M11.5 19.5L14.3 15.2L17.2 17.6L20.8 12.2" stroke="#f8fafc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="20.8" cy="12.2" r="2" fill="#00e5ff"/>
-                    </svg>
+                    <img src="/flagmeter-icon.png" alt="FlagMeter Pro" style="width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.55));">
                 </div>
                 <div class="fm-brand-text">
                     <div class="fm-brand-title-row">
@@ -144,7 +128,7 @@
                             </svg>
                         </div>
                         <div class="nav-tab-content">
-                            <span class="nav-tab-title">GhostDetect Lab</span>
+                            <span class="nav-tab-title">FlagMeter Core</span>
                             <span class="nav-tab-sub">Native Browser Engine</span>
                         </div>
                     </button>
@@ -282,52 +266,43 @@
                 </div>
             </div>
 
-            <!-- PART II & PART III SEPARATE COLUMNS: BEHAVIORAL BIOMETRICS (LEFT) & UNCOVERED FRONTIER LAB (RIGHT) -->
-            <div class="fm-dual-special-grid">
-                <div class="fm-special-tier fm-special-purple">
-                    <div class="fm-special-meta">
-                        <span class="fm-special-pill fm-pill-purple">BEHAVIORAL LAB</span>
-                        <span class="fm-special-desc">Fitts's Law &amp; Keystroke Cadence</span>
+            <!-- Tier 3: Behavioral Biometrics, Frontier Probes, Google Wire & 155-Site Scoring Codex -->
+            <div class="nav-tier">
+                <div class="nav-tier-header">
+                    <div class="nav-tier-label">
+                        <span class="nav-tier-dot dot-cyan"></span>
+                        <span class="nav-tier-tag">PART II (TIER 3) &bull; BEHAVIORAL, FRONTIER, GOOGLE WIRE &amp; 155-SITE CODEX</span>
                     </div>
-                    <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')" style="padding: 6px 14px; min-height: 34px; border-color: rgba(168, 85, 247, 0.45); background: rgba(168, 85, 247, 0.14);">
+                    <span class="nav-tier-count">4 SPECIALIST LABS &bull; 155 SITES &bull; 16 MATH ENGINES</span>
+                </div>
+                <div class="nav-tier-grid fm-tier3-grid">
+                    <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')">
                         <div class="nav-tab-icon" style="color: #c084fc;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                             </svg>
                         </div>
                         <div class="nav-tab-content">
-                            <span class="nav-tab-title" style="color: #f3e8ff;">Behavioral Biometrics &amp; Playbook</span>
-                            <span class="nav-tab-sub" style="color: #d8b4fe;">Live Human Benchmark + Rules</span>
+                            <span class="nav-tab-title">Behavioral Biometrics &amp; Playbook</span>
+                            <span class="nav-tab-sub">Fitts's Law &amp; Keystroke Cadence</span>
                         </div>
                     </button>
-                </div>
 
-                <div class="fm-special-tier fm-special-emerald" id="tierUncoveredBox">
-                    <div class="fm-special-meta">
-                        <span class="fm-special-pill fm-pill-emerald">FRONTIER LAB</span>
-                        <span class="fm-special-desc">16 Novel JS, Container &amp; DPI Probes</span>
-                    </div>
-                    <button class="nav-tab" id="tabUncoveredBtn" onclick="switchTab('uncovered')" style="padding: 6px 14px; min-height: 34px;">
+                    <button class="nav-tab" id="tabUncoveredBtn" onclick="switchTab('uncovered')">
                         <div class="nav-tab-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                             </svg>
                         </div>
                         <div class="nav-tab-content">
-                            <span class="nav-tab-title">Uncovered Frontier (16 Probes)</span>
-                            <span class="nav-tab-sub" id="tabUncoveredSubLabel">Auditing 16 Novel Probes…</span>
+                            <span class="nav-tab-title">Uncovered Frontier (22 Probes)</span>
+                            <span class="nav-tab-sub" id="tabUncoveredSubLabel">Auditing 22 Novel Probes…</span>
                         </div>
                     </button>
-                </div>
 
-                <div class="fm-special-tier fm-special-google" id="tierGoogleIntegrityBox">
-                    <div class="fm-special-meta">
-                        <span class="fm-special-pill fm-pill-google">GOOGLE LAB</span>
-                        <span class="fm-special-desc">SearchGuard (knitsail / SG_SS)</span>
-                    </div>
-                    <button class="nav-tab" id="tabGoogleIntegrityBtn" onclick="switchTab('googleintegrity')" style="padding: 6px 14px; min-height: 34px;">
+                    <button class="nav-tab" id="tabGoogleIntegrityBtn" onclick="switchTab('googleintegrity')">
                         <div class="nav-tab-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                                 <path d="M8 11h6M11 8v6"></path>
@@ -338,24 +313,18 @@
                             <span class="nav-tab-sub" id="tabGoogleIntegritySubLabel">Auditing 28 Wire &amp; SG_SS Probes…</span>
                         </div>
                     </button>
-                </div>
 
-                <div class="fm-special-tier" id="tierScoringDoctrineBox" style="border-color: rgba(245, 158, 11, 0.55); background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(15, 23, 42, 0.85) 100%);">
-                    <div class="fm-special-meta">
-                        <span class="fm-special-pill" style="background: rgba(245, 158, 11, 0.22); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5);">SCORING &amp; DOCTRINE CODEX</span>
-                        <span class="fm-special-desc">55 Sites &bull; 12 Math Engines &bull; 22 Presets</span>
-                    </div>
-                    <button class="nav-tab" id="tabScoringDoctrineBtn" onclick="switchTab('scoringdoctrine')" style="padding: 6px 14px; min-height: 34px;">
+                    <button class="nav-tab" id="tabScoringDoctrineBtn" onclick="switchTab('scoringdoctrine')">
                         <div class="nav-tab-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                                 <path d="M2 17l10 5 10-5"/>
                                 <path d="M2 12l10 5 10-5"/>
                             </svg>
                         </div>
                         <div class="nav-tab-content">
-                            <span class="nav-tab-title">55-Site Scoring Predictor &amp; Doctrine</span>
-                            <span class="nav-tab-sub" id="tabScoringDoctrineSubLabel">Auditing 12 Math Engines…</span>
+                            <span class="nav-tab-title">155-Site Scoring Predictor &amp; Doctrine</span>
+                            <span class="nav-tab-sub" id="tabScoringDoctrineSubLabel">Auditing 16 Math Engines…</span>
                         </div>
                     </button>
                 </div>
@@ -400,7 +369,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span id="liveAuditSpinner" class="ghost-audit-spinner"></span>
                             <span id="liveAuditStagePill" style="background: rgba(0, 229, 255, 0.18); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.45); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; font-family: monospace;">STAGE 1 / 8</span>
-                            <span id="liveAuditStageText" style="font-size: 13.5px; font-weight: 700; color: #f8fafc;">Initializing FlagMeter &amp; GhostDetect Multi-Engine Active Telemetry Pipeline...</span>
+                            <span id="liveAuditStageText" style="font-size: 13.5px; font-weight: 700; color: #f8fafc;">Initializing FlagMeter Pro Multi-Engine Active Telemetry Pipeline...</span>
                         </div>
                         <div id="liveAuditStageSub" style="font-size: 11.5px; font-family: monospace; color: #94a3b8; margin-top: 3px;">Probing active Edge TLS :4443, Authoritative DNS :53, First-Party STUN :3478 &amp; 12 In-House Suites...</div>
                     </div>
@@ -430,7 +399,7 @@
                     <span class="sub-pill-status">SOLVING…</span>
                 </div>
                 <div id="subGhostNative" class="sub-pill sub-scanning" onclick="switchTab('fingerprint')">
-                    <span class="sub-pill-name">5. GhostDetect &amp; 16-STUN RTC</span>
+                    <span class="sub-pill-name">5. FlagMeter Core &amp; 16-STUN RTC</span>
                     <span class="sub-pill-status">AUDITING…</span>
                 </div>
                 <div id="subFpCom" class="sub-pill sub-scanning" onclick="switchTab('fingerprintcom')">
@@ -3359,7 +3328,7 @@
                         <button class="filter-pill" id="ec3Sys_stockx" onclick="switchECommerce3System('stockx')">StockX (150)</button>
                         <button class="filter-pill" id="ec3Sys_goat" onclick="switchECommerce3System('goat')">GOAT (181)</button>
                         <button class="filter-pill" id="ec3Sys_sephora" onclick="switchECommerce3System('sephora')">Sephora (197)</button>
-                        <button class="filter-pill" id="ec3Sys_newbalance" onclick="switchECommerce3System('newbalance')">NewBalance (172)</button>
+                        <button class="filter-pill" id="ec3Sys_newbalance" onclick="switchECommerce3System('newbalance')">Chewy &amp; NewBalance (172)</button>
                         <button class="filter-pill" id="ec3Sys_macys" onclick="switchECommerce3System('macys')">Macys (184)</button>
                         <button class="filter-pill" id="ec3Sys_costco" onclick="switchECommerce3System('costco')">Costco (157)</button>
                         <button class="filter-pill" id="ec3Sys_homedepot" onclick="switchECommerce3System('homedepot')">HomeDepot (173)</button>
@@ -3517,7 +3486,7 @@
                             <span class="font-mono text-green" id="ec3HeroStatus_sephora">197 Calls &bull; Clean</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                            <span style="color: var(--text-muted);">NewBalance (Cloudflare Bot Management)</span>
+                            <span style="color: var(--text-muted);">Chewy &amp; NewBalance (Kasada 120-VM + Akamai + FPJS Pro)</span>
                             <span class="font-mono text-green" id="ec3HeroStatus_newbalance">172 Calls &bull; Clean</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 12px;">
@@ -4159,13 +4128,13 @@
                     </div>
                 </div>
 
-                <!-- System 14: NewBalance (Cloudflare Bot Management + Forter) -->
+                <!-- System 14: Chewy & NewBalance (Kasada KPSDK cdndex.io 120-Collector VM + Akamai BMP + FPJS Pro) -->
                 <div class="card" data-ec3-card="newbalance">
                     <div class="card-header">
                         <div>
-                            <span class="card-title">14. NewBalance (Sneakers/Retail)</span>
+                            <span class="card-title">14. Chewy &amp; NewBalance (Pet &amp; Retail)</span>
                             <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
-                                172 Intercepted Calls &bull; 26 Client Scripts &bull; www.newbalance.com
+                                172 Intercepted Calls &bull; 34 Client Scripts &bull; www.chewy.com (Kasada cdndex.io VM)
                             </div>
                         </div>
                         <span class="badge-pass" id="ec3CardBadge_newbalance">172 CALLS PASS</span>
@@ -4173,7 +4142,7 @@
                     <div class="card-body">
                         <div class="metric-row">
                             <span class="metric-label">Primary Anti-Bot &amp; Script Archive</span>
-                            <span class="metric-value font-mono text-cyan">Cloudflare Bot Management + Forter (26 JS Files)</span>
+                            <span class="metric-value font-mono text-cyan">Kasada KPSDK (120-Collector VM) + Akamai + FPJS Pro</span>
                         </div>
                         <div class="metric-row">
                             <span class="metric-label">Telemetry Beacons &amp; 3rd-Party SDKs</span>
@@ -5178,7 +5147,7 @@
                         <button class="filter-pill" id="ec3Filter_stockx" onclick="filterECommerce3Components('stockx')">StockX (150)</button>
                         <button class="filter-pill" id="ec3Filter_goat" onclick="filterECommerce3Components('goat')">GOAT (181)</button>
                         <button class="filter-pill" id="ec3Filter_sephora" onclick="filterECommerce3Components('sephora')">Sephora (197)</button>
-                        <button class="filter-pill" id="ec3Filter_newbalance" onclick="filterECommerce3Components('newbalance')">NewBalance (172)</button>
+                        <button class="filter-pill" id="ec3Filter_newbalance" onclick="filterECommerce3Components('newbalance')">Chewy &amp; NewBalance (172)</button>
                         <button class="filter-pill" id="ec3Filter_macys" onclick="filterECommerce3Components('macys')">Macys (184)</button>
                         <button class="filter-pill" id="ec3Filter_costco" onclick="filterECommerce3Components('costco')">Costco (157)</button>
                         <button class="filter-pill" id="ec3Filter_homedepot" onclick="filterECommerce3Components('homedepot')">HomeDepot (173)</button>
@@ -6965,21 +6934,21 @@
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(window.runScoringDoctrineAudit) window.runScoringDoctrineAudit();" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-color: #fbbf24; color: #0f172a; font-weight: 800;">
-                        ↻ Re-Run 12 Math Scoring Engines
+                        ↻ Re-Run 16 Math Scoring Engines
                     </button>
                 </div>
 
                 <!-- 4 Live KPI Cards -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 18px;">
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(52, 211, 153, 0.35); border-radius: 10px; padding: 12px 16px;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">12 Unlocked Math Engines</div>
-                        <div id="sdMetricEngines" style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px; font-family: var(--mono);">12 / 12 CLEAN</div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Apple Shield, Zoey, DataDome, BioCatch, FPJS</div>
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">16 Unlocked Math Engines</div>
+                        <div id="sdMetricEngines" style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px; font-family: var(--mono);">16 / 16 CLEAN</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Apple Shield, Zoey, DataDome, Sardine, Stytch, Shape</div>
                     </div>
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 12px 16px;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">55-Site Privilege Prediction</div>
-                        <div id="sdMetricSites" style="font-size: 19px; font-weight: 800; color: #38bdf8; margin-top: 4px; font-family: var(--mono);">55 / 55 TIER-1 PASS</div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Stage-1 Perimeter + Stage-2/3 Checkout</div>
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">155-Site Privilege Matrix (55+100)</div>
+                        <div id="sdMetricSites" style="font-size: 19px; font-weight: 800; color: #38bdf8; margin-top: 4px; font-family: var(--mono);">155 / 155 (55+100 PASS)</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">55 Baseline + 100 Phase-2 7-Layer Audited Sites</div>
                     </div>
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 10px; padding: 12px 16px;">
                         <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">GhostBrowser Preset Audit</div>
@@ -6993,37 +6962,40 @@
                     </div>
                 </div>
 
-                <!-- 5 Interactive Sub-Tabs Navigation -->
+                <!-- 6 Interactive Sub-Tabs Navigation -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(148, 163, 184, 0.18);">
                     <button id="sdBtn_live_predictor" class="filter-pill active" onclick="switchScoringDoctrineSubTab('live_predictor')" style="padding: 8px 14px; font-weight: 700;">
-                        1. Live 12-Engine Math Predictor
+                        1. Live 16-Engine Math Predictor
+                    </button>
+                    <button id="sdBtn_phase2_100_matrix" class="filter-pill" onclick="switchScoringDoctrineSubTab('phase2_100_matrix')" style="padding: 8px 14px; font-weight: 700; border-color: rgba(16, 185, 129, 0.55); color: #34d399;">
+                        ★ 2. Phase 2: 100-Website 7-Layer Audit (100/100)
                     </button>
                     <button id="sdBtn_sites_matrix" class="filter-pill" onclick="switchScoringDoctrineSubTab('sites_matrix')" style="padding: 8px 14px; font-weight: 700;">
-                        2. All 55 Websites Privilege &amp; Funnel Matrix
+                        3. Phase 1: 55-Website Privilege &amp; Funnel Matrix
                     </button>
                     <button id="sdBtn_persona_audit" class="filter-pill" onclick="switchScoringDoctrineSubTab('persona_audit')" style="padding: 8px 14px; font-weight: 700;">
-                        3. GhostBrowser 22-Persona Assessment
+                        4. GhostBrowser 22-Persona Assessment
                     </button>
                     <button id="sdBtn_pre_encryption" class="filter-pill" onclick="switchScoringDoctrineSubTab('pre_encryption')" style="padding: 8px 14px; font-weight: 700;">
-                        4. Pre-Encryption Sensor Schemas &amp; Keys
+                        5. Pre-Encryption Sensor Schemas &amp; Keys
                     </button>
                     <button id="sdBtn_doctrine_codex" class="filter-pill" onclick="switchScoringDoctrineSubTab('doctrine_codex')" style="padding: 8px 14px; font-weight: 700;">
-                        5. The Session Privilege &amp; Anti-Bot Doctrine Codex
+                        6. The Session Privilege &amp; Anti-Bot Doctrine Codex
                     </button>
                 </div>
             </div>
 
             <!-- ========================================================================= -->
-            <!-- SUB-PANEL 1: LIVE 12-ENGINE MATHEMATICAL SCORING PREDICTOR               -->
+            <!-- SUB-PANEL 1: LIVE 16-ENGINE MATHEMATICAL SCORING PREDICTOR               -->
             <!-- ========================================================================= -->
             <div id="sdPanel_live_predictor" style="display: flex; flex-direction: column; gap: 18px;">
                 <div class="card" style="padding: 0; overflow: hidden;">
                     <div style="padding: 16px 20px; background: #0D1117; border-bottom: 1px solid var(--border);">
                         <h3 style="font-size: 15px; font-weight: 700; color: #f8fafc; margin: 0;">
-                            Live Mathematical Scoring &amp; Invariant Bitmask Execution (12 Unlocked Production Engines)
+                            Live Mathematical Scoring &amp; Invariant Bitmask Execution (16 Unlocked Production Engines)
                         </h3>
                         <p style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0 0;">
-                            Runs the exact deobfuscated client-side formulas from Apple Shield (<code>_0x53b05f.analyze</code>), AWS WAF v2.4.0 (<code>Zoey::</code>), DataDome v5.11.1 (<code>sgb/sgd/sgc</code>), FingerprintJS Pro v4 (<code>G/N/H</code>), HUMAN/PerimeterX (<code>PX12787</code>), BioCatch v7.0.0 (<code>WebGLTimingService</code> / <code>FKGroteskNeue</code>), and eBay DeviceAssurance against your current browser session.
+                            Runs the exact deobfuscated client-side formulas from Apple Shield (<code>_0x53b05f.analyze</code>), AWS WAF v2.4.0 (<code>Zoey::</code>), DataDome v5.11.1 (<code>sgb/sgd/sgc</code>), FingerprintJS Pro v4 (<code>G/N/H</code>), HUMAN/PerimeterX (<code>PX12787</code>), BioCatch v7.0.0 (<code>WebGLTimingService</code> / <code>FKGroteskNeue</code>), eBay DeviceAssurance, Sardine AI (<code>_immortal|deviceToken</code>), Stytch DFP &amp; Socure Sigma (<code>soc_gdid</code>), MaxMind minFraud (<code>__mmapiwsDb</code>), and F5 Shape / WASM Enclaves against your current browser session.
                         </p>
                     </div>
                     <div class="table-container">
@@ -7045,6 +7017,58 @@
                     </div>
                 </div>
                 <div id="sd17EnginesEncyclopediaContainer"></div>
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- SUB-PANEL 2B: PHASE 2 100-WEBSITE 7-LAYER FULL-STACK AUDIT MATRIX        -->
+            <!-- ========================================================================= -->
+            <div id="sdPanel_phase2_100_matrix" style="display: none; flex-direction: column; gap: 18px;">
+                <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(16, 185, 129, 0.35);">
+                    <div style="padding: 16px 20px; background: #0D1117; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <h3 style="font-size: 15.5px; font-weight: 800; color: #34d399; margin: 0;">
+                                Phase 2: 100-Website 7-Layer Full-Stack Telemetry &amp; Scoring Audit (100 / 100 Live Verified ✅ APPROVED)
+                            </h3>
+                            <p id="sdPhase2VisibleCount" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0 0;">
+                                Showing all 100 live-verified websites across 10 industry batches (100% Out-of-Band host inspection &bull; 2-Stage organic human homepage-to-action flow).
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" placeholder="Search 100 sites, cookies, IDB, WASM..." oninput="if(window.searchPhase2SitesMatrix) window.searchPhase2SitesMatrix(this.value)" style="background: rgba(2, 6, 23, 0.85); border: 1px solid rgba(16, 185, 129, 0.4); color: #f8fafc; border-radius: 8px; padding: 6px 12px; font-size: 12px; min-width: 240px;" />
+                            <button id="sdToggleAllPhase2DossiersBtn" type="button" class="filter-pill" onclick="if(window.toggleAllPhase2SiteDossiers) window.toggleAllPhase2SiteDossiers()" style="background: rgba(16, 185, 129, 0.16); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.45); font-weight: 700;">
+                                &#9656; Expand All 100 7-Layer Dossiers
+                            </button>
+                        </div>
+                        <div id="sdPhase2FilterBar" style="display: flex; gap: 6px; flex-wrap: wrap; width: 100%;">
+                            <button class="filter-pill sd-p2-filter-btn active" data-sdp2-filter="all" onclick="filterPhase2SitesMatrix('all', this)">All 100 Sites</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b1" onclick="filterPhase2SitesMatrix('b1', this)">B1: Fintech &amp; Crypto (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b2" onclick="filterPhase2SitesMatrix('b2', this)">B2: Ticketing &amp; Queues (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b3" onclick="filterPhase2SitesMatrix('b3', this)">B3: Airlines &amp; Travel (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b4" onclick="filterPhase2SitesMatrix('b4', this)">B4: Luxury &amp; Streetwear (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b5" onclick="filterPhase2SitesMatrix('b5', this)">B5: Gaming &amp; Digital (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b6" onclick="filterPhase2SitesMatrix('b6', this)">B6: Telecom &amp; HW (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b7" onclick="filterPhase2SitesMatrix('b7', this)">B7: BNPL &amp; Payments (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b8" onclick="filterPhase2SitesMatrix('b8', this)">B8: Social &amp; Marketplaces (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b9" onclick="filterPhase2SitesMatrix('b9', this)">B9: Enterprise SaaS (10)</button>
+                            <button class="filter-pill sd-p2-filter-btn" data-sdp2-filter="b10" onclick="filterPhase2SitesMatrix('b10', this)">B10: Fraud &amp; Bot Vendors (10)</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="audit-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 210px;">Site # &amp; Network Requests</th>
+                                    <th style="width: 240px;">Protection Stack &amp; Organic 2-Stage Flow</th>
+                                    <th style="width: 230px;">Layer 2–4: Cookie, LS/SS &amp; IndexedDB</th>
+                                    <th style="width: 210px;">Layer 3–6: Iframes, Scripts &amp; Realm</th>
+                                    <th>Layer 7: Mathematical Scoring Formula &amp; Threshold</th>
+                                    <th style="width: 190px;">Live Verification &amp; Dossier</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sdPhase2_100SitesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- ========================================================================= -->
@@ -7164,7 +7188,7 @@
             <!-- SUB-PANEL 4: PRE-ENCRYPTION SENSOR SCHEMAS & CRYPTOGRAPHIC KEYS           -->
             <!-- ========================================================================= -->
             <div id="sdPanel_pre_encryption" style="display: none; flex-direction: column; gap: 18px;">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
                     <div class="card" style="padding: 18px 20px;">
                         <h3 style="font-size: 15px; font-weight: 800; color: #f43f5e; margin: 0 0 6px 0;">
                             1. Apple Shield (<code>apple_shld_deobf.js</code>) — Exact 0–100 Formula &amp; Signal Weights
@@ -7200,7 +7224,7 @@ Stealth Detectors : t1 (chrome.csi navStart spy), t2 (chrome.loadTimes navStart 
                 </div>
                 <div id="sdExtraPreEncryptionSchemasContainer"></div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
                     <div class="card" style="padding: 18px 20px;">
                         <h3 style="font-size: 15px; font-weight: 800; color: #38bdf8; margin: 0 0 6px 0;">
                             3. DataDome v5.11.1 (<code>tags.js</code>) &amp; HUMAN / PerimeterX Stream Ciphers
@@ -7290,7 +7314,7 @@ fphxfwdfr (X-Forwarded-For), Sec-CH-UA-* + 10 WebRTC STUN probes (io_enable_rip=
                     <h3 style="font-size: 17px; font-weight: 800; color: #f8fafc; margin: 4px 0 12px 0;">
                         What Actually Matters vs. What Hurts Your Score When Over-Spoofed
                     </h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
                         <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 16px;">
                             <div style="font-size: 13.5px; font-weight: 800; color: #34d399; margin-bottom: 8px;">✓ HEAVILY REWARDED (Unlocks Maximum Session Privilege)</div>
                             <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #e2e8f0; line-height: 1.6;">
@@ -7352,7 +7376,7 @@ fphxfwdfr (X-Forwarded-For), Sec-CH-UA-* + 10 WebRTC STUN probes (io_enable_rip=
         </div>
 
         <footer class="footer">
-            FlagMeter &bull; GhostDetect &amp; BotLens Unified Enterprise Browser, Silicon &amp; Active Network Telemetry Suite &bull; Direct Edge TLS :4443 &bull; DNS :53 &bull; STUN :3478
+            FlagMeter Pro &bull; Unified Enterprise Browser, Silicon &amp; Active Network Telemetry Suite &bull; Direct Edge TLS :4443 &bull; DNS :53 &bull; STUN :3478
         </footer>
     </div>
 
