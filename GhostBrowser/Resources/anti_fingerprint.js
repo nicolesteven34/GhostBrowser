@@ -7351,7 +7351,7 @@
                     syntheticEmitted = true;
 
                     const effectiveIp = proxyIp || "76.82.200.120";
-                    const effectiveTurnIp = (isAntiBotHost || !turnHostIp) ? effectiveIp : turnHostIp;
+                    const effectiveTurnIp = effectiveIp;
                     const ufrag = extractUfrag(pc.localDescription && pc.localDescription.sdp) || '7f9a';
                     const hostPort = 54100 + (Math.abs(seedNum * 3) % 10000);
                     const port = 51000 + (Math.abs(seedNum) % 12000);
@@ -7981,7 +7981,7 @@
                     const hookedClearColor = makeNative(function clearColor(r, g, b, a) {
                         try {
                             const cv = this && this.canvas;
-                            if (cv && cv.width === 256 && cv.height === 24) {
+                            if (!cv || cv.width < 64 || cv.height < 48 || (cv.width === 256 && cv.height === 24)) {
                                 return invokeNativeWithCleanStack(origClearColor, this, arguments);
                             }
                         } catch (e) {}
@@ -8009,7 +8009,7 @@
                     const hookedBufferData = makeNative(function bufferData(target, data, usage) {
                         try {
                             const cv = this && this.canvas;
-                            if (cv && cv.width === 256 && cv.height === 24) {
+                            if (!cv || cv.width < 64 || cv.height < 48 || (cv.width === 256 && cv.height === 24)) {
                                 return invokeNativeWithCleanStack(origBufferData, this, arguments);
                             }
                             const F32 = win.Float32Array || Float32Array;
@@ -8017,10 +8017,19 @@
                                 if (data.length === 24 && Math.abs(data[0] + 0.75) < 0.001 && Math.abs(data[1] - 0.75) < 0.001) {
                                     return invokeNativeWithCleanStack(origBufferData, this, arguments);
                                 }
-                                const copy = new F32(data);
-                                copy[0] = copy[0] + vtxDx;
-                                copy[1] = copy[1] - vtxDy;
-                                return invokeNativeWithCleanStack(origBufferData, this, [target, copy, usage]);
+                                let hasFractional = false;
+                                for (let i = 0; i < data.length; i++) {
+                                    if (Math.abs(data[i] - Math.round(data[i])) > 0.001) {
+                                        hasFractional = true;
+                                        break;
+                                    }
+                                }
+                                if (hasFractional) {
+                                    const copy = new F32(data);
+                                    copy[0] = copy[0] + vtxDx;
+                                    copy[1] = copy[1] - vtxDy;
+                                    return invokeNativeWithCleanStack(origBufferData, this, [target, copy, usage]);
+                                }
                             }
                         } catch (e) {}
                         return invokeNativeWithCleanStack(origBufferData, this, arguments);
@@ -9163,18 +9172,105 @@
             if (win.OffscreenCanvasRenderingContext2D && win.OffscreenCanvasRenderingContext2D.prototype) {
                 ctxProtos.push(win.OffscreenCanvasRenderingContext2D.prototype);
             }
-            const dx = ((fmix32(profileSeed, 101) % 15) + 1) * 0.0625;
-            const dy = ((fmix32(profileSeed, 102) % 15) + 1) * 0.0625;
-            const offX = (fmix32(profileSeed, 103) % 8) + 1;
-            const offY = (fmix32(profileSeed, 104) % 4);
-            const deltaR = (fmix32(profileSeed, 105) % 7) + 1;
-            const deltaG = (fmix32(profileSeed, 106) % 7) + 1;
-            const deltaB = (fmix32(profileSeed, 107) % 7) + 1;
+            const dx = ((fmix32(profileSeed, 101) % 15) + 1) * 0.03125;
+            const dy = ((fmix32(profileSeed, 102) % 15) + 1) * 0.03125;
+            const _wrfAttrMap = new WeakMap();
+
+            if (!isAntiBotHost && win.HTMLCanvasElement && win.HTMLCanvasElement.prototype && !_hookedProtos.has(win.HTMLCanvasElement.prototype)) {
+                const hcProto = win.HTMLCanvasElement.prototype;
+                _hookedProtos.add(hcProto);
+                const origGetContext = hcProto.getContext;
+                if (typeof origGetContext === 'function') {
+                    Object.defineProperty(hcProto, 'getContext', {
+                        value: makeNative(function getContext(contextType, contextAttributes) {
+                            if (contextType === '2d' && contextAttributes && typeof contextAttributes === 'object' && contextAttributes.willReadFrequently) {
+                                const normAttrs = Object.assign({}, contextAttributes, { willReadFrequently: false });
+                                const ctx = invokeNativeWithCleanStack(origGetContext, this, [contextType, normAttrs]);
+                                if (ctx) _wrfAttrMap.set(ctx, true);
+                                return ctx;
+                            }
+                            return invokeNativeWithCleanStack(origGetContext, this, arguments);
+                        }, 'getContext', 1, origGetContext),
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+            }
+
+            if (!isAntiBotHost && win.OffscreenCanvas && win.OffscreenCanvas.prototype && !_hookedProtos.has(win.OffscreenCanvas.prototype)) {
+                const oscProto = win.OffscreenCanvas.prototype;
+                _hookedProtos.add(oscProto);
+                const origOscGetContext = oscProto.getContext;
+                if (typeof origOscGetContext === 'function') {
+                    Object.defineProperty(oscProto, 'getContext', {
+                        value: makeNative(function getContext(contextType, contextAttributes) {
+                            if (contextType === '2d' && contextAttributes && typeof contextAttributes === 'object' && contextAttributes.willReadFrequently) {
+                                const normAttrs = Object.assign({}, contextAttributes, { willReadFrequently: false });
+                                const ctx = invokeNativeWithCleanStack(origOscGetContext, this, [contextType, normAttrs]);
+                                if (ctx) _wrfAttrMap.set(ctx, true);
+                                return ctx;
+                            }
+                            return invokeNativeWithCleanStack(origOscGetContext, this, arguments);
+                        }, 'getContext', 1, origOscGetContext),
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+                const origConvertToBlob = oscProto.convertToBlob;
+                if (typeof origConvertToBlob === 'function') {
+                    Object.defineProperty(oscProto, 'convertToBlob', {
+                        value: makeNative(function convertToBlob(options) {
+                            try {
+                                const mime = (options && options.type) ? String(options.type).toLowerCase() : 'image/png';
+                                if (mime === 'image/png' && this && this.width > 0 && this.height > 0 && win.document) {
+                                    const tmp = win.document.createElement('canvas');
+                                    tmp.width = this.width;
+                                    tmp.height = this.height;
+                                    const tctx = tmp.getContext('2d');
+                                    if (tctx) {
+                                        tctx.drawImage(this, 0, 0);
+                                        const dUrl = tmp.toDataURL('image/png');
+                                        const b64 = dUrl.split(',')[1];
+                                        if (b64) {
+                                            const bin = win.atob(b64);
+                                            const bytes = new win.Uint8Array(bin.length);
+                                            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                                            const BlobCtor = win.Blob || Blob;
+                                            return win.Promise.resolve(new BlobCtor([bytes], { type: 'image/png' }));
+                                        }
+                                    }
+                                }
+                            } catch (e) {}
+                            return invokeNativeWithCleanStack(origConvertToBlob, this, arguments);
+                        }, 'convertToBlob', 0, origConvertToBlob),
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+            }
 
             for (const proto of ctxProtos) {
                 if (_hookedProtos.has(proto)) continue;
                 _hookedProtos.add(proto);
-                const isOffscreenProto = Boolean(win.OffscreenCanvasRenderingContext2D && proto === win.OffscreenCanvasRenderingContext2D.prototype);
+
+                const origGetContextAttributes = proto.getContextAttributes;
+                if (typeof origGetContextAttributes === 'function') {
+                    Object.defineProperty(proto, 'getContextAttributes', {
+                        value: makeNative(function getContextAttributes() {
+                            const attrs = invokeNativeWithCleanStack(origGetContextAttributes, this, arguments);
+                            if (attrs && _wrfAttrMap.has(this)) {
+                                attrs.willReadFrequently = true;
+                            }
+                            return attrs;
+                        }, 'getContextAttributes', 0, origGetContextAttributes),
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
 
                 const origMeasureText = proto.measureText;
                 if (typeof origMeasureText === 'function') {
@@ -9193,38 +9289,25 @@
                     });
                 }
 
-                // Leave OffscreenCanvasRenderingContext2D.prototype.fillText and .arc untouched
-                // so 2D OffscreenCanvas renders identically between main thread (window) and Worker realms.
-                if (isAntiBotHost || isOffscreenProto) continue;
+                if (isAntiBotHost) continue;
 
                 const origFillText = proto.fillText;
-                const origGetImageData = proto.getImageData;
-                const origPutImageData = proto.putImageData;
-                if (typeof origFillText === 'function' && typeof origGetImageData === 'function' && typeof origPutImageData === 'function') {
+                if (typeof origFillText === 'function') {
                     const hookedFillText = makeNative(function fillText(text, x, y, maxWidth) {
-                        const nx = Number(x) + dx;
-                        const ny = Number(y) + dy;
-                        const res = arguments.length >= 4
-                            ? invokeNativeWithCleanStack(origFillText, this, [text, nx, ny, maxWidth])
-                            : invokeNativeWithCleanStack(origFillText, this, [text, nx, ny]);
                         try {
-                            const cvs = this.canvas;
+                            const cvs = this && this.canvas;
                             const w = cvs ? (cvs.width || 0) : 0;
                             const h = cvs ? (cvs.height || 0) : 0;
-                            if (w >= 16 && h >= 16) {
-                                const px1 = Math.max(0, Math.min(w - 1, Math.floor(Number(x) || 0) + offX));
-                                const py1 = Math.max(0, Math.min(h - 1, Math.floor(Number(y) || 0) - offY));
-                                const img = origGetImageData.call(this, px1, py1, 1, 1);
-                                if (img && img.data) {
-                                    img.data[0] = (img.data[0] ^ deltaR) & 0xff;
-                                    img.data[1] = (img.data[1] ^ deltaG) & 0xff;
-                                    img.data[2] = (img.data[2] ^ deltaB) & 0xff;
-                                    if (img.data[3] === 0) img.data[3] = 255;
-                                    origPutImageData.call(this, img, px1, py1);
-                                }
+                            const str = String(text || '');
+                            if (str.length >= 4 && w >= 40 && h >= 15) {
+                                const nx = Number(x) + dx;
+                                const ny = Number(y) + dy;
+                                return arguments.length >= 4
+                                    ? invokeNativeWithCleanStack(origFillText, this, [text, nx, ny, maxWidth])
+                                    : invokeNativeWithCleanStack(origFillText, this, [text, nx, ny]);
                             }
                         } catch (e) {}
-                        return res;
+                        return invokeNativeWithCleanStack(origFillText, this, arguments);
                     }, 'fillText', 3, origFillText);
                     Object.defineProperty(proto, 'fillText', {
                         value: hookedFillText,
@@ -9232,24 +9315,6 @@
                         enumerable: true,
                         configurable: true
                     });
-                    const origArc = proto.arc;
-                    if (typeof origArc === 'function') {
-                        const dr = ((fmix32(profileSeed, 108) % 19) + 1) * 0.03125;
-                        const hookedArc = makeNative(function arc(x, y, radius, startAngle, endAngle, counterclockwise) {
-                            const nr = Math.max(0.1, Number(radius || 0) + dr);
-                            const nx = Number(x || 0) + dx;
-                            const ny = Number(y || 0) + dy;
-                            return arguments.length >= 6
-                                ? invokeNativeWithCleanStack(origArc, this, [nx, ny, nr, startAngle, endAngle, counterclockwise])
-                                : invokeNativeWithCleanStack(origArc, this, [nx, ny, nr, startAngle, endAngle]);
-                        }, 'arc', 5, origArc);
-                        Object.defineProperty(proto, 'arc', {
-                            value: hookedArc,
-                            writable: true,
-                            enumerable: true,
-                            configurable: true
-                        });
-                    }
                 }
             }
 
@@ -9579,6 +9644,17 @@
                     });
                 }
                 {
+                    if (typeof win.MediaKeySystemAccess !== 'function') {
+                        const MksaCtor = makeNative(function MediaKeySystemAccess() {
+                            throw new win.TypeError('Illegal constructor');
+                        }, 'MediaKeySystemAccess', 0);
+                        Object.defineProperty(win, 'MediaKeySystemAccess', {
+                            value: MksaCtor,
+                            writable: true,
+                            enumerable: false,
+                            configurable: true
+                        });
+                    }
                     const origRmksa = navProto.requestMediaKeySystemAccess;
                     const isEdgePersona = /Edg\//.test(cfg.userAgent || '');
                     const isAppleOrmacSafariPersona = !_isWinPersona && !_isAndroidPersona && (!/Chrome\//.test(cfg.userAgent || '') || /iPhone|iPad|iPod/.test(cfg.userAgent || ''));
@@ -9597,15 +9673,23 @@
                             const notSupErr = () => new DOMException('The key system specified is not supported.', 'NotSupportedError');
                             const makeSynthAccess = () => {
                                 const firstCfg = supportedConfigurations[0] || {};
-                                const accessObj = {
-                                    keySystem: ks,
-                                    getConfiguration: makeNative(function getConfiguration() {
-                                        return firstCfg;
-                                    }, 'getConfiguration', 0),
-                                    createMediaKeys: makeNative(function createMediaKeys() {
-                                        return Promise.resolve({});
-                                    }, 'createMediaKeys', 0)
-                                };
+                                const mksaProto = (win.MediaKeySystemAccess && win.MediaKeySystemAccess.prototype) || Object.prototype;
+                                const accessObj = Object.create(mksaProto);
+                                Object.defineProperties(accessObj, {
+                                    keySystem: { value: ks, writable: false, enumerable: true, configurable: true },
+                                    getConfiguration: {
+                                        value: makeNative(function getConfiguration() {
+                                            return firstCfg;
+                                        }, 'getConfiguration', 0),
+                                        writable: true, enumerable: true, configurable: true
+                                    },
+                                    createMediaKeys: {
+                                        value: makeNative(function createMediaKeys() {
+                                            return Promise.resolve({});
+                                        }, 'createMediaKeys', 0),
+                                        writable: true, enumerable: true, configurable: true
+                                    }
+                                });
                                 return Promise.resolve(accessObj);
                             };
                             if (/^(?:com\.apple\.fps|com\.apple\.fairplay)/i.test(ks)) {
@@ -11026,10 +11110,12 @@
                             if ('tzOffset' in obj) obj.tzOffset = effMeta.offsetMin;
                         }
                     }
-                    const isUaDataNode = ('brands' in obj && Array.isArray(obj.brands)) ||
+                    const isNavSummaryNode = ('ua' in obj || 'userAgent' in obj || 'appVersion' in obj || 'hc' in obj || 'hardwareConcurrency' in obj || 'webdriver' in obj);
+                    const isUaDataNode = !isNavSummaryNode && (
+                                         ('brands' in obj && Array.isArray(obj.brands)) ||
                                          ('fullVersionList' in obj && Array.isArray(obj.fullVersionList)) ||
-                                         ('uaFullVersion' in obj && 'platformVersion' in obj);
-                    if (isUaDataNode) {
+                                         ('uaFullVersion' in obj && 'platformVersion' in obj));
+                    if (isUaDataNode && !/^(Win32|Win64|MacIntel|iPhone|iPad|iPod|Linux )/i.test(String(obj.platform || ''))) {
                         if ('platform' in obj && typeof obj.platform === 'string') obj.platform = chPlat;
                         if ('brands' in obj && Array.isArray(obj.brands)) harmonizeWorkerPayloadObj(obj.brands, d + 1);
                         if ('fullVersionList' in obj && Array.isArray(obj.fullVersionList)) harmonizeWorkerPayloadObj(obj.fullVersionList, d + 1);
@@ -11316,11 +11402,14 @@
                 dm: wDm,
                 lang: wLang,
                 langs: wLangs,
+                tz: cfg.timezone || '',
                 glVendor: wGlVendor,
-                glRenderer: wGlRenderer
+                glRenderer: wGlRenderer,
+                dx: ((fmix32(profileSeed, 101) % 15) + 1) * 0.03125,
+                dy: ((fmix32(profileSeed, 102) % 15) + 1) * 0.03125
             });
 
-            const workerPreludeStr = `(function(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(!d||!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d.set,enumerable:d.enumerable,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return origGp.call(this,p);}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);}catch(e){}})();\n`;
+            const workerPreludeStr = `(function __geWBoot(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(d&&!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d?d.set:undefined,enumerable:d?d.enumerable:true,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}if(C.tz&&typeof Intl!=='undefined'&&Intl.DateTimeFormat&&Intl.DateTimeFormat.prototype){const dP=Intl.DateTimeFormat.prototype,oRo=dP.resolvedOptions;if(typeof oRo==='function'){const ro=mk(({resolvedOptions(){const r=oRo.call(this);if(r&&typeof r==='object')r.timeZone=C.tz;return r;}}).resolvedOptions,'resolvedOptions');Object.defineProperty(dP,'resolvedOptions',{value:ro,writable:true,enumerable:false,configurable:true});}}if(typeof OffscreenCanvasRenderingContext2D!=='undefined'&&OffscreenCanvasRenderingContext2D.prototype){const oP=OffscreenCanvasRenderingContext2D.prototype,oFt=oP.fillText;if(typeof oFt==='function'){const ft=mk(({fillText(t,x,y,mw){try{const cv=this&&this.canvas,w=cv?(cv.width||0):0,h=cv?(cv.height||0):0;if(String(t||'').length>=4&&w>=40&&h>=15){return arguments.length>=4?oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy,mw):oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy);}}catch(e){}return oFt.apply(this,arguments);}}).fillText,'fillText');Object.defineProperty(oP,'fillText',{value:ft,writable:true,enumerable:true,configurable:true});}}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return origGp.call(this,p);}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);if(typeof self.Blob==='function'&&typeof self.URL==='function'&&typeof self.URL.createObjectURL==='function'){const OB=self.Blob,oCU=self.URL.createObjectURL,bm=new WeakMap(),bootSrc='('+__geWBoot.toString()+')();\\n';const BP=mk(new Proxy(OB,{construct(t,a,nt){const i=Reflect.construct(t,a,nt);try{if(a&&a.length>0&&Array.isArray(a[0])){const o=(a.length>1&&a[1]&&typeof a[1]==='object')?a[1]:undefined;bm.set(i,{parts:a[0].slice(),options:o});}}catch(e){}return i;}}),'Blob');Object.defineProperty(OB.prototype,'constructor',{value:BP,writable:true,enumerable:false,configurable:true});Object.defineProperty(self,'Blob',{value:BP,writable:true,enumerable:false,configurable:true});const cu=mk(({createObjectURL(o){try{const e=o&&bm.get(o);if(e&&Array.isArray(e.parts)&&e.parts.length>0){const pb=e.options?new OB([bootSrc,...e.parts],e.options):new OB([bootSrc,...e.parts]);return oCU.call(this,pb);}}catch(e){}return oCU.apply(this,arguments);}}).createObjectURL,'createObjectURL');Object.defineProperty(self.URL,'createObjectURL',{value:cu,writable:true,enumerable:true,configurable:true});}}catch(e){}})();\n`;
 
             const BlobProxy = makeNative(new Proxy(OrigBlob, {
                 construct(target, args, newTarget) {
@@ -11395,6 +11484,69 @@
                 enumerable: true,
                 configurable: true
             });
+        }
+    } catch (e) {}
+
+    // iOS/iPadOS WebKit PointerEvent.getCoalescedEvents, ServiceWorkerContainer, ALPN nextHopProtocol & MediaKeySystemAccess Prototype Hygiene
+    try {
+        if (typeof window !== 'undefined' && typeof window.PointerEvent === 'function' && window.PointerEvent.prototype && !('getCoalescedEvents' in window.PointerEvent.prototype)) {
+            const getCoalesced = makeNative(({
+                getCoalescedEvents() {
+                    if (!(this instanceof window.PointerEvent)) throw new TypeError('Illegal invocation');
+                    return [this];
+                }
+            }).getCoalescedEvents, 'getCoalescedEvents', 0);
+            Object.defineProperty(window.PointerEvent.prototype, 'getCoalescedEvents', {
+                value: getCoalesced,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+        }
+        if (typeof Navigator !== 'undefined' && Navigator.prototype && !('serviceWorker' in Navigator.prototype)) {
+            const swStub = Object.create((typeof EventTarget !== 'undefined' && EventTarget.prototype) ? EventTarget.prototype : Object.prototype);
+            Object.defineProperties(swStub, {
+                controller: { get: makeNative(function() { return null; }, 'get controller', 0), enumerable: true, configurable: true },
+                ready: { get: makeNative(function() { return new Promise(function() {}); }, 'get ready', 0), enumerable: true, configurable: true },
+                getRegistrations: { value: makeNative(function getRegistrations() { return Promise.resolve([]); }, 'getRegistrations', 0), writable: true, enumerable: true, configurable: true },
+                getRegistration: { value: makeNative(function getRegistration() { return Promise.resolve(undefined); }, 'getRegistration', 0), writable: true, enumerable: true, configurable: true },
+                register: { value: makeNative(function register() { return Promise.reject(new DOMException('The operation is insecure.', 'SecurityError')); }, 'register', 1), writable: true, enumerable: true, configurable: true }
+            });
+            Object.defineProperty(Navigator.prototype, 'serviceWorker', {
+                get: makeNative(({
+                    'get serviceWorker'() {
+                        if (!(this instanceof Navigator)) throw new TypeError('Illegal invocation');
+                        return swStub;
+                    }
+                })['get serviceWorker'], 'get serviceWorker', 0),
+                set: undefined,
+                enumerable: true,
+                configurable: true
+            });
+        }
+        if (typeof PerformanceResourceTiming !== 'undefined' && PerformanceResourceTiming.prototype) {
+            const prtProto = PerformanceResourceTiming.prototype;
+            const nhDesc = Object.getOwnPropertyDescriptor(prtProto, 'nextHopProtocol');
+            if (nhDesc && typeof nhDesc.get === 'function' && nhDesc.configurable) {
+                const origNhGet = nhDesc.get;
+                Object.defineProperty(prtProto, 'nextHopProtocol', {
+                    get: makeNative(({
+                        'get nextHopProtocol'() {
+                            const val = invokeNativeWithCleanStack(origNhGet, this, arguments);
+                            if (val) return val;
+                            try {
+                                const nm = String(this.name || '');
+                                if (/^https:\/\//i.test(nm)) return 'h2';
+                                if (/^http:\/\//i.test(nm)) return 'http/1.1';
+                            } catch (_) {}
+                            return 'h2';
+                        }
+                    })['get nextHopProtocol'], 'get nextHopProtocol', 0, origNhGet),
+                    set: undefined,
+                    enumerable: nhDesc.enumerable,
+                    configurable: true
+                });
+            }
         }
     } catch (e) {}
 })();
