@@ -1539,10 +1539,10 @@ public final class LocalSocks5DnsBridge {
 
         let servers = ispDnsServers()
         func tryServer(attempt: Int) {
-            if attempt >= min(2, servers.count) {
+            if attempt >= min(3, servers.count) {
                 cacheLock.lock()
                 port53ConsecutiveFailures += 1
-                if port53ConsecutiveFailures >= 2 {
+                if verifiedDnsServers.isEmpty && port53ConsecutiveFailures >= 6 {
                     port53BlockedByProxy = true
                 }
                 cacheLock.unlock()
@@ -1557,6 +1557,7 @@ public final class LocalSocks5DnsBridge {
                 if handled {
                     self?.cacheLock.lock()
                     self?.port53ConsecutiveFailures = 0
+                    self?.port53BlockedByProxy = false
                     self?.verifiedDnsServers.insert(dnsIp)
                     self?.cacheLock.unlock()
                     if ip != nil {
@@ -1590,7 +1591,7 @@ public final class LocalSocks5DnsBridge {
             completion(handled, ip)
         }
 
-        queue.asyncAfter(deadline: .now() + 2.0) {
+        queue.asyncAfter(deadline: .now() + 3.5) {
             finish(false, nil)
         }
 

@@ -159,13 +159,22 @@
         _verifiedLiveTcpIp = trimmed;
         _livePageTcpIp = trimmed;
         if (metaObj && typeof metaObj === 'object') {
-            if (metaObj.isp && typeof metaObj.isp === 'string' && metaObj.isp.trim()) _livePageIsp = metaObj.isp.trim();
-            if (metaObj.city && typeof metaObj.city === 'string' && metaObj.city.trim()) _livePageCity = metaObj.city.trim();
-            if (metaObj.region && typeof metaObj.region === 'string' && metaObj.region.trim()) _livePageRegion = metaObj.region.trim();
-            if (metaObj.country && typeof metaObj.country === 'string' && metaObj.country.trim()) _livePageCountry = metaObj.country.trim();
-            if (metaObj.countryCode && typeof metaObj.countryCode === 'string' && metaObj.countryCode.trim()) _livePageCountryCode = metaObj.countryCode.trim().toUpperCase();
-            if (metaObj.timezone && typeof metaObj.timezone === 'string' && metaObj.timezone.includes('/')) {
-                if (!_livePageTimezone) _livePageTimezone = metaObj.timezone.trim();
+            const g = (metaObj.geo && typeof metaObj.geo === 'object') ? metaObj.geo : metaObj;
+            const conn = (metaObj.connection && typeof metaObj.connection === 'object') ? metaObj.connection : {};
+            const comp = (metaObj.company && typeof metaObj.company === 'object') ? metaObj.company : {};
+            const ispVal = g.isp || g.org || conn.isp || conn.org || comp.name || g.asname || g.as_name || '';
+            const cityVal = g.city || metaObj.city || '';
+            const regVal = g.region || g.regionName || metaObj.region || metaObj.regionName || '';
+            const countryVal = g.country || g.country_name || metaObj.country || metaObj.country_name || '';
+            const ccVal = g.countryCode || g.country_code || metaObj.countryCode || metaObj.country_code || '';
+            const tzVal = (typeof g.timezone === 'string' ? g.timezone : (g.timezone && g.timezone.id ? g.timezone.id : '')) || (typeof metaObj.timezone === 'string' ? metaObj.timezone : (metaObj.timezone && metaObj.timezone.id ? metaObj.timezone.id : ''));
+            if (typeof ispVal === 'string' && ispVal.trim()) _livePageIsp = ispVal.trim();
+            if (typeof cityVal === 'string' && cityVal.trim()) _livePageCity = cityVal.trim();
+            if (typeof regVal === 'string' && regVal.trim()) _livePageRegion = regVal.trim();
+            if (typeof countryVal === 'string' && countryVal.trim()) _livePageCountry = countryVal.trim();
+            if (typeof ccVal === 'string' && ccVal.trim()) _livePageCountryCode = ccVal.trim().toUpperCase();
+            if (typeof tzVal === 'string' && tzVal.includes('/')) {
+                if (!_livePageTimezone) _livePageTimezone = tzVal.trim();
             }
         }
         try {
@@ -214,23 +223,24 @@
             if (_verifiedLiveTcpIp) return;
             const fFn = (typeof _topRawFetch === 'function') ? _topRawFetch : window.fetch;
             if (typeof fFn !== 'function') return;
-            const probeUrls = ['https://www.cloudflare.com/cdn-cgi/trace', 'https://api.ipify.org?format=json'];
+            const probeUrls = ['https://ipwho.is/', 'https://www.cloudflare.com/cdn-cgi/trace'];
             for (let i = 0; i < probeUrls.length; i++) {
                 const pUrl = probeUrls[i];
                 try {
                     fFn.call(window, pUrl, { cache: 'no-store', credentials: 'omit' }).then(res => res.text()).then(txt => {
-                        if (!txt || _verifiedLiveTcpIp) return;
+                        if (!txt) return;
                         const mTrace = txt.match(/(?:^|\n)ip=((?:\d{1,3}\.){3}\d{1,3})(?:\r|\n|$)/);
                         if (mTrace && mTrace[1]) {
-                            _recordVerifiedLiveIp(mTrace[1]);
+                            if (!_verifiedLiveTcpIp) _recordVerifiedLiveIp(mTrace[1]);
                             return;
                         }
                         const trimmed = txt.trim();
                         if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed)) {
-                            _recordVerifiedLiveIp(trimmed);
+                            if (!_verifiedLiveTcpIp) _recordVerifiedLiveIp(trimmed);
                         } else if (trimmed.startsWith('{')) {
                             const j = JSON.parse(trimmed);
-                            if (j && typeof j.ip === 'string') _recordVerifiedLiveIp(j.ip);
+                            const cand = j && (j.ip || j.clientIp || (j.data && j.data.ip) || (j.intel && j.intel.ip));
+                            if (typeof cand === 'string') _recordVerifiedLiveIp(cand, j.intel || j.data || j);
                         }
                     }).catch(() => {});
                 } catch (e) {}
@@ -2299,26 +2309,63 @@
         return { ip, isp, city, region, country, countryCode };
     }
 
+    const _verifiedCarrierDnsIps = [];
+
+    function isPublicDnsIp(ip) {
+        if (!ip || typeof ip !== 'string') return true;
+        const s = ip.trim();
+        if (!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(s)) return true;
+        if (/^(?:10\.|127\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(s)) return true;
+        // Google, Cloudflare, Quad9, OpenDNS, NextDNS, AdGuard, Level3 public recursors
+        if (/^(?:8\.8\.|8\.34\.|8\.35\.|74\.125\.|142\.250\.|142\.251\.|172\.217\.|172\.253\.|192\.178\.|1\.1\.1\.|1\.0\.0\.|104\.16\.|162\.158\.|172\.6[4-9]\.|172\.7[01]\.|9\.9\.9\.|149\.112\.|208\.67\.|4\.2\.2\.)/.test(s)) {
+            return true;
+        }
+        return false;
+    }
+
+    function _recordCarrierDnsIp(ip) {
+        if (!ip || typeof ip !== 'string') return;
+        const s = ip.trim();
+        if (isPublicDnsIp(s)) return;
+        if (!_verifiedCarrierDnsIps.includes(s)) {
+            _verifiedCarrierDnsIps.push(s);
+        }
+    }
+
     function doesResolverMatchProxyIsp(resolverOrg, proxyIsp) {
         if (!resolverOrg || !proxyIsp) return false;
-        const r = String(resolverOrg).toLowerCase();
-        const p = String(proxyIsp).toLowerCase();
-        if (r.includes(p) || p.includes(r)) return true;
+        const rRaw = String(resolverOrg);
+        const rPart = rRaw.includes(' - ') ? rRaw.split(' - ').slice(1).join(' - ') : rRaw;
+        const r = rPart.toLowerCase().trim();
+        const p = String(proxyIsp).toLowerCase().trim();
+        if (!r || r === 'unknown') return false;
+        if (r === p || r.includes(p) || p.includes(r)) return true;
+        const publicDnsPatterns = [
+            /\bgoogle\b/i, /\bcloudflare\b/i, /\bquad9\b/i, /\bopendns\b/i,
+            /\bcisco\s*opendns\b/i, /\bnextdns\b/i, /\badguard\b/i, /\bwoodynet\b/i,
+            /\bcleanbrowsing\b/i, /\bcontrol\s*d\b/i, /\bverisign\b/i, /\byandex\b/i
+        ];
+        for (const pat of publicDnsPatterns) {
+            if (pat.test(r) && !pat.test(p)) return false;
+        }
         const families = [
-            ['verizon', 'cellco', 'fios', 'vzw'],
-            ['charter', 'spectrum', 'time warner', 'bright house'],
-            ['t-mobile', 'tmobile', 'sprint'],
-            ['at&t', 'att ', 'sbcglobal', 'bellsouth'],
-            ['comcast', 'xfinity'],
-            ['cox'],
-            ['frontier'],
-            ['centurylink', 'lumen', 'qwest'],
-            ['optimum', 'altice', 'cablevision']
+            ['verizon', 'cellco', 'fios', 'vzw', 'mci communications', 'uunet', 'as6167', 'as701', 'as22394'],
+            ['charter', 'spectrum', 'time warner', 'bright house', 'as20115', 'as7843'],
+            ['t-mobile', 'tmobile', 'sprint', 'metro by t-mobile', 'omnipoint', 'as21928'],
+            ['at&t', 'att ', 'att-', 'sbcglobal', 'bellsouth', 'cingular', 'as7018', 'as20057'],
+            ['comcast', 'xfinity', 'as7922'],
+            ['cox', 'as22773'],
+            ['frontier', 'as5650'],
+            ['centurylink', 'lumen', 'qwest', 'level 3', 'level3', 'as209', 'as3356'],
+            ['optimum', 'altice', 'cablevision', 'suddenlink', 'as6128', 'as19108']
         ];
         for (const fam of families) {
-            if (fam.some(k => r.includes(k)) && fam.some(k => p.includes(k))) return true;
+            const rIn = fam.some(k => r.includes(k));
+            const pIn = fam.some(k => p.includes(k));
+            if (rIn && pIn) return true;
+            if (rIn !== pIn) return false;
         }
-        const rWords = r.replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !['communications', 'business', 'telecom', 'wireless', 'internet', 'holdings', 'services', 'corporation'].includes(w));
+        const rWords = r.replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !['communications', 'business', 'telecom', 'wireless', 'internet', 'holdings', 'services', 'corporation', 'united', 'states', 'america'].includes(w));
         return rWords.some(w => p.includes(w));
     }
 
@@ -2344,10 +2391,9 @@
             const cleanWord = ispLower.replace(/[^a-z0-9]/g, '').slice(0, 10) || 'isp';
             ispDomain = cleanWord + '.net';
         }
-        // Keep primary DNS resolvers in the EXACT same /24 subnet (o1.o2.o3.x)
-        // so strict /24 subnet proximity checks and server-side GeoIP lookups (ipfighter.com,
-        // browserinsight.net, pixelscan.net) resolve to the exact same ISP, ASN, and City,
-        // while seeding host octets per profile + IP so no static octet pattern is reused.
+        // Prefer verified live carrier DNS IPs (e.g. 141.207.169.254 on Verizon Business AS6167)
+        // when discovered, and fill remaining slots with deterministic /24 subnet IPs (o1.o2.o3.x)
+        // so server-side GeoIP / ASN lookups always resolve to the exact same ISP, ASN, and Country.
         const ipIntSeed = ((o1 & 0xff) << 24) | ((o2 & 0xff) << 16) | ((o3 & 0xff) << 8) | (o4 & 0xff);
         const hostOctets = [];
         let octSalt = 1;
@@ -2361,9 +2407,14 @@
         const numServers = Math.max(6, Math.min(8, count || 6));
         const chain = [];
         for (let i = 0; i < numServers; i++) {
-            let hOct = hostOctets[i % hostOctets.length] || ((11 + i * 7) % 250 + 2);
-            if (hOct === o4) hOct = (hOct % 250) + 2;
-            const resolverIp = `${o1}.${o2}.${o3}.${hOct}`;
+            let resolverIp = '';
+            if (i < _verifiedCarrierDnsIps.length) {
+                resolverIp = _verifiedCarrierDnsIps[i];
+            } else {
+                let hOct = hostOctets[i % hostOctets.length] || ((11 + i * 7) % 250 + 2);
+                if (hOct === o4) hOct = (hOct % 250) + 2;
+                resolverIp = `${o1}.${o2}.${o3}.${hOct}`;
+            }
             const idxStr = String(i + 1).padStart(2, '0');
             const hostname = `dns${idxStr}.${ispDomain}`;
             chain.push({
@@ -2408,10 +2459,6 @@
         const u = typeof url === 'string' ? url : (url && url.url ? url.url : '');
         const host = (typeof location !== 'undefined' && location.hostname) ? location.hostname.toLowerCase() : '';
         const isBiHost = host.includes('browserinsight.net');
-        const isFmHost = host.includes('flagmeter.com');
-        if (isFmHost && (u.includes('edns.ip-api.com') || u.includes('sharkdns.com') || u.includes('surfsharkdns.com'))) {
-            return false;
-        }
         return u.includes('/api/v1/servers-for-result') ||
                u.includes('/api/v1/servers-for-round') ||
                u.includes('/api/v1/dns-leak/result') ||
@@ -2473,6 +2520,10 @@
                 return true;
             }
             if (u.includes('edns.ip-api.com')) {
+                const meta = getEffectiveProxyMeta();
+                if (data.dns && data.dns.ip && !isPublicDnsIp(data.dns.ip) && doesResolverMatchProxyIsp(data.dns.geo || '', meta.isp)) {
+                    _recordCarrierDnsIp(data.dns.ip);
+                }
                 const chain = buildProxyIspDnsChain(6);
                 const primary = chain[0];
                 _synthesizedDnsIps.add(primary.ip_address);
@@ -2528,13 +2579,17 @@
                 if (intelObj && typeof intelObj === 'object') {
                     const liveIp = intelObj.ip || intelObj.visitorIP || '';
                     const geoObj = (intelObj.geo && typeof intelObj.geo === 'object') ? intelObj.geo : {};
+                    const asnObj = (intelObj.asn && typeof intelObj.asn === 'object') ? intelObj.asn : {};
+                    if (asnObj.asn && cfg) {
+                        cfg.proxyAsn = `AS${String(asnObj.asn).replace(/^AS/i, '')}`;
+                    }
                     if (liveIp && typeof liveIp === 'string') {
                         _recordVerifiedLiveIp(liveIp, {
-                            isp: geoObj.isp || geoObj.org || '',
+                            isp: geoObj.isp || geoObj.org || asnObj.name || '',
                             city: geoObj.city || '',
                             region: geoObj.region || geoObj.regionName || '',
                             country: geoObj.country || '',
-                            countryCode: geoObj.countryCode || '',
+                            countryCode: geoObj.countryCode || asnObj.cc || '',
                             timezone: geoObj.timezone || ''
                         });
                     }
@@ -2644,18 +2699,33 @@
             }
             // Surfshark DNS leak check (sharkdns.com / surfsharkdns.com)
             if (u.includes('sharkdns.com') || u.includes('surfsharkdns.com')) {
-                const chain = buildProxyIspDnsChain(6);
-                const node = chain[0];
-                _synthesizedDnsIps.add(node.ip_address);
-                for (const k of Object.keys(data)) delete data[k];
-                data[node.ip_address] = {
-                    IP: node.ip_address,
-                    ISP: node.isp,
-                    Country: node.country || 'United States',
-                    CountryCode: (node.country_code || 'US').toUpperCase(),
-                    City: node.city || '',
-                    Leak: false
-                };
+                let keptRealCarrier = 0;
+                for (const k of Object.keys(data)) {
+                    const entry = data[k];
+                    const eIp = (entry && (entry.IP || entry.ip)) || k;
+                    const eIsp = (entry && (entry.ISP || entry.isp)) || '';
+                    const eCountry = (entry && (entry.Country || entry.country)) || '';
+                    const eCc = (entry && (entry.CountryCode || entry.country_code)) || '';
+                    if (doesResolverMatchProxyIsp(eIsp, eCountry, eCc, eIp)) {
+                        _recordCarrierDnsIp(eIp);
+                        keptRealCarrier++;
+                    } else {
+                        delete data[k];
+                    }
+                }
+                if (keptRealCarrier === 0) {
+                    const chain = buildProxyIspDnsChain(6);
+                    const node = chain[0];
+                    _synthesizedDnsIps.add(node.ip_address);
+                    data[node.ip_address] = {
+                        IP: node.ip_address,
+                        ISP: node.isp,
+                        Country: node.country || 'United States',
+                        CountryCode: (node.country_code || 'US').toUpperCase(),
+                        City: node.city || '',
+                        Leak: false
+                    };
+                }
                 return true;
             }
             // Pixelscan Connection Info (/s/api/ci and /s/api/civ2) & VPN/Proxy Check (/s/api/vpc) & IP Blacklist (/s/api/cip*)
@@ -3951,7 +4021,36 @@
                         f.status = 'pass';
                         f.weight = 0;
                         modified = true;
+                    } else if (fid === 'dns-resolver' || fid === 'dns-leak') {
+                        const meta = getProxyDnsMetadata();
+                        const chain = buildProxyIspDnsChain(6);
+                        const rawIps = (String(f.detail || '').match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) || []);
+                        const cleanIps = rawIps.filter((ip) => !isPublicDnsIp(ip));
+                        for (const cip of cleanIps) _recordCarrierDnsIp(cip);
+                        const finalIp = cleanIps.length > 0 ? cleanIps[0] : (chain[0] ? chain[0].ip_address : '71.250.0.12');
+                        f.status = 'pass';
+                        f.weight = 0;
+                        if (fid === 'dns-resolver') {
+                            f.detail = `Resolved via ${finalIp} (${meta.isp}, ${meta.countryCode}), matching HTTP exit ASN (${meta.isp}).`;
+                        } else {
+                            f.detail = `Resolver ${finalIp} (${meta.country} · ${meta.isp}) matches HTTP exit country (${meta.countryCode}) and ISP/ASN (${meta.isp}).`;
+                        }
+                        modified = true;
                     }
+                }
+                if ((Array.isArray(rootObj.votes) || rootObj.reputation) && !rootObj.findings.some(x => x && x.id === 'dns-resolver')) {
+                    const meta = getProxyDnsMetadata();
+                    const chain = buildProxyIspDnsChain(6);
+                    const finalIp = chain[0] ? chain[0].ip_address : '71.250.0.12';
+                    rootObj.findings.push({
+                        group: 'ip',
+                        status: 'pass',
+                        id: 'dns-resolver',
+                        name: 'Authoritative DNS resolver (:53) ASN & Geo match',
+                        detail: `Resolved via ${finalIp} (${meta.isp}, ${meta.countryCode}), matching HTTP exit ASN (${meta.isp}).`,
+                        weight: 0
+                    });
+                    modified = true;
                 }
             }
         } catch (e) {}
@@ -6020,8 +6119,12 @@
                     const uDns = typeof url === 'string' ? url : (url && url.url ? url.url : '');
                     if ((cfg.proxyEnabled || cfg.proxyIp) && (uDns.includes('sharkdns.com') || uDns.includes('surfsharkdns.com') || uDns.includes('edns.ip-api.com'))) {
                         return _waitForVerifiedLiveIp(1800).then(() => new Promise((resolve) => {
-                            const delayMs = (uDns.includes('sharkdns.com') || uDns.includes('surfsharkdns.com')) ? 28 : 12;
-                            setTimeout(() => {
+                            const startWait = Date.now();
+                            const checkReady = () => {
+                                if (!_livePageIsp && (Date.now() - startWait) < 1200) {
+                                    setTimeout(checkReady, 60);
+                                    return;
+                                }
                                 const synthObj = {};
                                 sanitizeDnsLeakData(uDns, synthObj);
                                 resolve(new Response(JSON.stringify(synthObj), {
@@ -6029,7 +6132,8 @@
                                     statusText: 'OK',
                                     headers: { 'content-type': 'application/json; charset=utf-8' }
                                 }));
-                            }, delayMs);
+                            };
+                            setTimeout(checkReady, (uDns.includes('sharkdns.com') || uDns.includes('surfsharkdns.com')) ? 35 : 18);
                         }));
                     }
                     return nativeFetch.apply(this, arguments).then(async (response) => {
@@ -6695,10 +6799,11 @@
                                 _livePageTcpIp = txt;
                             } else if (txt.startsWith('{')) {
                                 const parsed = JSON.parse(txt);
-                                if (parsed && typeof parsed.ip === 'string') {
-                                    const pIp = parsed.ip.trim();
+                                const candIp = parsed && (parsed.ip || parsed.clientIp || (parsed.network && parsed.network.clientIp) || (parsed.intel && parsed.intel.ip) || (parsed.data && parsed.data.ip));
+                                if (typeof candIp === 'string') {
+                                    const pIp = candIp.trim();
                                     if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(pIp)) {
-                                        _recordVerifiedLiveIp(pIp);
+                                        _recordVerifiedLiveIp(pIp, parsed.intel || parsed.data || parsed);
                                     } else if (pIp.includes(':')) {
                                         const v4 = getKnownIpv4();
                                         if (v4) {
