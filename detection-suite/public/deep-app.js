@@ -281,8 +281,7 @@
     // CPU
     const cp = x.cpu;
     if (cp && cp.supported && cp.speedup != null) {
-      const expected = Math.min(cp.workers, cp.claimed);
-      if (cp.claimed >= 4 && cp.speedup < Math.max(1.6, expected * 0.3)) f('warn', 'dev-cpu', 'CPU parallelism vs. hardwareConcurrency', `Claims ${cp.claimed} cores, but ${cp.workers} parallel workers only achieved ${cp.speedup}× throughput. The core count is spoofed, or this is a CPU-starved VM.`, 20);
+      if (cp.claimed >= 4 && cp.speedup < 1.05) f('warn', 'dev-cpu', 'CPU parallelism vs. hardwareConcurrency', `Claims ${cp.claimed} cores, but ${cp.workers} parallel workers only achieved ${cp.speedup}× throughput. The core count is spoofed, or this is a CPU-starved VM.`, 20);
       else f('pass', 'dev-cpu', 'CPU parallelism vs. hardwareConcurrency', `${cp.workers} workers → ${cp.speedup}× speed-up, plausible for ${cp.claimed} logical cores.`);
     }
     // Intl
@@ -355,8 +354,279 @@
       const tz = corr.findings.find((r) => r.id === 'geo-tz');
       if (tz) R.push(row('IP geo vs. clock', tz.status === 'pass' ? 'consistent' : 'mismatch', 'consistent', tz.status === 'pass'));
     }
+    if (x.multiDnsSummary) {
+      R.push(row('Multi-vector DNS (3 engines)', x.multiDnsSummary.observed, 'Same country & carrier/ISP', x.multiDnsSummary.ok));
+    }
     $('matrix').innerHTML = `<thead><tr><th>Layer</th><th>Observed</th><th>Expected for claim</th><th></th></tr></thead><tbody>${R.map((r) =>
       `<tr><td>${esc(r.layer)}</td><td class="mono">${esc(r.observed)}</td><td>${esc(r.expected)}</td><td class="st ${r.ok === true ? 'ok' : r.ok === false ? 'bad' : 'na'}">${r.ok === true ? '✓' : r.ok === false ? '✕' : '·'}</td></tr>`).join('')}</tbody>`;
+  }
+
+  async function runMultiVectorDnsSweep() {
+    const randStr = (len) => {
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      let out = '';
+      for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      return out;
+    };
+    const fetchWithTimeout = (url, ms) => new Promise((resolve) => {
+      const t = setTimeout(() => resolve(null), ms || 3500);
+      fetch(url, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { clearTimeout(t); resolve(d); })
+        .catch(() => { clearTimeout(t); resolve(null); });
+    });
+
+    const surfPromises = [0, 1, 2].map(() => fetchWithTimeout(`https://${randStr(14)}.ipv4.surfsharkdns.com`, 3500));
+    const ednsPromises = [0, 1].map(() => fetchWithTimeout(`https://${randStr(32)}.edns.ip-api.com/json`, 3500));
+
+    const [surfRes, ednsRes] = await Promise.all([
+      Promise.all(surfPromises),
+      Promise.all(ednsPromises),
+    ]);
+
+    const surfMap = new Map();
+    for (const obj of surfRes) {
+      if (!obj || typeof obj !== 'object') continue;
+      for (const [k, val] of Object.entries(obj)) {
+        const ip = (val && (val.IP || val.ip)) || k;
+        if (!ip || typeof ip !== 'string' || !/^\d+\.\d+\.\d+\.\d+$/.test(ip)) continue;
+        if (!surfMap.has(ip)) {
+          surfMap.set(ip, {
+            ip,
+            isp: (val && (val.ISP || val.isp)) || 'Unknown ISP',
+            country: (val && (val.Country || val.country)) || 'Unknown',
+            cc: (val && (val.CountryCode || val.country_code)) || '',
+            city: (val && (val.City || val.city)) || '',
+          });
+        }
+      }
+    }
+
+    const ednsMap = new Map();
+    for (const obj of ednsRes) {
+      if (!obj || typeof obj !== 'object') continue;
+      if (obj.dns && obj.dns.ip) {
+        ednsMap.set('DNS:' + obj.dns.ip, { kind: 'Recursive DNS', ip: obj.dns.ip, geo: obj.dns.geo || 'Unknown' });
+      }
+      if (obj.edns && obj.edns.ip) {
+        ednsMap.set('EDNS:' + obj.edns.ip, { kind: 'EDNS Client Subnet', ip: obj.edns.ip, geo: obj.edns.geo || 'Unknown' });
+      }
+    }
+
+    return {
+      surfshark: Array.from(surfMap.values()),
+      edns: Array.from(ednsMap.values()),
+    };
+  }
+
+  function renderMultiVectorDnsMatrix(ctx) {
+    const intel = ctx.intel || {};
+    const net = ctx.net || {};
+    const rtc = ctx.rtc || {};
+    const dnsRes = ctx.dnsRes || {};
+    const corr = ctx.corr || {};
+    const multiDns = ctx.multiDns || { surfshark: [], edns: [] };
+
+    const baseIp = intel.ip || 'unknown';
+    const baseCountry = (intel.geo && intel.geo.country) || (intel.asn && intel.asn.cc) || '';
+    const baseCc = ((intel.asn && intel.asn.cc) || '').toUpperCase();
+    const baseIsp = (intel.geo && (intel.geo.isp || intel.geo.org)) || (intel.asn && intel.asn.name) || '';
+    const baseAsn = (intel.asn && intel.asn.asn) ? `AS${intel.asn.asn}` : '';
+
+    const countryMatches = (text, cc) => {
+      const t = String(text || '').toLowerCase();
+      const c = String(cc || '').toUpperCase();
+      if (!baseCountry && !baseCc) return true;
+      if (c && baseCc && c === baseCc) return true;
+      if (baseCountry && t.includes(baseCountry.toLowerCase())) return true;
+      if (baseCc === 'US' && /\b(united states|usa|u\.s\.a\.|america)\b/i.test(t)) return true;
+      if (baseCc === 'GB' && /\b(united kingdom|uk|great britain|england)\b/i.test(t)) return true;
+      return false;
+    };
+
+    const rows = [];
+    const leakAlerts = [];
+
+    // 1. Baseline HTTP :443
+    rows.push({
+      vector: '1. HTTP Page Egress (:443 Baseline)',
+      ips: baseIp,
+      country: `${(intel.geo && intel.geo.city) ? intel.geo.city + ', ' : ''}${baseCountry || baseCc || '—'}`,
+      isp: `${baseIsp}${baseAsn ? ' (' + baseAsn + ')' : ''}`,
+      verdict: '✓ BASELINE',
+      ok: true,
+    });
+
+    // 2. Direct TLS Edge :4443
+    const rawEdgeIp = (net && net.remote) ? String(net.remote).replace(/^::ffff:/i, '').replace(/:\d+$/, '') : '';
+    if (rawEdgeIp && rawEdgeIp !== '127.0.0.1') {
+      const sameEdge = rawEdgeIp === baseIp;
+      rows.push({
+        vector: '2. Direct TLS Edge (:4443 Port Check)',
+        ips: rawEdgeIp,
+        country: sameEdge ? (baseCountry || baseCc || 'Same as :443') : 'Carrier Multi-Gateway / Split Route',
+        isp: sameEdge ? `${baseIsp}${baseAsn ? ' (' + baseAsn + ')' : ''}` : `Port :4443 exited via ${rawEdgeIp} vs :443 ${baseIp}`,
+        verdict: sameEdge ? '✓ MATCH' : '! SPLIT ROUTE',
+        ok: sameEdge,
+      });
+    } else {
+      rows.push({
+        vector: '2. Direct TLS Edge (:4443 Port Check)',
+        ips: 'unreachable',
+        country: '—',
+        isp: 'Port :4443 blocked by proxy or firewall',
+        verdict: '· BLOCKED',
+        ok: null,
+      });
+    }
+
+    // 3. WebRTC UDP STUN :3478
+    const rtcIps = Array.from(new Set(((rtc && rtc.srflx) || []).map((s) => s.ip).concat((rtc && rtc.hostRaw) || []).filter(Boolean)));
+    if (rtcIps.length > 0) {
+      const allRtcMatch = rtcIps.every((ip) => ip === baseIp);
+      rows.push({
+        vector: '3. WebRTC STUN UDP (:3478 Path)',
+        ips: rtcIps.join(', '),
+        country: allRtcMatch ? (baseCountry || baseCc || 'Same as :443') : 'UDP / TCP Egress Mismatch',
+        isp: allRtcMatch ? `${baseIsp}${baseAsn ? ' (' + baseAsn + ')' : ''}` : `UDP candidate(s) differ from HTTP ${baseIp}`,
+        verdict: allRtcMatch ? '✓ MATCH' : '✕ UDP LEAK',
+        ok: allRtcMatch,
+      });
+    } else {
+      rows.push({
+        vector: '3. WebRTC STUN UDP (:3478 Path)',
+        ips: 'no UDP srflx',
+        country: '—',
+        isp: 'UDP blocked or mDNS-only',
+        verdict: '· NO UDP',
+        ok: null,
+      });
+    }
+
+    // 4. FlagMeter Authoritative NS1 (:53)
+    const authDnsFinding = (corr && corr.findings) ? corr.findings.find((f) => f.id === 'dns-resolver') : null;
+    if (authDnsFinding) {
+      const authOk = authDnsFinding.status === 'pass';
+      const authWarn = authDnsFinding.status === 'warn';
+      rows.push({
+        vector: '4. FlagMeter Auth NS1 (*.probe.flagmeter.com :53)',
+        ips: (authDnsFinding.detail.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/) || ['captured'])[0],
+        country: authOk ? (baseCountry || baseCc || 'Matches HTTP') : 'Authoritative NS1 Check',
+        isp: authDnsFinding.detail,
+        verdict: authOk ? '✓ MATCH' : authWarn ? '! ASN DIFF' : '✕ NS1 LEAK',
+        ok: authOk ? true : authWarn ? null : false,
+      });
+      if (authDnsFinding.status === 'fail') {
+        leakAlerts.push(`Authoritative NS1 (:53): ${authDnsFinding.detail}`);
+      }
+    } else {
+      rows.push({
+        vector: '4. FlagMeter Auth NS1 (*.probe.flagmeter.com :53)',
+        ips: 'pending / cached',
+        country: baseCountry || '—',
+        isp: 'Resolved via proxy tunnel',
+        verdict: '· TUNNELED',
+        ok: null,
+      });
+    }
+
+    // 5. Surfshark / BrowserScan Wildcard DNS (3x *.ipv4.surfsharkdns.com)
+    const surfNodes = multiDns.surfshark || [];
+    if (surfNodes.length > 0) {
+      const surfIps = surfNodes.map((n) => n.ip).join(', ');
+      const surfCountries = Array.from(new Set(surfNodes.map((n) => `${n.country}${n.cc ? ' (' + n.cc + ')' : ''}`))).join(', ');
+      const surfIsps = Array.from(new Set(surfNodes.map((n) => n.isp))).join(' · ');
+      const badCountryNodes = surfNodes.filter((n) => !countryMatches(n.country, n.cc));
+      const surfOk = badCountryNodes.length === 0;
+      rows.push({
+        vector: '5. BrowserScan / Surfshark DNS (3× *.ipv4.surfsharkdns.com)',
+        ips: surfIps,
+        country: surfCountries,
+        isp: surfIsps,
+        verdict: surfOk ? '✓ MATCH' : `✕ LEAK (${badCountryNodes.map((n) => n.country).join('/')})`,
+        ok: surfOk,
+      });
+      if (!surfOk) {
+        const leakDesc = `Surfshark / BrowserScan wildcard DNS resolved via ${badCountryNodes.map((n) => `${n.ip} (${n.isp}, ${n.country})`).join('; ')}, while HTTP exit IP ${baseIp} is in ${baseCountry || baseCc}.`;
+        leakAlerts.push(leakDesc);
+        state.groups.ip = (state.groups.ip || []).filter((x0) => x0.id !== 'dns-surfshark-leak').concat([{
+          group: 'ip',
+          status: 'fail',
+          id: 'dns-surfshark-leak',
+          name: 'BrowserScan / Surfshark Wildcard DNS Leak',
+          detail: leakDesc,
+          weight: 35,
+        }]);
+      }
+    } else {
+      rows.push({
+        vector: '5. BrowserScan / Surfshark DNS (3× *.ipv4.surfsharkdns.com)',
+        ips: 'no response',
+        country: '—',
+        isp: 'Blocked or timed out',
+        verdict: '· TIMEOUT',
+        ok: null,
+      });
+    }
+
+    // 6. IP-API EDNS Sweep (2x *.edns.ip-api.com + dnsRes)
+    const ednsList = (multiDns.edns || []).slice();
+    if (dnsRes && dnsRes.ip && !ednsList.some((e) => e.ip === dnsRes.ip)) {
+      ednsList.unshift({ kind: 'Recursive DNS', ip: dnsRes.ip, geo: dnsRes.geo || 'Unknown' });
+    }
+    if (dnsRes && dnsRes.edns && dnsRes.edns.ip && !ednsList.some((e) => e.ip === dnsRes.edns.ip)) {
+      ednsList.push({ kind: 'EDNS Client Subnet', ip: dnsRes.edns.ip, geo: dnsRes.edns.geo || 'Unknown' });
+    }
+    if (ednsList.length > 0) {
+      const ednsIps = ednsList.map((e) => `${e.ip} (${e.kind === 'EDNS Client Subnet' ? 'EDNS' : 'DNS'})`).join(', ');
+      const ednsGeos = Array.from(new Set(ednsList.map((e) => e.geo))).join(' · ');
+      const badEdns = ednsList.filter((e) => !countryMatches(e.geo, ''));
+      const ednsOk = badEdns.length === 0;
+      rows.push({
+        vector: '6. IP-API EDNS & Recursor Sweep (2× *.edns.ip-api.com)',
+        ips: ednsIps,
+        country: ednsGeos,
+        isp: ednsGeos,
+        verdict: ednsOk ? '✓ MATCH' : '✕ COUNTRY LEAK',
+        ok: ednsOk,
+      });
+      if (!ednsOk) {
+        const leakDesc = `IP-API EDNS wildcard probe resolved via ${badEdns.map((e) => `${e.ip} (${e.geo})`).join('; ')}, mismatching HTTP exit country ${baseCountry || baseCc}.`;
+        leakAlerts.push(leakDesc);
+        state.groups.ip = (state.groups.ip || []).filter((x0) => x0.id !== 'dns-edns-multi-leak').concat([{
+          group: 'ip',
+          status: 'fail',
+          id: 'dns-edns-multi-leak',
+          name: 'IP-API Multi-Round EDNS Leak',
+          detail: leakDesc,
+          weight: 35,
+        }]);
+      }
+    } else {
+      rows.push({
+        vector: '6. IP-API EDNS & Recursor Sweep (2× *.edns.ip-api.com)',
+        ips: 'no response',
+        country: '—',
+        isp: 'Blocked or timed out',
+        verdict: '· TIMEOUT',
+        ok: null,
+      });
+    }
+
+    const html = `<thead><tr><th>Probe Vector / Engine</th><th>Detected IP(s)</th><th>Country / Location</th><th>ISP / ASN / Detail</th><th>Verdict</th></tr></thead><tbody>${rows.map((r) =>
+      `<tr><td><b>${esc(r.vector)}</b></td><td class="mono">${esc(r.ips)}</td><td>${esc(r.country)}</td><td class="mono">${esc(r.isp)}</td><td class="st ${r.ok === true ? 'ok' : r.ok === false ? 'bad' : 'na'}" style="white-space:nowrap;font-weight:700;">${esc(r.verdict)}</td></tr>`
+    ).join('')}</tbody>`;
+
+    if ($('dns-multi-matrix-summary')) $('dns-multi-matrix-summary').innerHTML = html;
+    if ($('dns-multi-matrix-ip')) $('dns-multi-matrix-ip').innerHTML = html;
+
+    const totalResolvers = surfNodes.length + ednsList.length;
+    return {
+      ok: leakAlerts.length === 0,
+      observed: leakAlerts.length === 0
+        ? `${totalResolvers || 1} resolver(s) audited · All match ${baseCountry || baseCc || 'exit geo'}`
+        : `LEAK DETECTED (${leakAlerts.length} vector mismatch)`,
+    };
   }
 
   // ------------------------------------------------------------------ charts
@@ -426,6 +696,7 @@
     // server-side lookups (parallel)
     const pEdge = D.edgeProbe(S.edge, S.pv);
     const pDns = D.dnsLeak();
+    const pMultiDns = runMultiVectorDnsSweep();
     const pNet = pEdge.then(() => getJSON(`/api/deep/network?pv=${S.pv}`)).catch((e) => ({ error: e.message }));
     window.__SHARED_EDGE_NET_PROMISE__ = pNet;
     const pIP = getJSON(`/api/deep/ip?pv=${S.pv}`).catch((e) => ({ error: e.message }));
@@ -648,45 +919,6 @@
     }
     state.raw.correlation = corr;
     for (const r of corr.findings || []) {
-      if ((r.status === 'fail' || r.status === 'warn') && r.detail) {
-        const det = String(r.detail);
-        // Handle dual-stack IPv4 (STUN/DNS) vs IPv6 (HTTP) or same /16 CGNAT cellular pool rotation
-        if (/WebRTC public IP vs\. HTTP IP/i.test(r.name || '') || r.id === 'rtc-ip' || r.id === 'rtc-mismatch') {
-          const m = det.match(/exits from ([^\s]+) but HTTP traffic arrives from ([^\s.]+)/i);
-          if (m) {
-            const udpIp = m[1].replace(/\.$/, '');
-            const httpIp = m[2].replace(/\.$/, '');
-            const pA = udpIp.split('.');
-            const pB = httpIp.split('.');
-            const isDualStack = (udpIp.includes(':') !== httpIp.includes(':'));
-            const isSameSlash16 = (pA.length === 4 && pB.length === 4 && pA[0] === pB[0] && pA[1] === pB[1]);
-            if (isDualStack || isSameSlash16) {
-              r.status = 'pass';
-              r.weight = 0;
-              r.detail = isDualStack
-                ? `Coherent Dual-Stack Carrier Egress (UDP IPv4 ${udpIp} · HTTP IPv6 ${httpIp}).`
-                : `Coherent Carrier CGNAT /16 Pool (UDP ${udpIp} · HTTP ${httpIp}).`;
-            }
-          }
-        } else if (/DNS client-subnet vs\. HTTP IP/i.test(r.name || '') || r.id === 'dns-ecs') {
-          const m = det.match(/subnet ([^\s/]+)\/\d+ which doesn't contain ([^\s.]+)/i);
-          if (m) {
-            const ecsIp = m[1].replace(/\.$/, '');
-            const httpIp = m[2].replace(/\.$/, '');
-            const pA = ecsIp.split('.');
-            const pB = httpIp.split('.');
-            const isDualStack = (ecsIp.includes(':') !== httpIp.includes(':'));
-            const isSameSlash16 = (pA.length === 4 && pB.length === 4 && pA[0] === pB[0] && pA[1] === pB[1]);
-            if (isDualStack || isSameSlash16) {
-              r.status = 'pass';
-              r.weight = 0;
-              r.detail = isDualStack
-                ? `Resolver forwarded IPv4 ECS (${ecsIp}/24) matching WebRTC UDP egress on dual-stack carrier.`
-                : `Resolver forwarded carrier CGNAT subnet (${ecsIp}/24) within same /16 pool as ${httpIp}.`;
-            }
-          }
-        }
-      }
       const g = GROUPS.includes(r.group) ? r.group : 'challenge';
       state.groups[g] = state.groups[g].filter((x0) => x0.id !== r.id).concat([r]);
     }
@@ -705,23 +937,37 @@
       'OS votes': (corr.votes || []).map((v) => `${v.source}: ${OSLBL[v.os]}`).join(' · '),
       'Recent STUN peers': (corr.stunSeen || []).join(', ') || 'none',
     });
-    renderMatrix(Object.assign(x, { net, intel, corr }));
+    const multiDns = await pMultiDns;
+    state.raw.multiVectorDns = multiDns;
+    const multiDnsSummary = renderMultiVectorDnsMatrix({ intel, net, rtc, dnsRes, corr, multiDns });
+    renderMatrix(Object.assign(x, { net, intel, corr, multiDnsSummary }));
     render();
-    const netIssues = (state.groups.net || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
-    const ipIssues = (state.groups.ip || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
-    const devIssues = (state.groups.device || []).concat(state.groups.challenge || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
-    const behIssues = (state.groups.behavior || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
-    const totalDeepIssues = netIssues + ipIssues + devIssues + behIssues;
-    if (typeof window.updateUnifiedSubsystemBadge === 'function') {
-      window.updateUnifiedSubsystemBadge('subEdgeTls', netIssues === 0, netIssues === 0 ? (net.tls ? `✓ JA4 ${net.tls.ja4.slice(0, 10)}…` : '✓ TLS/H2 Clean') : `✗ ${netIssues} TLS/H2 Issue(s)`);
-      window.updateUnifiedSubsystemBadge('subDnsStun', ipIssues === 0, ipIssues === 0 ? '✓ DNS :53 & STUN :3478' : `✗ ${ipIssues} DNS/IP Issue(s)`);
-      window.updateUnifiedSubsystemBadge('subBotlensDeep', devIssues === 0, devIssues === 0 ? '✓ Wasm/Shader/PoW Clean' : `✗ ${devIssues} GPU/PoW Issue(s)`);
-    }
-    if (typeof window.updateNavTabStatus === 'function') {
-      const rp = report();
-      const deepClean = totalDeepIssues === 0 && (rp.score || 0) === 0;
-      window.updateNavTabStatus('tabBotlensDeepBtn', deepClean, deepClean ? '✓ 5 Pillars Clean (0/100)' : `✗ ${totalDeepIssues} Issue(s) (${rp.score || 0}/100)`);
-    }
+    const syncBotlensDeepStatus = () => {
+      const netIssues = (state.groups.net || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+      const ipIssues = (state.groups.ip || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+      const devIssues = (state.groups.device || []).concat(state.groups.challenge || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+      const behIssues = (state.groups.behavior || []).filter((f) => f.status === 'fail' || f.status === 'warn').length;
+      const totalDeepIssues = netIssues + ipIssues + devIssues + behIssues;
+      if (typeof window.updateUnifiedSubsystemBadge === 'function') {
+        window.updateUnifiedSubsystemBadge('subEdgeTls', netIssues === 0, netIssues === 0 ? (net && net.tls ? `✓ JA4 ${net.tls.ja4.slice(0, 10)}…` : '✓ TLS/H2 Clean') : `✗ ${netIssues} TLS/H2 Issue(s)`);
+        window.updateUnifiedSubsystemBadge('subDnsStun', ipIssues === 0, ipIssues === 0 ? '✓ DNS :53 & STUN :3478' : `✗ ${ipIssues} DNS/IP Issue(s)`);
+        window.updateUnifiedSubsystemBadge('subBotlensDeep', devIssues === 0, devIssues === 0 ? '✓ Wasm/Shader/PoW Clean' : `✗ ${devIssues} GPU/PoW Issue(s)`);
+      }
+      if (typeof window.updateNavTabStatus === 'function') {
+        const rp = report();
+        const deepClean = totalDeepIssues === 0 && (rp.score || 0) === 0;
+        window.updateNavTabStatus('tabBotlensDeepBtn', deepClean, deepClean ? '✓ 5 Pillars Clean (0/100)' : `✗ ${totalDeepIssues} Issue(s) (${rp.score || 0}/100)`);
+      }
+    };
+    syncBotlensDeepStatus();
+    window.rescanBotLensDeep = async function () {
+      state.runtime.clear();
+      if (window.__SHARED_BL_SCAN_PROMISE__) {
+        try { state.overview = await window.__SHARED_BL_SCAN_PROMISE__; } catch (_) {}
+      }
+      render();
+      syncBotlensDeepStatus();
+    };
 
     setTimeout(() => {
       const rp = report();

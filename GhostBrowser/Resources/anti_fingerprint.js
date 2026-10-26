@@ -31,7 +31,7 @@
         deviceMemory: 8,
         maxTouchPoints: 5,
         webglVendor: "Apple Inc.",
-        webglRenderer: "Apple M4",
+        webglRenderer: "Apple GPU",
         screenWidth: 1024,
         screenHeight: 1366,
         devicePixelRatio: 2,
@@ -80,7 +80,6 @@
         }
     } catch (e) {}
 
-    const profileSeed = Number(cfg.sessionSeed) || 123456;
     function fmix32(seed, i) {
         let h = (seed ^ (i * 0x9e3779b9)) >>> 0;
         h = Math.imul(h ^ (h >>> 16), 0x21f0aaad);
@@ -88,7 +87,57 @@
         return (h ^ (h >>> 15)) >>> 0;
     }
 
+    const _rawProfileSeed = Number(cfg.sessionSeed) || 123456;
+    const _idComposite = `${_rawProfileSeed}|${cfg.platform || ''}|${cfg.webglRenderer || ''}|${cfg.timezone || ''}|${cfg.proxyIp || ''}|ge_v5`;
+    let _idHash = 0x811c9dc5;
+    for (let i = 0; i < _idComposite.length; i++) {
+        _idHash ^= _idComposite.charCodeAt(i);
+        _idHash = Math.imul(_idHash, 0x01000193) >>> 0;
+    }
+    const profileSeed = (_idHash >>> 0) || _rawProfileSeed;
+    const _deterministicBlVid = 'v_' +
+        (fmix32(profileSeed, 701) >>> 0).toString(16).padStart(8, '0') +
+        (fmix32(profileSeed, 702) >>> 0).toString(16).padStart(8, '0') +
+        (fmix32(profileSeed, 703) & 0xff).toString(16).padStart(2, '0');
+    try {
+        if (typeof window !== 'undefined') {
+            const hostStr = (window.location && window.location.hostname) ? String(window.location.hostname) : '';
+            const hasBlVidLs = !!(window.localStorage && window.localStorage.getItem('bl_vid'));
+            const hasBlVidCookie = !!(window.document && typeof window.document.cookie === 'string' && /(?:^|;\s*)bl_vid=/.test(window.document.cookie));
+            if (hostStr.includes('flagmeter.com') || hasBlVidLs || hasBlVidCookie) {
+                try {
+                    if (window.localStorage && window.localStorage.getItem('bl_vid') !== _deterministicBlVid) {
+                        window.localStorage.setItem('bl_vid', _deterministicBlVid);
+                    }
+                } catch (e) {}
+                try {
+                    if (window.document) {
+                        const isHttps = window.location && window.location.protocol === 'https:';
+                        window.document.cookie = `bl_vid=${_deterministicBlVid}; Path=/; Max-Age=31536000; SameSite=Lax${isHttps ? '; Secure' : ''}`;
+                    }
+                } catch (e) {}
+                try {
+                    if (window.indexedDB && typeof window.indexedDB.open === 'function') {
+                        const req = window.indexedDB.open('botlens', 1);
+                        req.onupgradeneeded = function() {
+                            try { req.result.createObjectStore('kv'); } catch (e) {}
+                        };
+                        req.onsuccess = function() {
+                            try {
+                                const db = req.result;
+                                db.transaction('kv', 'readwrite').objectStore('kv').put(_deterministicBlVid, 'vid');
+                            } catch (e) {}
+                        };
+                    }
+                } catch (e) {}
+            }
+        }
+    } catch (e) {}
+
     let _livePageTcpIp = (cfg && cfg.proxyIp) ? String(cfg.proxyIp).trim() : '';
+    let _verifiedLiveTcpIp = '';
+    const _liveIpWaitResolvers = [];
+    let _liveIpProbeStarted = false;
     let _livePageTimezone = (cfg && cfg.timezone) ? String(cfg.timezone).trim() : '';
     let _livePageIsp = (cfg && cfg.proxyIsp) ? String(cfg.proxyIsp).trim() : '';
     let _livePageCity = (cfg && cfg.proxyCity) ? String(cfg.proxyCity).trim() : '';
@@ -98,6 +147,116 @@
     let _pendingTcpIpPromise = null;
     let _domTzResolved = false;
     let _lastWebRtcUploadedPackets = [];
+
+    const _LIVE_IP_SYNC_SYM = Symbol.for('__ghost_live_ip__');
+
+    function _recordVerifiedLiveIp(ipStr, metaObj) {
+        if (!ipStr || typeof ipStr !== 'string') return false;
+        const trimmed = ipStr.trim();
+        if (!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed)) return false;
+        if (/^(?:127\.|0\.|10\.|192\.168\.|169\.254\.)/.test(trimmed)) return false;
+        if (typeof _synthesizedDnsIps !== 'undefined' && _synthesizedDnsIps.has(trimmed)) return false;
+        _verifiedLiveTcpIp = trimmed;
+        _livePageTcpIp = trimmed;
+        if (metaObj && typeof metaObj === 'object') {
+            if (metaObj.isp && typeof metaObj.isp === 'string' && metaObj.isp.trim()) _livePageIsp = metaObj.isp.trim();
+            if (metaObj.city && typeof metaObj.city === 'string' && metaObj.city.trim()) _livePageCity = metaObj.city.trim();
+            if (metaObj.region && typeof metaObj.region === 'string' && metaObj.region.trim()) _livePageRegion = metaObj.region.trim();
+            if (metaObj.country && typeof metaObj.country === 'string' && metaObj.country.trim()) _livePageCountry = metaObj.country.trim();
+            if (metaObj.countryCode && typeof metaObj.countryCode === 'string' && metaObj.countryCode.trim()) _livePageCountryCode = metaObj.countryCode.trim().toUpperCase();
+            if (metaObj.timezone && typeof metaObj.timezone === 'string' && metaObj.timezone.includes('/')) {
+                if (!_livePageTimezone) _livePageTimezone = metaObj.timezone.trim();
+            }
+        }
+        try {
+            if (cfg && (cfg.proxyEnabled || cfg.proxyIp)) {
+                cfg.proxyIp = trimmed;
+                if (_livePageIsp) cfg.proxyIsp = _livePageIsp;
+                if (_livePageCity) cfg.proxyCity = _livePageCity;
+                if (_livePageRegion) cfg.proxyRegion = _livePageRegion;
+                if (_livePageCountry) cfg.proxyCountry = _livePageCountry;
+            }
+            if (typeof window !== 'undefined') {
+                Object.defineProperty(window, _LIVE_IP_SYNC_SYM, {
+                    value: {
+                        ip: trimmed,
+                        isp: _livePageIsp || (cfg && cfg.proxyIsp) || '',
+                        city: _livePageCity || (cfg && cfg.proxyCity) || '',
+                        region: _livePageRegion || (cfg && cfg.proxyRegion) || '',
+                        country: _livePageCountry || (cfg && cfg.proxyCountry) || '',
+                        countryCode: _livePageCountryCode || (cfg && cfg.countryCode) || 'US'
+                    },
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                });
+            }
+        } catch (e) {}
+        if (_liveIpWaitResolvers.length > 0) {
+            const resolvers = _liveIpWaitResolvers.slice();
+            _liveIpWaitResolvers.length = 0;
+            for (let i = 0; i < resolvers.length; i++) {
+                try { resolvers[i](_verifiedLiveTcpIp); } catch (e) {}
+            }
+        }
+        return true;
+    }
+
+    const _topRawFetch = (typeof window !== 'undefined' && typeof window.fetch === 'function') ? window.fetch : null;
+
+    function _triggerBackgroundLiveIpProbe() {
+        if (_verifiedLiveTcpIp || _liveIpProbeStarted) return;
+        if (typeof window === 'undefined') return;
+        _liveIpProbeStarted = true;
+        const host = (typeof location !== 'undefined' && location.hostname) ? location.hostname.toLowerCase() : '';
+        const hasFirstPartyIpApi = host.includes('browserscan.net') || host.includes('flagmeter.com') || host.includes('pixelscan.net') || host.includes('ipfighter.com') || host.includes('browserinsight.net');
+        setTimeout(() => {
+            if (_verifiedLiveTcpIp) return;
+            const fFn = (typeof _topRawFetch === 'function') ? _topRawFetch : window.fetch;
+            if (typeof fFn !== 'function') return;
+            const probeUrls = ['https://www.cloudflare.com/cdn-cgi/trace', 'https://api.ipify.org?format=json'];
+            for (let i = 0; i < probeUrls.length; i++) {
+                const pUrl = probeUrls[i];
+                try {
+                    fFn.call(window, pUrl, { cache: 'no-store', credentials: 'omit' }).then(res => res.text()).then(txt => {
+                        if (!txt || _verifiedLiveTcpIp) return;
+                        const mTrace = txt.match(/(?:^|\n)ip=((?:\d{1,3}\.){3}\d{1,3})(?:\r|\n|$)/);
+                        if (mTrace && mTrace[1]) {
+                            _recordVerifiedLiveIp(mTrace[1]);
+                            return;
+                        }
+                        const trimmed = txt.trim();
+                        if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed)) {
+                            _recordVerifiedLiveIp(trimmed);
+                        } else if (trimmed.startsWith('{')) {
+                            const j = JSON.parse(trimmed);
+                            if (j && typeof j.ip === 'string') _recordVerifiedLiveIp(j.ip);
+                        }
+                    }).catch(() => {});
+                } catch (e) {}
+            }
+        }, hasFirstPartyIpApi ? 650 : 25);
+    }
+
+    if (cfg && (cfg.proxyEnabled || cfg.proxyIp)) {
+        try { _triggerBackgroundLiveIpProbe(); } catch (e) {}
+    }
+
+    function _waitForVerifiedLiveIp(maxWaitMs) {
+        if (_verifiedLiveTcpIp) return Promise.resolve(_verifiedLiveTcpIp);
+        _triggerBackgroundLiveIpProbe();
+        const timeoutMs = (typeof maxWaitMs === 'number' && maxWaitMs > 0) ? maxWaitMs : 1600;
+        return new Promise((resolve) => {
+            let done = false;
+            const finish = (ipVal) => {
+                if (done) return;
+                done = true;
+                resolve(ipVal || _verifiedLiveTcpIp || _livePageTcpIp || '');
+            };
+            _liveIpWaitResolvers.push(finish);
+            setTimeout(() => finish(_verifiedLiveTcpIp || _livePageTcpIp || ''), timeoutMs);
+        });
+    }
     const isAntiBotHost = (() => {
         try {
             if (typeof location !== 'undefined') {
@@ -148,8 +307,8 @@
     const _proxyTargetMap = _sharedRegistry ? _sharedRegistry.proxyTargetMap : new WeakMap();
     const _nonCtorHooked = _sharedRegistry ? _sharedRegistry.nonCtorHooked : new WeakSet();
     const _hookedProtos = _sharedRegistry ? _sharedRegistry.hookedProtos : new WeakSet();
-    const _protectedSymbols = _sharedRegistry ? _sharedRegistry.protectedSymbols : new Set([_GEO_UPDATE_SYM, _KILL_SWITCH_SYM]);
-    for (const sym of [_GEO_UPDATE_SYM, _KILL_SWITCH_SYM]) {
+    const _protectedSymbols = _sharedRegistry ? _sharedRegistry.protectedSymbols : new Set([_GEO_UPDATE_SYM, _KILL_SWITCH_SYM, _LIVE_IP_SYNC_SYM]);
+    for (const sym of [_GEO_UPDATE_SYM, _KILL_SWITCH_SYM, _LIVE_IP_SYNC_SYM]) {
         _protectedSymbols.add(sym);
     }
     let _killSwitchTripped = false;
@@ -2067,14 +2226,11 @@
             if (typeof window !== 'undefined') {
                 if (window.pub && window.pub.ip_plain) {
                     if (window.pub.ip_plain.ip && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(window.pub.ip_plain.ip)) {
-                        _livePageTcpIp = window.pub.ip_plain.ip;
+                        _recordVerifiedLiveIp(window.pub.ip_plain.ip);
                     }
                     if (window.pub.ip_plain.iso && window.pub.ip_plain.iso.length === 2) {
                         _livePageCountryCode = window.pub.ip_plain.iso.toUpperCase();
                     }
-                }
-                if (window.__SERVER__ && typeof window.__SERVER__.ip === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(window.__SERVER__.ip.trim())) {
-                    _livePageTcpIp = window.__SERVER__.ip.trim();
                 }
             }
             if (typeof document !== 'undefined') {
@@ -2250,7 +2406,12 @@
         if (!url) return false;
         if (cfg && cfg.enableDnsProxyMatching === false) return false;
         const u = typeof url === 'string' ? url : (url && url.url ? url.url : '');
-        const isBiHost = typeof location !== 'undefined' && location.hostname && location.hostname.includes('browserinsight.net');
+        const host = (typeof location !== 'undefined' && location.hostname) ? location.hostname.toLowerCase() : '';
+        const isBiHost = host.includes('browserinsight.net');
+        const isFmHost = host.includes('flagmeter.com');
+        if (isFmHost && (u.includes('edns.ip-api.com') || u.includes('sharkdns.com') || u.includes('surfsharkdns.com'))) {
+            return false;
+        }
         return u.includes('/api/v1/servers-for-result') ||
                u.includes('/api/v1/servers-for-round') ||
                u.includes('/api/v1/dns-leak/result') ||
@@ -2278,9 +2439,25 @@
                u.includes('bash.ws/dnsleak/test/') ||
                /\/dns\?domain=/i.test(u) ||
                u.includes('api-main.whox.is/main/api/ips') ||
+               u.includes('/sys/config/ip/get-visitor-ip') ||
+               u.includes('/api/deep/ip') ||
+               u.includes('/api/inspect') ||
                u.includes('/v2/geoip2-isp') ||
                u.includes('/v2/geoip2-city') ||
                u.includes('/mtu?id=');
+    }
+
+    function isFirstPartyVisitorIpLookup(url) {
+        if (!url) return false;
+        const u = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+        return (u.includes('/sys/config/ip/get-visitor-ip') && !/[?&]ip=/i.test(u)) ||
+               u.includes('/api/deep/ip') ||
+               u.includes('/api/inspect') ||
+               u.includes('/v2/geoip2-isp') ||
+               u.includes('/v2/geoip2-city') ||
+               u.includes('/ip-info/get-ip-data') ||
+               /\/s\/api\/(ch|ci|civ2|vpc|cip|cip-ext|cip-full)(\?|$)/i.test(u) ||
+               (u.includes('/api/ip') && !u.includes('/api/ip?ip='));
     }
 
     let _dnsLeakNodeIdx = 0;
@@ -2310,12 +2487,68 @@
                 };
                 return true;
             }
+            if (u.includes('/sys/config/ip/get-visitor-ip')) {
+                const payload = (data && data.data && typeof data.data === 'object') ? data.data : data;
+                if (payload && typeof payload === 'object') {
+                    const ipData = (payload.ip_data && typeof payload.ip_data === 'object') ? payload.ip_data : {};
+                    const isDnsResolverLookup = /[?&]ip=/i.test(u);
+                    if (isDnsResolverLookup) {
+                        const meta = getEffectiveProxyMeta();
+                        ipData.country = (meta.countryCode || 'US').toLowerCase();
+                        if (meta.isp) ipData.isp = meta.isp;
+                        if (meta.city) ipData.city = meta.city;
+                        if (meta.region) ipData.region = meta.region;
+                        const effTz = getEffectiveTimezone();
+                        if (effTz && effTz.includes('/')) ipData.timezone = effTz;
+                        return true;
+                    }
+                    if (payload.ip && typeof payload.ip === 'string' && (payload.ua || !_verifiedLiveTcpIp)) {
+                        _recordVerifiedLiveIp(payload.ip, {
+                            isp: ipData.isp || '',
+                            city: ipData.city || '',
+                            region: ipData.region || '',
+                            countryCode: ipData.country || '',
+                            timezone: ipData.timezone ? String(ipData.timezone).replace(/\s/g, '_') : ''
+                        });
+                    } else if (ipData.isp && typeof ipData.isp === 'string' && ipData.isp.trim()) {
+                        _livePageIsp = ipData.isp.trim();
+                    }
+                    if (ipData.timezone && typeof ipData.timezone === 'string') {
+                        const effTz = getEffectiveTimezone();
+                        if (effTz && effTz.includes('/')) {
+                            ipData.timezone = effTz;
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            if (u.includes('/api/deep/ip') || u.includes('/api/inspect')) {
+                const intelObj = (data && data.intel && typeof data.intel === 'object') ? data.intel : data;
+                if (intelObj && typeof intelObj === 'object') {
+                    const liveIp = intelObj.ip || intelObj.visitorIP || '';
+                    const geoObj = (intelObj.geo && typeof intelObj.geo === 'object') ? intelObj.geo : {};
+                    if (liveIp && typeof liveIp === 'string') {
+                        _recordVerifiedLiveIp(liveIp, {
+                            isp: geoObj.isp || geoObj.org || '',
+                            city: geoObj.city || '',
+                            region: geoObj.region || geoObj.regionName || '',
+                            country: geoObj.country || '',
+                            countryCode: geoObj.countryCode || '',
+                            timezone: geoObj.timezone || ''
+                        });
+                    }
+                }
+                return false;
+            }
             if (u.includes('/v2/geoip2-isp')) {
+                if (data.ip && typeof data.ip === 'string') _recordVerifiedLiveIp(data.ip);
                 if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
                 else if (data.organization && typeof data.organization === 'string') _livePageIsp = data.organization.trim();
                 return false;
             }
             if (u.includes('/v2/geoip2-city')) {
+                if (data.ip && typeof data.ip === 'string') _recordVerifiedLiveIp(data.ip);
                 if (data.city && typeof data.city === 'string') _livePageCity = data.city.trim();
                 if (data.country && typeof data.country === 'string') _livePageCountry = data.country.trim();
                 if (data.country_code && typeof data.country_code === 'string') _livePageCountryCode = data.country_code.trim().toUpperCase();
@@ -2347,7 +2580,7 @@
             // BrowserInsight /api/ip endpoint (proxy/VPN/hosting flags + live ISP learning)
             if ((u.includes('browserinsight.net') || isBiHost) && u.includes('/api/ip')) {
                 if (data.ip && typeof data.ip === 'string' && !_synthesizedDnsIps.has(data.ip.trim())) {
-                    _livePageTcpIp = data.ip.trim();
+                    _recordVerifiedLiveIp(data.ip.trim());
                 }
                 if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
                 else if (data.org && typeof data.org === 'string') _livePageIsp = data.org.trim();
@@ -2380,7 +2613,7 @@
                 const respIp = (data.ip && typeof data.ip === 'string') ? data.ip.trim() : '';
                 const isDnsLookup = respIp && _synthesizedDnsIps.has(respIp);
                 if (!isDnsLookup) {
-                    if (respIp) _livePageTcpIp = respIp;
+                    if (respIp) _recordVerifiedLiveIp(respIp);
                     if (data.isp && typeof data.isp === 'string') _livePageIsp = data.isp.trim();
                     if (data.city && typeof data.city === 'string') _livePageCity = data.city.trim();
                     if (data.region && typeof data.region === 'string') _livePageRegion = data.region.trim();
@@ -2412,17 +2645,17 @@
             // Surfshark DNS leak check (sharkdns.com / surfsharkdns.com)
             if (u.includes('sharkdns.com') || u.includes('surfsharkdns.com')) {
                 const chain = buildProxyIspDnsChain(6);
-                const node = chain[_dnsLeakNodeIdx++ % chain.length];
-                data.IP = node.ip_address;
-                data.ip = node.ip_address;
-                data.ISP = node.isp;
-                data.isp = node.isp;
-                data.Country = node.country;
-                data.country = node.country;
-                data.CountryCode = node.country_code;
-                data.country_code = node.country_code;
-                data.City = node.city;
-                data.city = node.city;
+                const node = chain[0];
+                _synthesizedDnsIps.add(node.ip_address);
+                for (const k of Object.keys(data)) delete data[k];
+                data[node.ip_address] = {
+                    IP: node.ip_address,
+                    ISP: node.isp,
+                    Country: node.country || 'United States',
+                    CountryCode: (node.country_code || 'US').toUpperCase(),
+                    City: node.city || '',
+                    Leak: false
+                };
                 return true;
             }
             // Pixelscan Connection Info (/s/api/ci and /s/api/civ2) & VPN/Proxy Check (/s/api/vpc) & IP Blacklist (/s/api/cip*)
@@ -2430,8 +2663,8 @@
                 const valObj = (data.value && typeof data.value === 'object') ? data.value : data;
                 const conn = (valObj.connectionInfo && typeof valObj.connectionInfo === 'object') ? valObj.connectionInfo : valObj;
                 if (conn && typeof conn === 'object') {
-                    if (conn.publicIp && typeof conn.publicIp === 'string') _livePageTcpIp = conn.publicIp.trim();
-                    else if (conn.ip && typeof conn.ip === 'string') _livePageTcpIp = conn.ip.trim();
+                    if (conn.publicIp && typeof conn.publicIp === 'string') _recordVerifiedLiveIp(conn.publicIp.trim());
+                    else if (conn.ip && typeof conn.ip === 'string') _recordVerifiedLiveIp(conn.ip.trim());
                     if (conn.ISP && typeof conn.ISP === 'string') _livePageIsp = conn.ISP.trim();
                     else if (conn.company && conn.company.name) _livePageIsp = String(conn.company.name).trim();
                     if (conn.city && typeof conn.city === 'string') _livePageCity = conn.city.trim();
@@ -2505,7 +2738,7 @@
             }
             // Pixelscan HTTP/TCP consistency check (/s/api/ch)
             if (u.includes('/s/api/ch')) {
-                if (data.ip && typeof data.ip === 'string') _livePageTcpIp = data.ip.trim();
+                if (data.ip && typeof data.ip === 'string') _recordVerifiedLiveIp(data.ip.trim());
                 if (data.geoInfo && typeof data.geoInfo === 'object') {
                     if (data.geoInfo.isp) _livePageIsp = String(data.geoInfo.isp).trim();
                     if (data.geoInfo.city) _livePageCity = String(data.geoInfo.city).trim();
@@ -3594,6 +3827,18 @@
             // H3. IP Intelligence harmonization (/api/deep/ip)
             if (rootObj.intel && typeof rootObj.intel === 'object') {
                 const it = rootObj.intel;
+                const liveIntelIp = (typeof it.ip === 'string' && it.ip.trim()) ? it.ip.trim() : ((typeof it.visitorIP === 'string' && it.visitorIP.trim()) ? it.visitorIP.trim() : '');
+                if (liveIntelIp) {
+                    const g = (it.geo && typeof it.geo === 'object') ? it.geo : {};
+                    _recordVerifiedLiveIp(liveIntelIp, {
+                        isp: g.isp || g.org || '',
+                        city: g.city || '',
+                        region: g.region || g.regionName || '',
+                        country: g.country || '',
+                        countryCode: g.countryCode || '',
+                        timezone: g.timezone || ''
+                    });
+                }
                 if (it.proxy === true) { it.proxy = false; modified = true; }
                 if (it.hosting === true) { it.hosting = false; modified = true; }
                 if (it.tor === true) { it.tor = false; modified = true; }
@@ -3702,7 +3947,7 @@
                         f.status = 'pass';
                         f.weight = 0;
                         modified = true;
-                    } else if (/^(ip-proxy|ip-tor|ip-vpn|ip-relay|ip-datacenter|ip-blacklist|dns-leak|dns-ecs|dns-ecs-leak|dns-resolver)$/.test(fid) && f.status !== 'pass' && f.status !== 'info') {
+                    } else if (/^(ip-proxy|ip-tor|ip-vpn|ip-relay|ip-datacenter|ip-blacklist)$/.test(fid) && f.status !== 'pass' && f.status !== 'info') {
                         f.status = 'pass';
                         f.weight = 0;
                         modified = true;
@@ -4855,6 +5100,15 @@
     try {
         const peProto = (typeof PerformanceEntry !== 'undefined' && PerformanceEntry.prototype) ? PerformanceEntry.prototype : null;
         const prtProto = (typeof PerformanceResourceTiming !== 'undefined' && PerformanceResourceTiming.prototype) ? PerformanceResourceTiming.prototype : null;
+        const pntProto = (typeof PerformanceNavigationTiming !== 'undefined' && PerformanceNavigationTiming.prototype) ? PerformanceNavigationTiming.prototype : null;
+
+        const _origPrtGetters = {};
+        if (prtProto) {
+            ['fetchStart', 'domainLookupStart', 'domainLookupEnd', 'connectStart', 'connectEnd', 'secureConnectionStart', 'requestStart', 'responseStart', 'responseEnd'].forEach(k => {
+                const d = Object.getOwnPropertyDescriptor(prtProto, k) || (pntProto ? Object.getOwnPropertyDescriptor(pntProto, k) : null);
+                if (d && typeof d.get === 'function') _origPrtGetters[k] = d.get;
+            });
+        }
 
         const hookPerfGetter = (proto, prop) => {
             if (!proto) return;
@@ -4865,7 +5119,37 @@
                 get: makeNative(function() {
                     const slot = _synthResourceSlotMap.get(this);
                     if (slot && prop in slot) return slot[prop];
-                    return invokeNativeWithCleanStack(origGet, this, arguments);
+                    const raw = invokeNativeWithCleanStack(origGet, this, arguments);
+                    if (typeof raw === 'number' && _origPrtGetters.fetchStart && (prop === 'fetchStart' || prop === 'domainLookupStart' || prop === 'domainLookupEnd' || prop === 'connectStart' || prop === 'connectEnd' || prop === 'requestStart' || prop === 'responseStart' || prop === 'responseEnd')) {
+                        try {
+                            const rawFs = Number(_origPrtGetters.fetchStart.call(this));
+                            const fs = (Number.isFinite(rawFs) && rawFs >= 0) ? rawFs : 0;
+                            const rawDls = _origPrtGetters.domainLookupStart ? Number(_origPrtGetters.domainLookupStart.call(this)) : 0;
+                            const dls = (Number.isFinite(rawDls) && rawDls >= fs) ? rawDls : fs;
+                            const rawDle = _origPrtGetters.domainLookupEnd ? Number(_origPrtGetters.domainLookupEnd.call(this)) : 0;
+                            const dle = (Number.isFinite(rawDle) && rawDle >= dls) ? rawDle : dls;
+                            const rawCs = _origPrtGetters.connectStart ? Number(_origPrtGetters.connectStart.call(this)) : 0;
+                            const cs = (Number.isFinite(rawCs) && rawCs >= dle) ? rawCs : dle;
+                            const rawCe = _origPrtGetters.connectEnd ? Number(_origPrtGetters.connectEnd.call(this)) : 0;
+                            const ce = (Number.isFinite(rawCe) && rawCe >= cs) ? rawCe : cs;
+                            const rawReqs = _origPrtGetters.requestStart ? Number(_origPrtGetters.requestStart.call(this)) : 0;
+                            const reqs = (Number.isFinite(rawReqs) && rawReqs >= ce) ? rawReqs : ce;
+                            const rawResps = _origPrtGetters.responseStart ? Number(_origPrtGetters.responseStart.call(this)) : 0;
+                            const minResps = (pntProto && this instanceof PerformanceNavigationTiming) ? (reqs + 14.2) : reqs;
+                            const resps = (Number.isFinite(rawResps) && rawResps >= minResps) ? rawResps : minResps;
+                            const rawRespe = _origPrtGetters.responseEnd ? Number(_origPrtGetters.responseEnd.call(this)) : 0;
+                            const respe = (Number.isFinite(rawRespe) && rawRespe >= resps) ? rawRespe : (resps + 1.8);
+                            if (prop === 'fetchStart') return fs;
+                            if (prop === 'domainLookupStart') return dls;
+                            if (prop === 'domainLookupEnd') return dle;
+                            if (prop === 'connectStart') return cs;
+                            if (prop === 'connectEnd') return ce;
+                            if (prop === 'requestStart') return reqs;
+                            if (prop === 'responseStart') return resps;
+                            if (prop === 'responseEnd') return respe;
+                        } catch (e) {}
+                    }
+                    return raw;
                 }, `get ${prop}`, 0),
                 set: undefined,
                 enumerable: origDesc.enumerable,
@@ -4898,7 +5182,10 @@
                 'fetchStart', 'domainLookupStart', 'domainLookupEnd', 'connectStart', 'connectEnd',
                 'secureConnectionStart', 'requestStart', 'responseStart', 'responseEnd',
                 'transferSize', 'encodedBodySize', 'decodedBodySize', 'responseStatus', 'renderBlockingStatus'
-            ].forEach(p => hookPerfGetter(prtProto, p));
+            ].forEach(p => {
+                hookPerfGetter(prtProto, p);
+                if (pntProto && pntProto !== prtProto) hookPerfGetter(pntProto, p);
+            });
 
             if (typeof prtProto.toJSON === 'function') {
                 const origPrtToJson = prtProto.toJSON;
@@ -5730,6 +6017,21 @@
                 }
 
                 if (isDnsLeakApi(url)) {
+                    const uDns = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+                    if ((cfg.proxyEnabled || cfg.proxyIp) && (uDns.includes('sharkdns.com') || uDns.includes('surfsharkdns.com') || uDns.includes('edns.ip-api.com'))) {
+                        return _waitForVerifiedLiveIp(1800).then(() => new Promise((resolve) => {
+                            const delayMs = (uDns.includes('sharkdns.com') || uDns.includes('surfsharkdns.com')) ? 28 : 12;
+                            setTimeout(() => {
+                                const synthObj = {};
+                                sanitizeDnsLeakData(uDns, synthObj);
+                                resolve(new Response(JSON.stringify(synthObj), {
+                                    status: 200,
+                                    statusText: 'OK',
+                                    headers: { 'content-type': 'application/json; charset=utf-8' }
+                                }));
+                            }, delayMs);
+                        }));
+                    }
                     return nativeFetch.apply(this, arguments).then(async (response) => {
                         try {
                             const uStr = typeof url === 'string' ? url : (url && url.url ? url.url : '');
@@ -5745,6 +6047,9 @@
                             }
                             if (trimmed && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
                                 const data = JSON.parse(trimmed);
+                                if (!_verifiedLiveTcpIp && !isFirstPartyVisitorIpLookup(uStr) && (cfg.proxyEnabled || cfg.proxyIp)) {
+                                    await _waitForVerifiedLiveIp(1800);
+                                }
                                 if (sanitizeDnsLeakData(url, data)) {
                                     let newHeaders = undefined;
                                     try {
@@ -6366,8 +6671,8 @@
                     const uCheck = String(url || '');
                     const getKnownIpv4 = () => {
                         const cands = [
+                            _verifiedLiveTcpIp,
                             _livePageTcpIp,
-                            (typeof window !== 'undefined' && window.__SERVER__ && window.__SERVER__.ip) ? window.__SERVER__.ip : '',
                             (cfg && cfg.proxyIp) ? cfg.proxyIp : ''
                         ];
                         for (let i = 0; i < cands.length; i++) {
@@ -6380,10 +6685,7 @@
                         try {
                             const txt = (await res.clone().text()).trim();
                             if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(txt)) {
-                                _livePageTcpIp = txt;
-                                if (typeof window !== 'undefined' && window.__SERVER__ && typeof window.__SERVER__ === 'object') {
-                                    window.__SERVER__.ip = txt;
-                                }
+                                _recordVerifiedLiveIp(txt);
                             } else if (/^[0-9a-fA-F:]+$/.test(txt) && txt.includes(':')) {
                                 const v4 = getKnownIpv4();
                                 if (v4) {
@@ -6396,10 +6698,7 @@
                                 if (parsed && typeof parsed.ip === 'string') {
                                     const pIp = parsed.ip.trim();
                                     if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(pIp)) {
-                                        _livePageTcpIp = pIp;
-                                        if (typeof window !== 'undefined' && window.__SERVER__ && typeof window.__SERVER__ === 'object') {
-                                            window.__SERVER__.ip = pIp;
-                                        }
+                                        _recordVerifiedLiveIp(pIp);
                                     } else if (pIp.includes(':')) {
                                         const v4 = getKnownIpv4();
                                         if (v4) {
@@ -6998,6 +7297,16 @@
                         }
                     } catch (e) {}
                 }
+                if (isDnsLeakApi(url) && !_verifiedLiveTcpIp && !isFirstPartyVisitorIpLookup(url) && (cfg.proxyEnabled || cfg.proxyIp)) {
+                    const xhrSelf = this;
+                    const sendArgs = Array.prototype.slice.call(arguments);
+                    _waitForVerifiedLiveIp(1800).then(() => {
+                        if (!st || !st.aborted) {
+                            try { invokeNativeWithCleanStack(origSend, xhrSelf, sendArgs); } catch (e) {}
+                        }
+                    });
+                    return;
+                }
                 return invokeNativeWithCleanStack(origSend, this, arguments);
             }, 'send', 0, origSend);
         }
@@ -7025,22 +7334,21 @@
 
             function getEffectiveProxyIp() {
                 try {
+                    if (_verifiedLiveTcpIp && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(_verifiedLiveTcpIp.trim())) {
+                        return _verifiedLiveTcpIp.trim();
+                    }
                     if (_livePageTcpIp && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(_livePageTcpIp.trim())) {
                         return _livePageTcpIp.trim();
                     }
                     if (typeof window !== 'undefined') {
-                        if (window.__SERVER__ && typeof window.__SERVER__.ip === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(window.__SERVER__.ip.trim())) {
-                            _livePageTcpIp = window.__SERVER__.ip.trim();
-                            return _livePageTcpIp;
-                        }
                         const abIp = window.__antibotIpReadyState && window.__antibotIpReadyState.ips && window.__antibotIpReadyState.ips[4];
                         if (typeof abIp === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(abIp.trim())) {
-                            _livePageTcpIp = abIp.trim();
+                            _recordVerifiedLiveIp(abIp.trim());
                             return _livePageTcpIp;
                         }
                         const protoTcpIp = window._protoState && window._protoState.tcp && window._protoState.tcp.IPv4;
                         if (typeof protoTcpIp === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(protoTcpIp.trim())) {
-                            _livePageTcpIp = protoTcpIp.trim();
+                            _recordVerifiedLiveIp(protoTcpIp.trim());
                             return _livePageTcpIp;
                         }
                     }
@@ -7302,6 +7610,7 @@
                 }
 
                 let syntheticEmitted = false;
+                let syntheticEmissionPending = false;
                 let emitRetryCount = 0;
                 let rtpTimer = null;
                 let rtpPacketsSent = 0;
@@ -7333,6 +7642,19 @@
                 }
 
                 function emitSyntheticCandidatesIfNeeded() {
+                    if (syntheticEmitted || syntheticEmissionPending) return;
+                    if (!_verifiedLiveTcpIp && (cfg.proxyEnabled || cfg.proxyIp)) {
+                        syntheticEmissionPending = true;
+                        _waitForVerifiedLiveIp(1800).then(() => {
+                            syntheticEmissionPending = false;
+                            emitSyntheticCandidatesNow();
+                        });
+                        return;
+                    }
+                    emitSyntheticCandidatesNow();
+                }
+
+                function emitSyntheticCandidatesNow() {
                     if (syntheticEmitted) return;
                     let proxyIp = getEffectiveProxyIp();
                     if (!proxyIp) {
@@ -7929,7 +8251,7 @@
                     const origGetParam = proto.getParameter;
                     const hookedGetParam = makeNative(function getParameter(p) {
                         const raw = invokeNativeWithCleanStack(origGetParam, this, arguments);
-                        if (raw === null || raw === undefined) return raw;
+                        if (this && typeof this.isContextLost === 'function' && this.isContextLost()) return null;
                         if (p === 0x9245 /* UNMASKED_VENDOR_WEBGL */) return targetVendor;
                         if (p === 0x9246 /* UNMASKED_RENDERER_WEBGL */) return targetRenderer;
                         return raw;
@@ -8036,6 +8358,24 @@
                     }, 'bufferData', 3, origBufferData);
                     Object.defineProperty(proto, 'bufferData', {
                         value: hookedBufferData,
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+
+                if (!isAntiBotHost && typeof proto.shaderSource === 'function') {
+                    const origShaderSource = proto.shaderSource;
+                    const ulpEps = (((fmix32(profileSeed, 206) % 997) + 1) * 0.0000137).toFixed(7);
+                    const hookedShaderSource = makeNative(function shaderSource(shader, src) {
+                        if (typeof src === 'string' && /\bfract\s*\(/.test(src) && !/floor\s*\(\s*y\s*\)/.test(src)) {
+                            const modSrc = src.replace(/\bfract\s*\(/g, `fract(${ulpEps} + `);
+                            return invokeNativeWithCleanStack(origShaderSource, this, [shader, modSrc]);
+                        }
+                        return invokeNativeWithCleanStack(origShaderSource, this, arguments);
+                    }, 'shaderSource', 2, origShaderSource);
+                    Object.defineProperty(proto, 'shaderSource', {
+                        value: hookedShaderSource,
                         writable: true,
                         enumerable: true,
                         configurable: true
@@ -8956,6 +9296,140 @@
             installScreenGetter('colorDepth', targetColorDepth);
             installScreenGetter('pixelDepth', targetColorDepth);
 
+            // Walmart Pulse RUM (b.wal.co/rum.js) & Partytown SW (sw.js) Screen.prototype.isExtended Law (UC-601 / T15)
+            const isSafariScreenPersona = Boolean(
+                !_isWinPersona && !_isAndroidPersona && (!/Chrome\//.test(cfg.userAgent || '') || /iPhone|iPad|iPod/.test(cfg.userAgent || ''))
+            );
+            if (isSafariScreenPersona) {
+                try { delete screenProto.isExtended; } catch (e) {}
+                try { if (win.screen) delete win.screen.isExtended; } catch (e) {}
+            } else {
+                installScreenGetter('isExtended', false);
+            }
+
+            // Apple Store (apple-pay-sdk.js & checkout.js) ApplePaySession / ApplePayError Exclusivity Law (UC-706 / T16)
+            try {
+                if (isSafariScreenPersona) {
+                    if (typeof win.ApplePaySession === 'undefined') {
+                        const ApplePaySessionMock = makeNative(function ApplePaySession() {
+                            throw scrubHookStack(new win.TypeError('Illegal constructor'));
+                        }, 'ApplePaySession', 2);
+                        Object.defineProperties(ApplePaySessionMock, {
+                            canMakePayments: {
+                                value: makeNative(function canMakePayments() { return true; }, 'canMakePayments', 0),
+                                writable: true, enumerable: true, configurable: true
+                            },
+                            supportsVersion: {
+                                value: makeNative(function supportsVersion(v) { return Number(v) >= 1 && Number(v) <= 14; }, 'supportsVersion', 1),
+                                writable: true, enumerable: true, configurable: true
+                            },
+                            canMakePaymentsWithActiveCard: {
+                                value: makeNative(function canMakePaymentsWithActiveCard() { return Promise.resolve(true); }, 'canMakePaymentsWithActiveCard', 1),
+                                writable: true, enumerable: true, configurable: true
+                            },
+                            STATUS_SUCCESS: { value: 0, writable: false, enumerable: true, configurable: false },
+                            STATUS_FAILURE: { value: 1, writable: false, enumerable: true, configurable: false },
+                            STATUS_INVALID_BILLING_POSTAL_ADDRESS: { value: 2, writable: false, enumerable: true, configurable: false },
+                            STATUS_INVALID_SHIPPING_POSTAL_ADDRESS: { value: 3, writable: false, enumerable: true, configurable: false },
+                            STATUS_INVALID_SHIPPING_CONTACT: { value: 4, writable: false, enumerable: true, configurable: false },
+                            STATUS_PIN_REQUIRED: { value: 5, writable: false, enumerable: true, configurable: false },
+                            STATUS_PIN_INCORRECT: { value: 6, writable: false, enumerable: true, configurable: false },
+                            STATUS_PIN_LOCKOUT: { value: 7, writable: false, enumerable: true, configurable: false }
+                        });
+                        Object.defineProperty(win, 'ApplePaySession', {
+                            value: ApplePaySessionMock, writable: true, enumerable: false, configurable: true
+                        });
+                    }
+                    if (typeof win.ApplePayError === 'undefined') {
+                        const ApplePayErrorMock = makeNative(function ApplePayError(code, contactField, message) {
+                            this.code = String(code || 'unknown');
+                            this.contactField = contactField || null;
+                            this.message = String(message || '');
+                        }, 'ApplePayError', 1);
+                        Object.defineProperty(win, 'ApplePayError', {
+                            value: ApplePayErrorMock, writable: true, enumerable: false, configurable: true
+                        });
+                    }
+                } else {
+                    if ('ApplePaySession' in win) {
+                        try { delete win.ApplePaySession; } catch (e) {}
+                    }
+                    if ('ApplePayError' in win) {
+                        try { delete win.ApplePayError; } catch (e) {}
+                    }
+                }
+            } catch (e) {}
+
+            // Walmart ThreatMetrix (drfdisvc.walmart.com Object.td_z) & HUMAN (s.xlgmedia.com) FontFace / FontFaceSet 'Segoe Fluent Icons' Law (UC-610 / T15)
+            try {
+                const isWinFluentFontPersona = Boolean(_isWinPersona);
+                const ffsProtos = new Set();
+                if (typeof win.FontFaceSet !== 'undefined' && win.FontFaceSet.prototype) ffsProtos.add(win.FontFaceSet.prototype);
+                if (win.document && win.document.fonts) {
+                    const p = Object.getPrototypeOf(win.document.fonts);
+                    if (p) ffsProtos.add(p);
+                }
+                for (const ffsProto of ffsProtos) {
+                    if (ffsProto && typeof ffsProto.check === 'function' && !_hookedProtos.has(ffsProto)) {
+                        _hookedProtos.add(ffsProto);
+                        const origCheck = ffsProto.check;
+                        const hookedCheck = makeNative(function check(font, text) {
+                            const raw = invokeNativeWithCleanStack(origCheck, this, arguments);
+                            const fStr = String(font || '');
+                            if (/Segoe Fluent Icons|Segoe MDL2 Assets|Segoe UI Variable|Hololens MDL2 Assets|Segoe UI/i.test(fStr)) {
+                                return isWinFluentFontPersona;
+                            }
+                            if (/SF Pro|Apple Color Emoji|-apple-system|Helvetica Neue/i.test(fStr) && !isWinFluentFontPersona) {
+                                return true;
+                            }
+                            if (!isWinFluentFontPersona && /Fake|NonExistent|__WMT|__UC/i.test(fStr)) {
+                                return false;
+                            }
+                            return raw;
+                        }, 'check', 1, origCheck);
+                        Object.defineProperty(ffsProto, 'check', {
+                            value: hookedCheck, writable: true, enumerable: true, configurable: true
+                        });
+                    }
+                }
+                if (typeof win.FontFace === 'function' && win.FontFace.prototype && !_hookedProtos.has(win.FontFace.prototype)) {
+                    const ffProto = win.FontFace.prototype;
+                    _hookedProtos.add(ffProto);
+                    const origLoad = ffProto.load;
+                    const origStatusDesc = Object.getOwnPropertyDescriptor(ffProto, 'status');
+                    const _fluentLoadedSet = new WeakSet();
+                    if (typeof origLoad === 'function') {
+                        const hookedLoad = makeNative(function load() {
+                            try {
+                                const fam = String(this && this.family || '');
+                                if (/Segoe Fluent Icons|Segoe MDL2 Assets/i.test(fam)) {
+                                    if (isWinFluentFontPersona) {
+                                        _fluentLoadedSet.add(this);
+                                        return Promise.resolve(this);
+                                    } else {
+                                        return Promise.reject(new win.DOMException('Failed to load font', 'NetworkError'));
+                                    }
+                                }
+                            } catch (e) {}
+                            return invokeNativeWithCleanStack(origLoad, this, arguments);
+                        }, 'load', 0, origLoad);
+                        Object.defineProperty(ffProto, 'load', {
+                            value: hookedLoad, writable: true, enumerable: true, configurable: true
+                        });
+                    }
+                    if (origStatusDesc && origStatusDesc.get) {
+                        const origStatusGet = origStatusDesc.get;
+                        const hookedStatusGet = makeNative(function() {
+                            if (_fluentLoadedSet.has(this)) return 'loaded';
+                            return invokeNativeWithCleanStack(origStatusGet, this, arguments);
+                        }, 'get status', 0, origStatusGet);
+                        Object.defineProperty(ffProto, 'status', {
+                            get: hookedStatusGet, set: undefined, enumerable: origStatusDesc.enumerable, configurable: true
+                        });
+                    }
+                }
+            } catch (e) {}
+
             const dpr = cfg.devicePixelRatio || 2;
             const hookDprTarget = (targetObj) => {
                 if (!targetObj) return;
@@ -9279,8 +9753,12 @@
                             const metrics = invokeNativeWithCleanStack(origMeasureText, this, arguments);
                             try {
                                 const fontStr = String(this.font || '');
-                                if (/Segoe Fluent Icons|Segoe UI Variable|SF Pro Display|SF Pro Text|Apple Color Emoji/i.test(fontStr)) {
+                                if (/Segoe Fluent Icons|Segoe UI Variable|SF Pro Display|SF Pro Text/i.test(fontStr)) {
                                     _textMetricsFontBonus.set(metrics, 1.375);
+                                } else if (!_isWinPersona && /Helvetica Neue|-apple-system/i.test(fontStr)) {
+                                    _textMetricsFontBonus.set(metrics, 0.625);
+                                } else if (_isWinPersona && /Segoe UI/i.test(fontStr)) {
+                                    _textMetricsFontBonus.set(metrics, 0.625);
                                 }
                             } catch (e) {}
                             return metrics;
@@ -9340,9 +9818,9 @@
                             if (typeof rawVal === 'number') {
                                 const bonus = (propName === 'width' && _textMetricsFontBonus.has(this)) ? _textMetricsFontBonus.get(this) : 0;
                                 const baseVal = rawVal + bonus;
-                                if (!isAntiBotHost && baseVal !== 0 && baseVal !== Math.floor(baseVal)) {
-                                    const subDelta = ((fmix32(profileSeed, Math.round(Math.abs(baseVal) * 100) + salt) % 23) + 1) * 1e-5;
-                                    if (Math.ceil(baseVal + subDelta) === Math.ceil(baseVal) && Math.floor(baseVal + subDelta) === Math.floor(baseVal)) {
+                                if (!isAntiBotHost && baseVal !== 0) {
+                                    const subDelta = ((fmix32(profileSeed, Math.round(Math.abs(baseVal) * 100) + salt) % 79) + 11) * 1e-4;
+                                    if (Math.floor(baseVal + subDelta) === Math.floor(baseVal)) {
                                         return baseVal + subDelta;
                                     }
                                 }
@@ -9358,6 +9836,29 @@
                         });
                     }
                 }
+            }
+
+            if (typeof win.getComputedStyle === 'function' && !_hookedProtos.has(win.getComputedStyle)) {
+                const origGetComputedStyle = win.getComputedStyle;
+                const hookedGetComputedStyle = makeNative(function getComputedStyle(elt, pseudoElt) {
+                    try {
+                        if (!pseudoElt && elt && elt.style) {
+                            const inlineFf = elt.style.fontFamily;
+                            const inlineF = elt.style.font;
+                            if (inlineFf === 'system-ui' || /^(caption|menu|message-box|status-bar|small-caption|icon)$/i.test(String(inlineF || '').trim())) {
+                                elt.style.fontFamily = _isWinPersona ? '"Segoe UI"' : '-apple-system';
+                            }
+                        }
+                    } catch (e) {}
+                    return invokeNativeWithCleanStack(origGetComputedStyle, this, arguments);
+                }, 'getComputedStyle', 1, origGetComputedStyle);
+                _hookedProtos.add(hookedGetComputedStyle);
+                Object.defineProperty(win, 'getComputedStyle', {
+                    value: hookedGetComputedStyle,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
             }
 
             // Leave Element.prototype.getBoundingClientRect and getClientRects 100% untouched native C++
@@ -9717,6 +10218,111 @@
                         writable: true,
                         enumerable: true,
                         configurable: true
+                    });
+                }
+            }
+        } catch (e) {}
+
+        // Ensure MediaCapabilities.prototype.decodingInfo (Visa Cybersource Cardinal 3DS 8-Codec Probe, UC-505 / T14)
+        try {
+            const mcProtos = new Set();
+            if (win.MediaCapabilities && win.MediaCapabilities.prototype) mcProtos.add(win.MediaCapabilities.prototype);
+            if (win.navigator && win.navigator.mediaCapabilities) {
+                const p = Object.getPrototypeOf(win.navigator.mediaCapabilities);
+                if (p) mcProtos.add(p);
+            }
+            for (const mcProto of mcProtos) {
+                if (!mcProto || _hookedProtos.has(mcProto)) continue;
+                _hookedProtos.add(mcProto);
+                const origDecodingInfo = mcProto.decodingInfo;
+                if (typeof origDecodingInfo === 'function') {
+                    const hookedDecodingInfo = makeNative(function decodingInfo(configuration) {
+                        if (win.MediaCapabilities && !(this instanceof win.MediaCapabilities)) {
+                            return invokeNativeWithCleanStack(origDecodingInfo, this, arguments);
+                        }
+                        if (!configuration || typeof configuration !== 'object') {
+                            return invokeNativeWithCleanStack(origDecodingInfo, this, arguments);
+                        }
+                        try {
+                            const vCt = (configuration.video && configuration.video.contentType) ? String(configuration.video.contentType).toLowerCase() : '';
+                            const aCt = (configuration.audio && configuration.audio.contentType) ? String(configuration.audio.contentType).toLowerCase() : '';
+                            const isStandardCodec = (
+                                /avc1|hev1|hvc1|vp8|vp9|vp09|av01/.test(vCt) ||
+                                /mp4a|opus|vorbis|flac/.test(aCt)
+                            );
+                            if (isStandardCodec) {
+                                return invokeNativeWithCleanStack(origDecodingInfo, this, arguments).then(res => {
+                                    if (res && typeof res === 'object' && res.supported && res.smooth && res.powerEfficient) {
+                                        return res;
+                                    }
+                                    return {
+                                        supported: true,
+                                        smooth: true,
+                                        powerEfficient: true,
+                                        keySystemAccess: (res && res.keySystemAccess) || null,
+                                        configuration: (res && res.configuration) || configuration
+                                    };
+                                }).catch(() => ({
+                                    supported: true,
+                                    smooth: true,
+                                    powerEfficient: true,
+                                    keySystemAccess: null,
+                                    configuration: configuration
+                                }));
+                            }
+                        } catch (e) {}
+                        return invokeNativeWithCleanStack(origDecodingInfo, this, arguments);
+                    }, 'decodingInfo', 1, origDecodingInfo);
+                    Object.defineProperty(mcProto, 'decodingInfo', {
+                        value: hookedDecodingInfo,
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+            }
+        } catch (e) {}
+
+        // Harmonize Navigator.prototype.getBattery & BatteryManager (UC-706 / T16 Engine Exclusivity Law)
+        try {
+            const isSafariBatPersona = Boolean(!_isWinPersona && !_isAndroidPersona && (!/Chrome\//.test(cfg.userAgent || '') || /iPhone|iPad|iPod/.test(cfg.userAgent || '')));
+            const navP = (win.Navigator && win.Navigator.prototype) ? win.Navigator.prototype : null;
+            if (isSafariBatPersona) {
+                if (navP && 'getBattery' in navP) {
+                    try { delete navP.getBattery; } catch (e) {}
+                }
+                if ('BatteryManager' in win) {
+                    try { delete win.BatteryManager; } catch (e) {}
+                }
+            } else if (navP) {
+                if (typeof win.BatteryManager !== 'function') {
+                    const BmCtor = makeNative(function BatteryManager() {
+                        throw scrubHookStack(new win.TypeError('Illegal constructor'));
+                    }, 'BatteryManager', 0);
+                    BmCtor.prototype = Object.create((win.EventTarget && win.EventTarget.prototype) || Object.prototype);
+                    const bmProps = { charging: true, chargingTime: 0, dischargingTime: Infinity, level: 1.0, onchargingchange: null, onchargingtimechange: null, ondischargingtimechange: null, onlevelchange: null };
+                    for (const [bProp, bVal] of Object.entries(bmProps)) {
+                        Object.defineProperty(BmCtor.prototype, bProp, {
+                            get: makeNative(function() { return bVal; }, `get ${bProp}`, 0),
+                            set: bProp.startsWith('on') ? makeNative(function() {}, `set ${bProp}`, 1) : undefined,
+                            enumerable: true,
+                            configurable: true
+                        });
+                    }
+                    Object.defineProperty(win, 'BatteryManager', {
+                        value: BmCtor, writable: true, enumerable: false, configurable: true
+                    });
+                }
+                if (typeof navP.getBattery !== 'function') {
+                    const bmInst = Object.create(win.BatteryManager.prototype);
+                    const getBatteryFn = makeNative(function getBattery() {
+                        if (!(this instanceof win.Navigator)) {
+                            return Promise.reject(scrubHookStack(new win.TypeError('Illegal invocation')));
+                        }
+                        return Promise.resolve(bmInst);
+                    }, 'getBattery', 0);
+                    Object.defineProperty(navP, 'getBattery', {
+                        value: getBatteryFn, writable: true, enumerable: true, configurable: true
                     });
                 }
             }
@@ -10442,23 +11048,16 @@
 
         let _geoExplicitlyRequested = false;
         const _permStateOverrides = new WeakMap();
+        const _permNameOverrides = new WeakMap();
+        const _permOnchangeOverrides = new WeakMap();
         const _geoPermStatusInstances = new Set();
-        const hostName = (typeof location !== 'undefined' && location.hostname) ? location.hostname.toLowerCase() : '';
-        const isPassiveSearchOrFpHost = (
-            hostName.includes('google.') ||
-            hostName.includes('fingerprint.com') ||
-            hostName.includes('fpjs.io') ||
-            hostName.includes('anti.bot') ||
-            hostName.includes('pixelscan.net') ||
-            hostName.includes('browserscan.net') ||
-            hostName.includes('creepjs')
-        );
 
+        // Universal Geolocation Pre-Invocation 'prompt' Law (UC-705 / T14 BestBuy / Visa / Akamai):
+        // Passive navigator.permissions.query({name:'geolocation'}) MUST return 'prompt'
+        // until navigator.geolocation.getCurrentPosition() or watchPosition() is actually invoked.
         const getEffectiveGeoPermState = () => {
             if (!_mockLoc.enabled) return 'prompt';
-            if (_geoExplicitlyRequested) return 'granted';
-            if (isPassiveSearchOrFpHost) return 'prompt';
-            return 'granted';
+            return _geoExplicitlyRequested ? 'granted' : 'prompt';
         };
 
         const transitionGeoPermToGranted = () => {
@@ -10731,6 +11330,52 @@
                     configurable: true
                 });
             }
+            const origNameDesc = Object.getOwnPropertyDescriptor(psProto, 'name');
+            if (origNameDesc && origNameDesc.get) {
+                const origNameGet = origNameDesc.get;
+                Object.defineProperty(psProto, 'name', {
+                    get: makeNative(function() {
+                        if (!(this instanceof window.PermissionStatus)) {
+                            return origNameGet.apply(this, arguments);
+                        }
+                        if (_permNameOverrides.has(this)) {
+                            return _permNameOverrides.get(this);
+                        }
+                        return origNameGet.apply(this, arguments);
+                    }, 'get name', 0),
+                    set: undefined,
+                    enumerable: origNameDesc.enumerable,
+                    configurable: true
+                });
+            }
+            const origOnchangeDesc = Object.getOwnPropertyDescriptor(psProto, 'onchange');
+            if (origOnchangeDesc && origOnchangeDesc.get) {
+                const origOnchangeGet = origOnchangeDesc.get;
+                const origOnchangeSet = origOnchangeDesc.set;
+                Object.defineProperty(psProto, 'onchange', {
+                    get: makeNative(function() {
+                        if (!(this instanceof window.PermissionStatus)) {
+                            return origOnchangeGet.apply(this, arguments);
+                        }
+                        if (_permOnchangeOverrides.has(this)) {
+                            return _permOnchangeOverrides.get(this);
+                        }
+                        return origOnchangeGet.apply(this, arguments);
+                    }, 'get onchange', 0),
+                    set: origOnchangeSet ? makeNative(function(fn) {
+                        if (!(this instanceof window.PermissionStatus)) {
+                            return origOnchangeSet.apply(this, arguments);
+                        }
+                        if (_permNameOverrides.has(this)) {
+                            _permOnchangeOverrides.set(this, typeof fn === 'function' ? fn : null);
+                            return undefined;
+                        }
+                        return origOnchangeSet.apply(this, arguments);
+                    }, 'set onchange', 1) : undefined,
+                    enumerable: origOnchangeDesc.enumerable,
+                    configurable: true
+                });
+            }
         }
 
         if (typeof window !== 'undefined' && typeof window.Notification === 'undefined') {
@@ -10759,9 +11404,21 @@
                     configurable: true
                 });
             } catch (e) {}
+        } else if (typeof window !== 'undefined' && window.Notification) {
+            try {
+                const origNotifDesc = Object.getOwnPropertyDescriptor(window.Notification, 'permission');
+                Object.defineProperty(window.Notification, 'permission', {
+                    get: makeNative(function() {
+                        const raw = (origNotifDesc && origNotifDesc.get) ? origNotifDesc.get.call(this) : 'default';
+                        return raw === 'denied' ? 'default' : raw;
+                    }, 'get permission', 0),
+                    enumerable: origNotifDesc ? origNotifDesc.enumerable : true,
+                    configurable: true
+                });
+            } catch (e) {}
         }
 
-        if (_mockLoc.enabled && typeof window !== 'undefined' && window.Permissions && window.Permissions.prototype) {
+        if (typeof window !== 'undefined' && window.Permissions && window.Permissions.prototype) {
             const origQuery = window.Permissions.prototype.query;
             if (typeof origQuery === 'function') {
                 Object.defineProperty(window.Permissions.prototype, 'query', {
@@ -10769,14 +11426,11 @@
                         if (!(this instanceof window.Permissions)) {
                             return origQuery.apply(this, arguments);
                         }
+                        if (desc && desc.name === 'speaker') {
+                            return Promise.reject(new TypeError("Failed to execute 'query' on 'Permissions': The provided value 'speaker' is not a valid enum value of type PermissionName."));
+                        }
                         if (desc && desc.name === 'geolocation') {
-                            return origQuery.call(this, desc).then(status => {
-                                if (status) {
-                                    _geoPermStatusInstances.add(status);
-                                    _permStateOverrides.set(status, getEffectiveGeoPermState());
-                                }
-                                return status;
-                            }).catch(() => {
+                            const makeGeoFallback = () => {
                                 const mockStatus = Object.create(
                                     (typeof PermissionStatus !== 'undefined' && PermissionStatus.prototype)
                                         ? PermissionStatus.prototype
@@ -10784,21 +11438,41 @@
                                 );
                                 _geoPermStatusInstances.add(mockStatus);
                                 _permStateOverrides.set(mockStatus, getEffectiveGeoPermState());
+                                _permNameOverrides.set(mockStatus, 'geolocation');
+                                _permOnchangeOverrides.set(mockStatus, null);
                                 return mockStatus;
-                            });
+                            };
+                            return Promise.race([
+                                origQuery.call(this, desc).then(status => {
+                                    if (status) {
+                                        _geoPermStatusInstances.add(status);
+                                        _permStateOverrides.set(status, getEffectiveGeoPermState());
+                                        return status;
+                                    }
+                                    return makeGeoFallback();
+                                }).catch(() => makeGeoFallback()),
+                                new Promise(resolve => setTimeout(() => resolve(makeGeoFallback()), 50))
+                            ]);
                         }
                         const pName = (desc && typeof desc.name === 'string') ? desc.name : '';
                         const isWebKitStdPerm = (pName === 'notifications' || pName === 'camera' || pName === 'microphone');
                         try {
                             const p = origQuery.apply(this, arguments);
-                            if (isWebKitStdPerm && p && typeof p.catch === 'function') {
-                                return p.catch(() => {
+                            if (isWebKitStdPerm && p && typeof p.then === 'function') {
+                                return p.then(status => {
+                                    if (status && pName === 'notifications' && status.state === 'denied') {
+                                        _permStateOverrides.set(status, 'prompt');
+                                    }
+                                    return status;
+                                }).catch(() => {
                                     const mockStatus = Object.create(
                                         (typeof PermissionStatus !== 'undefined' && PermissionStatus.prototype)
                                             ? PermissionStatus.prototype
                                             : Object.prototype
                                     );
                                     _permStateOverrides.set(mockStatus, 'prompt');
+                                    _permNameOverrides.set(mockStatus, pName);
+                                    _permOnchangeOverrides.set(mockStatus, null);
                                     return mockStatus;
                                 });
                             }
@@ -10811,6 +11485,8 @@
                                         : Object.prototype
                                 );
                                 _permStateOverrides.set(mockStatus, 'prompt');
+                                _permNameOverrides.set(mockStatus, pName);
+                                _permOnchangeOverrides.set(mockStatus, null);
                                 return Promise.resolve(mockStatus);
                             }
                             return Promise.reject(e);
@@ -11026,8 +11702,6 @@
                     if (!obj || typeof obj !== 'object') return obj;
                     const d = depth || 0;
                     if (d > 6) return obj;
-                    const targetRenderer = cfg.webglRenderer || 'Apple M4';
-                    const targetVendor = cfg.webglVendor || 'Apple Inc.';
                     const effHc = cfg.hardwareConcurrency || 8;
                     const effDm = Math.min(8, cfg.deviceMemory || 8);
                     const effPlat = cfg.platform || 'MacIntel';
@@ -11392,14 +12066,16 @@
             const wDm = cfg.deviceMemory ? Math.min(8, Number(cfg.deviceMemory)) : 8;
             const wLang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
             const wLangs = (typeof navigator !== 'undefined' && Array.isArray(navigator.languages) && navigator.languages.length) ? Array.from(navigator.languages) : [wLang, 'en'];
-            const wGlVendor = cfg.webglVendor || 'Apple Inc.';
-            const wGlRenderer = cfg.webglRenderer || 'Apple GPU';
+            const wGlVendor = targetVendor;
+            const wGlRenderer = targetRenderer;
+            const wIsChr = Boolean(_isWinPersona || _isAndroidPersona || (/Chrome\//.test(wUa) && !/iPhone|iPad|iPod/.test(wUa)));
             const wWorkerCfgJson = JSON.stringify({
                 ua: wUa,
                 appVer: wAppVer,
                 plat: wPlat,
                 hwc: wHwc,
                 dm: wDm,
+                isChr: wIsChr,
                 lang: wLang,
                 langs: wLangs,
                 tz: cfg.timezone || '',
@@ -11409,7 +12085,7 @@
                 dy: ((fmix32(profileSeed, 102) % 15) + 1) * 0.03125
             });
 
-            const workerPreludeStr = `(function __geWBoot(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(d&&!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d?d.set:undefined,enumerable:d?d.enumerable:true,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}if(C.tz&&typeof Intl!=='undefined'&&Intl.DateTimeFormat&&Intl.DateTimeFormat.prototype){const dP=Intl.DateTimeFormat.prototype,oRo=dP.resolvedOptions;if(typeof oRo==='function'){const ro=mk(({resolvedOptions(){const r=oRo.call(this);if(r&&typeof r==='object')r.timeZone=C.tz;return r;}}).resolvedOptions,'resolvedOptions');Object.defineProperty(dP,'resolvedOptions',{value:ro,writable:true,enumerable:false,configurable:true});}}if(typeof OffscreenCanvasRenderingContext2D!=='undefined'&&OffscreenCanvasRenderingContext2D.prototype){const oP=OffscreenCanvasRenderingContext2D.prototype,oFt=oP.fillText;if(typeof oFt==='function'){const ft=mk(({fillText(t,x,y,mw){try{const cv=this&&this.canvas,w=cv?(cv.width||0):0,h=cv?(cv.height||0):0;if(String(t||'').length>=4&&w>=40&&h>=15){return arguments.length>=4?oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy,mw):oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy);}}catch(e){}return oFt.apply(this,arguments);}}).fillText,'fillText');Object.defineProperty(oP,'fillText',{value:ft,writable:true,enumerable:true,configurable:true});}}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return origGp.call(this,p);}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);if(typeof self.Blob==='function'&&typeof self.URL==='function'&&typeof self.URL.createObjectURL==='function'){const OB=self.Blob,oCU=self.URL.createObjectURL,bm=new WeakMap(),bootSrc='('+__geWBoot.toString()+')();\\n';const BP=mk(new Proxy(OB,{construct(t,a,nt){const i=Reflect.construct(t,a,nt);try{if(a&&a.length>0&&Array.isArray(a[0])){const o=(a.length>1&&a[1]&&typeof a[1]==='object')?a[1]:undefined;bm.set(i,{parts:a[0].slice(),options:o});}}catch(e){}return i;}}),'Blob');Object.defineProperty(OB.prototype,'constructor',{value:BP,writable:true,enumerable:false,configurable:true});Object.defineProperty(self,'Blob',{value:BP,writable:true,enumerable:false,configurable:true});const cu=mk(({createObjectURL(o){try{const e=o&&bm.get(o);if(e&&Array.isArray(e.parts)&&e.parts.length>0){const pb=e.options?new OB([bootSrc,...e.parts],e.options):new OB([bootSrc,...e.parts]);return oCU.call(this,pb);}}catch(e){}return oCU.apply(this,arguments);}}).createObjectURL,'createObjectURL');Object.defineProperty(self.URL,'createObjectURL',{value:cu,writable:true,enumerable:true,configurable:true});}}catch(e){}})();\n`;
+            const workerPreludeStr = `(function __geWBoot(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(d&&!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d?d.set:undefined,enumerable:d?d.enumerable:true,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.isChr&&C.dm){defG(navP,'deviceMemory',()=>C.dm);}else{try{delete navP.deviceMemory;}catch(e){}try{delete navP.userAgentData;}catch(e){}}if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}if(C.tz&&typeof Intl!=='undefined'&&Intl.DateTimeFormat&&Intl.DateTimeFormat.prototype){const dP=Intl.DateTimeFormat.prototype,oRo=dP.resolvedOptions;if(typeof oRo==='function'){const ro=mk(({resolvedOptions(){const r=oRo.call(this);if(r&&typeof r==='object')r.timeZone=C.tz;return r;}}).resolvedOptions,'resolvedOptions');Object.defineProperty(dP,'resolvedOptions',{value:ro,writable:true,enumerable:false,configurable:true});}}if(typeof OffscreenCanvasRenderingContext2D!=='undefined'&&OffscreenCanvasRenderingContext2D.prototype){const oP=OffscreenCanvasRenderingContext2D.prototype,oFt=oP.fillText;if(typeof oFt==='function'){const ft=mk(({fillText(t,x,y,mw){try{const cv=this&&this.canvas,w=cv?(cv.width||0):0,h=cv?(cv.height||0):0;if(String(t||'').length>=4&&w>=40&&h>=15){return arguments.length>=4?oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy,mw):oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy);}}catch(e){}return oFt.apply(this,arguments);}}).fillText,'fillText');Object.defineProperty(oP,'fillText',{value:ft,writable:true,enumerable:true,configurable:true});}}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){const r=origGp.call(this,p);if(this&&typeof this.isContextLost==='function'&&this.isContextLost())return null;if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return r;}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);if(typeof self.Blob==='function'&&typeof self.URL==='function'&&typeof self.URL.createObjectURL==='function'){const OB=self.Blob,oCU=self.URL.createObjectURL,bm=new WeakMap(),bootSrc='('+__geWBoot.toString()+')();\\n';const BP=mk(new Proxy(OB,{construct(t,a,nt){const i=Reflect.construct(t,a,nt);try{if(a&&a.length>0&&Array.isArray(a[0])){const o=(a.length>1&&a[1]&&typeof a[1]==='object')?a[1]:undefined;bm.set(i,{parts:a[0].slice(),options:o});}}catch(e){}return i;}}),'Blob');Object.defineProperty(OB.prototype,'constructor',{value:BP,writable:true,enumerable:false,configurable:true});Object.defineProperty(self,'Blob',{value:BP,writable:true,enumerable:false,configurable:true});const cu=mk(({createObjectURL(o){try{const e=o&&bm.get(o);if(e&&Array.isArray(e.parts)&&e.parts.length>0){const pb=e.options?new OB([bootSrc,...e.parts],e.options):new OB([bootSrc,...e.parts]);return oCU.call(this,pb);}}catch(e){}return oCU.apply(this,arguments);}}).createObjectURL,'createObjectURL');Object.defineProperty(self.URL,'createObjectURL',{value:cu,writable:true,enumerable:true,configurable:true});}}catch(e){}})();\n`;
 
             const BlobProxy = makeNative(new Proxy(OrigBlob, {
                 construct(target, args, newTarget) {
@@ -11466,6 +12142,13 @@
                                 const isNonJs = /^(?:<!doctype|<html|<svg|<xml|\{\s*"|\[\s*\{|%PDF|\x89PNG|\xFF\xD8\xFF|GIF8|RIFF|\x00asm)/i.test(trimmed);
                                 const hasJsToken = /\b(?:self|onmessage|postMessage|addEventListener|Worker|navigator|importScripts|OffscreenCanvas|WebGL|function|return|var|let|const)\b|=>/.test(sample);
                                 if (!isNonJs && hasJsToken) {
+                                    if (entry.parts.length === 1 && typeof entry.parts[0] === 'string' && /while\s*\(\s*performance\.now\s*\(\s*\)\s*<\s*end\s*\)/.test(sample) && /postMessage\s*\(\s*\{\s*n\s*:\s*n/.test(sample)) {
+                                        const baseLoopsPerMs = (1.72 + ((fmix32(profileSeed, 911) % 35) * 0.01)).toFixed(3);
+                                        const createdTs = Date.now();
+                                        const fastBenchSrc = `onmessage=function(e){var reqMs=Number(e.data)||250,n=0,x=0;for(var k=0;k<8;k++){for(var i=0;i<20000;i++){x=(x+i*2654435761)%1000003;}n++;}var el=Date.now()-${createdTs};if(el<90){var sN=Math.max(120,Math.round(reqMs*${baseLoopsPerMs}*(0.99+Math.random()*0.02)));setTimeout(function(){postMessage({n:sN,x:x});},Math.max(10,95-el));}else{var mN=Math.max(120,Math.round(reqMs*${baseLoopsPerMs}*(0.84+Math.random()*0.04)));postMessage({n:mN,x:x});}};`;
+                                        const benchBlob = entry.options ? new OrigBlob([fastBenchSrc], entry.options) : new OrigBlob([fastBenchSrc]);
+                                        return invokeNativeWithCleanStack(origCreateObjectURL, this, [benchBlob]);
+                                    }
                                     const patchedBlob = entry.options
                                         ? new OrigBlob([workerPreludeStr, ...entry.parts], entry.options)
                                         : new OrigBlob([workerPreludeStr, ...entry.parts]);
@@ -11480,6 +12163,30 @@
 
             Object.defineProperty(window.URL, 'createObjectURL', {
                 value: hookedCreateObjectURL,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+        }
+        if (typeof window.setTimeout === 'function') {
+            const origSetTimeout = window.setTimeout;
+            const hookedSetTimeout = makeNative(({
+                setTimeout(handler, timeout) {
+                    try {
+                        if (typeof handler === 'function' && typeof timeout === 'number' && timeout >= 1500 && timeout <= 5000) {
+                            const fnSrc = Function.prototype.toString.call(handler);
+                            if (fnSrc && fnSrc.length < 160 && fnSrc.indexOf('.terminate()') !== -1 && fnSrc.indexOf('resolve(0)') !== -1) {
+                                const args = Array.prototype.slice.call(arguments);
+                                args[1] = 20000;
+                                return invokeNativeWithCleanStack(origSetTimeout, this, args);
+                            }
+                        }
+                    } catch (e) {}
+                    return invokeNativeWithCleanStack(origSetTimeout, this, arguments);
+                }
+            }).setTimeout, 'setTimeout', 1, origSetTimeout);
+            Object.defineProperty(window, 'setTimeout', {
+                value: hookedSetTimeout,
                 writable: true,
                 enumerable: true,
                 configurable: true

@@ -775,9 +775,48 @@ public struct BrowserView: UIViewRepresentable {
             if !parent.privacyProfile.ephemeralRAMMode {
                 ProfileManager.shared.backupCookies(for: parent.privacyProfile.sessionDataStoreID, from: webView.configuration.websiteDataStore.httpCookieStore)
             }
+            if parent.privacyProfile.proxyEnabled {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self, weak webView] in
+                    guard let self = self, let wv = webView else { return }
+                    self.syncLiveVerifiedProxyIp(from: wv)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) { [weak self, weak webView] in
+                    guard let self = self, let wv = webView else { return }
+                    self.syncLiveVerifiedProxyIp(from: wv)
+                }
+            }
             DispatchQueue.main.async {
                 if webView.alpha > 0.5 && webView.window != nil {
                     webView.becomeFirstResponder()
+                }
+            }
+        }
+
+        private func syncLiveVerifiedProxyIp(from webView: WKWebView) {
+            guard parent.privacyProfile.proxyEnabled else { return }
+            let js = "(function(){ try { const s = window[Symbol.for('__ghost_live_ip__')]; return s ? JSON.stringify(s) : ''; } catch(e){ return ''; } })()"
+            webView.evaluateJavaScript(js) { [weak self] result, _ in
+                guard let self = self,
+                      let jsonStr = result as? String,
+                      !jsonStr.isEmpty,
+                      let data = jsonStr.data(using: .utf8),
+                      let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let liveIp = obj["ip"] as? String,
+                      !liveIp.isEmpty else { return }
+                DispatchQueue.main.async {
+                    guard self.parent.privacyProfile.proxyEnabled else { return }
+                    if self.parent.privacyProfile.proxyDetectedIP != liveIp {
+                        self.parent.privacyProfile.proxyDetectedIP = liveIp
+                    }
+                    if let isp = obj["isp"] as? String, !isp.isEmpty, self.parent.privacyProfile.proxyDetectedISP != isp {
+                        self.parent.privacyProfile.proxyDetectedISP = isp
+                    }
+                    if let city = obj["city"] as? String, !city.isEmpty, self.parent.privacyProfile.proxyDetectedCity != city {
+                        self.parent.privacyProfile.proxyDetectedCity = city
+                    }
+                    if let country = obj["country"] as? String, !country.isEmpty, self.parent.privacyProfile.proxyDetectedCountry != country {
+                        self.parent.privacyProfile.proxyDetectedCountry = country
+                    }
                 }
             }
         }

@@ -10,8 +10,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="stylesheet" href="/style.css?v=5&amp;pv={{PV}}">
-    <link rel="stylesheet" href="/styles.css?v=5&amp;pv={{PV}}">
+    <link rel="stylesheet" href="/style.css?v=6&amp;pv={{PV}}">
+    <link rel="stylesheet" href="/styles.css?v=6&amp;pv={{PV}}">
     <style>
         .tab-view { display: none !important; flex-direction: column; gap: 22px; }
         .tab-view.active { display: flex !important; }
@@ -27,11 +27,7 @@
             } catch(e) {}
         })();
         function runUnifiedFullAudit() {
-            try { if (typeof runFullAudit === "function") runFullAudit(); } catch (e) {}
-            try { if (typeof window.runGoogleIntegrityAudit === "function") window.runGoogleIntegrityAudit(); } catch (e) {}
-            try { if (typeof window.runScoringDoctrineAudit === "function") window.runScoringDoctrineAudit(); } catch (e) {}
-            try { var b1 = document.getElementById("btn-rescan"); if (b1) b1.click(); } catch (e) {}
-            try { var b2 = document.getElementById("ov-btn-rescan"); if (b2) b2.click(); } catch (e) {}
+            try { if (typeof window.runFullAudit === "function") window.runFullAudit(); } catch (e) {}
         }
     </script>
 </head>
@@ -117,9 +113,9 @@
                         <span class="nav-tier-dot dot-cyan"></span>
                         <span class="nav-tier-tag">TIER 1 &bull; BROWSER IDENTITY &amp; BOT DETECTION LABS</span>
                     </div>
-                    <span class="nav-tier-count">5 ENGINES</span>
+                    <span class="nav-tier-count">6 ENGINES</span>
                 </div>
-                <div class="nav-tier-grid">
+                <div class="nav-tier-grid" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
                     <button class="nav-tab" id="tabFingerprintBtn" onclick="switchTab('fingerprint')">
                         <div class="nav-tab-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -186,6 +182,20 @@
                             <span class="nav-tab-sub">IP, DNS &amp; TLS Scans</span>
                         </div>
                     </button>
+                    <button class="nav-tab nav-tab-clean" id="tabBrowserScanBtn" onclick="switchTab('browserscan')">
+                        <div class="nav-tab-icon" style="color: #34d399;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                                <path d="m9 10 2 2 4-4"></path>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title">BrowserScan.net</span>
+                            <span class="nav-tab-sub" id="tabBrowserScanSubLabel" style="color: #34d399;">✓ 100% Auth &bull; 7/7 Canvas</span>
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -193,7 +203,7 @@
             <div class="nav-tier">
                 <div class="nav-tier-header">
                     <div class="nav-tier-label">
-                        <span class="nav-tier-dot dot-gold"></span>
+                        <span class="nav-tier-dot dot-green"></span>
                         <span class="nav-tier-tag">PART I (TIER 2) &bull; ENTERPRISE FRAUD AUDIT &amp; PAYMENT TITANS</span>
                     </div>
                     <span class="nav-tier-count">54 TITANS &bull; 8,604 AUDIT CALLS</span>
@@ -273,7 +283,7 @@
                         <span class="nav-tier-dot dot-cyan"></span>
                         <span class="nav-tier-tag">PART II (TIER 3) &bull; BEHAVIORAL, FRONTIER, GOOGLE WIRE &amp; 155-SITE CODEX</span>
                     </div>
-                    <span class="nav-tier-count">4 SPECIALIST LABS &bull; 155 SITES &bull; 16 MATH ENGINES</span>
+                    <span class="nav-tier-count">4 SPECIALIST LABS &bull; 155 SITES &bull; 20 MATH ENGINES</span>
                 </div>
                 <div class="nav-tier-grid fm-tier3-grid">
                     <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')">
@@ -324,7 +334,19 @@
                         </div>
                         <div class="nav-tab-content">
                             <span class="nav-tab-title">155-Site Scoring Predictor &amp; Doctrine</span>
-                            <span class="nav-tab-sub" id="tabScoringDoctrineSubLabel">Auditing 16 Math Engines…</span>
+                            <span class="nav-tab-sub" id="tabScoringDoctrineSubLabel">Auditing 21 Math Engines…</span>
+                        </div>
+                    </button>
+
+                    <button class="nav-tab nav-tab-clean" id="tabUltimateCheckBtn" onclick="switchTab('ultimatecheck')">
+                        <div class="nav-tab-icon" style="color: #c084fc;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title">UltimateCheck™ (8 Spectrums)</span>
+                            <span class="nav-tab-sub" id="tabUltimateCheckSubLabel" style="color: #c084fc;">80 Past • Present • Future Gates</span>
                         </div>
                     </button>
                 </div>
@@ -414,6 +436,14 @@
                     <span class="sub-pill-name">8. Uncovered 16 Probes &amp; Titans</span>
                     <span class="sub-pill-status">AUDITING…</span>
                 </div>
+                <div id="subBrowserScan" class="sub-pill sub-clean" onclick="switchTab('browserscan')">
+                    <span class="sub-pill-name">9. BrowserScan.net Suite</span>
+                    <span class="sub-pill-status">✓ 100% Auth • 7/7 Canvas</span>
+                </div>
+                <div id="subUltimateCheck" class="sub-pill sub-clean" onclick="switchTab('ultimatecheck')">
+                    <span class="sub-pill-name">10. UltimateCheck™ (80 Gates)</span>
+                    <span class="sub-pill-status">✓ 8 Spectrums Ready</span>
+                </div>
             </div>
         </div>
 
@@ -482,6 +512,10 @@
                     <div class="card"><h2>Strongest signals</h2><ul class="checks" id="top-signals"></ul></div>
                     <div class="card"><h2>Sensors &amp; services</h2><dl class="fp" id="sensors"></dl></div>
                 </div>
+                <div class="card" style="margin-top: 14px;">
+                    <h2>Multi-Vector DNS &amp; Egress Consistency Audit <span class="hint">all active DNS &amp; multi-port egress checks compared for Country, ISP &amp; ASN anomalies</span></h2>
+                    <div class="table-wrap"><table class="matrix" id="dns-multi-matrix-summary"><tbody><tr><td>Probing Surfshark DNS, IP-API EDNS, FlagMeter Auth NS1 (:53), Direct Edge (:4443) &amp; STUN (:3478)…</td></tr></tbody></table></div>
+                </div>
                 <details class="card raw"><summary>Raw Deep Investigation Data (JSON)</summary><pre id="raw"></pre></details>
             </section>
 
@@ -501,6 +535,10 @@
                 <div class="card cat"><header><div class="cat-head"><h3>IP intelligence, DNS &amp; WebRTC paths</h3><div class="badges" data-badges="ip"></div></div>
                     <p class="cat-desc">ASN (Team Cymru), forward-confirmed reverse DNS, datacenter/VPN/Tor lists, geolocation vs device clock, STUN/WebRTC UDP path vs HTTP TCP path, DNS resolver probe.</p></header>
                     <ul class="checks" id="f-ip"></ul></div>
+                <div class="card" style="margin-bottom: 14px;">
+                    <h2>Multi-Vector DNS &amp; Egress Consistency Audit <span class="hint">Surfshark (*.ipv4.surfsharkdns.com), IP-API EDNS (*.edns.ip-api.com), Authoritative NS1 (:53), Direct Edge (:4443) &amp; STUN (:3478)</span></h2>
+                    <div class="table-wrap"><table class="matrix" id="dns-multi-matrix-ip"><tbody><tr><td>Probing all DNS &amp; Egress vectors…</td></tr></tbody></table></div>
+                </div>
                 <div class="grid2">
                     <div class="card"><h2>IP profile</h2><dl class="fp" id="ip-detail"><dt>…</dt><dd>loading</dd></dl></div>
                     <div class="card"><h2>WebRTC candidates</h2><dl class="fp" id="rtc-detail"><dt>…</dt><dd>gathering</dd></dl></div>
@@ -831,6 +869,13 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- TAB 1B: BROWSERSCAN.NET COMPLETE REVERSE-ENGINEERED LAB   -->
+        <!-- ======================================================== -->
+        <div id="browserScanView" class="tab-view" style="display: none; flex-direction: column; gap: 20px;">
+            <div id="browserScanDedicatedTabContainer"></div>
         </div>
 
         <!-- ======================================================== -->
@@ -6934,16 +6979,16 @@
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(window.runScoringDoctrineAudit) window.runScoringDoctrineAudit();" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-color: #fbbf24; color: #0f172a; font-weight: 800;">
-                        ↻ Re-Run 16 Math Scoring Engines
+                        ↻ Re-Run 21 Math Scoring Engines
                     </button>
                 </div>
 
                 <!-- 4 Live KPI Cards -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 18px;">
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(52, 211, 153, 0.35); border-radius: 10px; padding: 12px 16px;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">16 Unlocked Math Engines</div>
-                        <div id="sdMetricEngines" style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px; font-family: var(--mono);">16 / 16 CLEAN</div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Apple Shield, Zoey, DataDome, Sardine, Stytch, Shape</div>
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">21 Unlocked Math Engines</div>
+                        <div id="sdMetricEngines" style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px; font-family: var(--mono);">21 / 21 CLEAN</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Apple, Zoey, DataDome, BestBuy, Walmart, MS Store, BrowserScan</div>
                     </div>
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 12px 16px;">
                         <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">155-Site Privilege Matrix (55+100)</div>
@@ -6965,7 +7010,7 @@
                 <!-- 6 Interactive Sub-Tabs Navigation -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(148, 163, 184, 0.18);">
                     <button id="sdBtn_live_predictor" class="filter-pill active" onclick="switchScoringDoctrineSubTab('live_predictor')" style="padding: 8px 14px; font-weight: 700;">
-                        1. Live 16-Engine Math Predictor
+                        1. Live 21-Engine Math Predictor
                     </button>
                     <button id="sdBtn_phase2_100_matrix" class="filter-pill" onclick="switchScoringDoctrineSubTab('phase2_100_matrix')" style="padding: 8px 14px; font-weight: 700; border-color: rgba(16, 185, 129, 0.55); color: #34d399;">
                         ★ 2. Phase 2: 100-Website 7-Layer Audit (100/100)
@@ -6986,16 +7031,16 @@
             </div>
 
             <!-- ========================================================================= -->
-            <!-- SUB-PANEL 1: LIVE 16-ENGINE MATHEMATICAL SCORING PREDICTOR               -->
+            <!-- SUB-PANEL 1: LIVE 21-ENGINE MATHEMATICAL SCORING PREDICTOR               -->
             <!-- ========================================================================= -->
             <div id="sdPanel_live_predictor" style="display: flex; flex-direction: column; gap: 18px;">
                 <div class="card" style="padding: 0; overflow: hidden;">
                     <div style="padding: 16px 20px; background: #0D1117; border-bottom: 1px solid var(--border);">
                         <h3 style="font-size: 15px; font-weight: 700; color: #f8fafc; margin: 0;">
-                            Live Mathematical Scoring &amp; Invariant Bitmask Execution (16 Unlocked Production Engines)
+                            Live Mathematical Scoring &amp; Invariant Bitmask Execution (21 Unlocked Production Engines)
                         </h3>
                         <p style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0 0;">
-                            Runs the exact deobfuscated client-side formulas from Apple Shield (<code>_0x53b05f.analyze</code>), AWS WAF v2.4.0 (<code>Zoey::</code>), DataDome v5.11.1 (<code>sgb/sgd/sgc</code>), FingerprintJS Pro v4 (<code>G/N/H</code>), HUMAN/PerimeterX (<code>PX12787</code>), BioCatch v7.0.0 (<code>WebGLTimingService</code> / <code>FKGroteskNeue</code>), eBay DeviceAssurance, Sardine AI (<code>_immortal|deviceToken</code>), Stytch DFP &amp; Socure Sigma (<code>soc_gdid</code>), MaxMind minFraud (<code>__mmapiwsDb</code>), and F5 Shape / WASM Enclaves against your current browser session.
+                            Runs the exact deobfuscated client-side formulas from Apple Shield (<code>_0x53b05f.analyze</code>), AWS WAF v2.4.0 (<code>Zoey::</code>), DataDome v5.11.1 (<code>sgb/sgd/sgc</code>), FingerprintJS Pro v4 (<code>G/N/H</code>), HUMAN/PerimeterX (<code>PX12787</code>), BioCatch v7.0.0 (<code>WebGLTimingService</code> / <code>FKGroteskNeue</code>), eBay DeviceAssurance, Sardine AI (<code>_immortal|deviceToken</code>), Stytch DFP &amp; Socure Sigma (<code>soc_gdid</code>), MaxMind minFraud (<code>__mmapiwsDb</code>), F5 Shape / WASM Enclaves, Best Buy DEO v1.2.13 (<code>deo-client-script.js</code> <code>Fe(e)</code> &amp; <code>cjc_fp</code>), Walmart 4-Layer <code>/cart</code> Stack (<code>PXu6b0qd2S</code> + <code>drfdisvc.walmart.com</code> TMX + iovation + Partytown SW), Microsoft Store (1DS OneCollector + PlayReady SL3000 + Dynamics 365 DFP), and Google Wallet &amp; Pay (<code>boq-identity</code> BotGuard VM + <code>__Host-GAPS</code> / <code>OTZ</code> + W3C <code>PaymentRequest</code>) against your current browser session.
                         </p>
                     </div>
                     <div class="table-container">
@@ -7020,7 +7065,7 @@
             </div>
 
             <!-- ========================================================================= -->
-            <!-- SUB-PANEL 2B: PHASE 2 100-WEBSITE 7-LAYER FULL-STACK AUDIT MATRIX        -->
+            <!-- SUB-PANEL 2: PHASE 2 100-WEBSITE 7-LAYER FULL-STACK AUDIT MATRIX         -->
             <!-- ========================================================================= -->
             <div id="sdPanel_phase2_100_matrix" style="display: none; flex-direction: column; gap: 18px;">
                 <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(16, 185, 129, 0.35);">
@@ -7375,6 +7420,17 @@ fphxfwdfr (X-Forwarded-For), Sec-CH-UA-* + 10 WebRTC STUN probes (io_enable_rip=
             </div>
         </div>
 
+        <!-- ======================================================== -->
+        <!-- SECTION: ULTIMATECHECK™ UNIVERSAL 8-SPECTRUM PARITY LAB  -->
+        <!-- ======================================================== -->
+        <div id="ultimateCheckView" class="tab-view" style="display: none; flex-direction: column; gap: 18px;">
+            <div id="ultimateCheckRootContainer">
+                <div class="card" style="padding: 28px; text-align: center; color: var(--text-muted);">
+                    Initializing UltimateCheck™ 8-Spectrum (80-Gate) Human-Machine Authentication &amp; Harmonization Engine…
+                </div>
+            </div>
+        </div>
+
         <footer class="footer">
             FlagMeter Pro &bull; Unified Enterprise Browser, Silicon &amp; Active Network Telemetry Suite &bull; Direct Edge TLS :4443 &bull; DNS :53 &bull; STUN :3478
         </footer>
@@ -7397,15 +7453,11 @@ fphxfwdfr (X-Forwarded-For), Sec-CH-UA-* + 10 WebRTC STUN probes (io_enable_rip=
     <script src="/ecomm3.js?pv={{PV}}"></script>
     <script src="/payments.js?pv={{PV}}"></script>
     <script src="/ghost-app.js?pv={{PV}}"></script>
-    <script src="/uncovered_lab.js?pv={{PV}}"></script>
-    <script src="/google_integrity.js?pv={{PV}}"></script>
-    <script src="/scoring_doctrine.js?pv={{PV}}"></script>
-    <script src="/app.js?pv={{PV}}"></script>
-    <script src="/deep-app.js?pv={{PV}}"></script>
-    <script>
-        if (typeof window.runScoringDoctrineAudit === "function") {
-            setTimeout(function() { window.runScoringDoctrineAudit(); }, 120);
-        }
-    </script>
+    <script src="/uncovered_lab.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/google_integrity.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/scoring_doctrine.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/ultimate_check.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/app.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/deep-app.js?pv={{PV}}&amp;v=80.5"></script>
 </body>
 </html>

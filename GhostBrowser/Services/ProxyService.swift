@@ -510,13 +510,26 @@ public final class ProxyService {
         }
 
         if primaryResult.success {
+            if let httpsInfo = await verifyHttpsExitIp(
+                type: primaryType,
+                host: cleanHost,
+                port: cleanPort,
+                username: cleanUser,
+                password: cleanPass
+            ) {
+                primaryResult.ip = httpsInfo.ip
+                if !httpsInfo.isp.isEmpty { primaryResult.isp = httpsInfo.isp }
+                if !httpsInfo.city.isEmpty { primaryResult.city = httpsInfo.city }
+                if !httpsInfo.region.isEmpty { primaryResult.regionCode = httpsInfo.region }
+                if !httpsInfo.country.isEmpty { primaryResult.country = httpsInfo.country }
+            }
             primaryResult.resolvedType = primaryType
             primaryResult.resolvedHost = cleanHost
             primaryResult.resolvedPort = cleanPort
             primaryResult.resolvedUsername = cleanUser
             primaryResult.resolvedPassword = cleanPass
             await MainActor.run {
-                if self.lastAppliedProfile != nil {
+                if self.lastAppliedProfile != nil && (self.activeDnsBridge == nil || self.activeDnsBridge?.isListening == false) {
                     self.forceRestartBridge(for: self.lastAppliedProfile)
                 }
             }
@@ -535,13 +548,26 @@ public final class ProxyService {
             geoPath: "/json/?fields=status,message,country,countryCode,region,regionName,city,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query"
         )
         if altResult.success {
+            if let httpsInfo = await verifyHttpsExitIp(
+                type: altType,
+                host: cleanHost,
+                port: cleanPort,
+                username: cleanUser,
+                password: cleanPass
+            ) {
+                altResult.ip = httpsInfo.ip
+                if !httpsInfo.isp.isEmpty { altResult.isp = httpsInfo.isp }
+                if !httpsInfo.city.isEmpty { altResult.city = httpsInfo.city }
+                if !httpsInfo.region.isEmpty { altResult.regionCode = httpsInfo.region }
+                if !httpsInfo.country.isEmpty { altResult.country = httpsInfo.country }
+            }
             altResult.resolvedType = altType
             altResult.resolvedHost = cleanHost
             altResult.resolvedPort = cleanPort
             altResult.resolvedUsername = cleanUser
             altResult.resolvedPassword = cleanPass
             await MainActor.run {
-                if self.lastAppliedProfile != nil {
+                if self.lastAppliedProfile != nil && (self.activeDnsBridge == nil || self.activeDnsBridge?.isListening == false) {
                     self.forceRestartBridge(for: self.lastAppliedProfile)
                 }
             }
@@ -558,6 +584,57 @@ public final class ProxyService {
         primaryResult.resolvedUsername = cleanUser
         primaryResult.resolvedPassword = cleanPass
         return primaryResult
+    }
+
+    /// Queries the live HTTPS (:443) exit IP through the proxy so carrier proxies that route port 80
+    /// through a transparent HTTP gateway report the exact same TLS :443 exit IP seen by websites.
+    private func verifyHttpsExitIp(
+        type: String,
+        host: String,
+        port: Int,
+        username: String,
+        password: String
+    ) async -> (ip: String, isp: String, city: String, region: String, country: String)? {
+        guard #available(iOS 17.0, *),
+              let nwPort = NWEndpoint.Port(rawValue: UInt16(port)) else {
+            return nil
+        }
+        let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: nwPort)
+        let isHttp = type.uppercased().contains("HTTP")
+        var proxyConfig: ProxyConfiguration = isHttp
+            ? ProxyConfiguration(httpCONNECTProxy: endpoint, tlsOptions: nil)
+            : ProxyConfiguration(socksv5Proxy: endpoint)
+        if !username.isEmpty {
+            proxyConfig.applyCredential(username: username, password: password)
+        }
+        let sessionConfig = URLSessionConfiguration.ephemeral
+        sessionConfig.timeoutIntervalForRequest = 4.5
+        sessionConfig.timeoutIntervalForResource = 5.0
+        sessionConfig.proxyConfigurations = [proxyConfig]
+        let session = URLSession(configuration: sessionConfig)
+        defer { session.invalidateAndCancel() }
+
+        if let url = URL(string: "https://ipwho.is/") {
+            if let (data, _) = try? await session.data(from: url),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               (obj["success"] as? Bool) != false,
+               let ip = obj["ip"] as? String, !ip.isEmpty {
+                let connDict = obj["connection"] as? [String: Any]
+                let isp = (connDict?["isp"] as? String) ?? (connDict?["org"] as? String) ?? ""
+                let city = (obj["city"] as? String) ?? ""
+                let region = (obj["region_code"] as? String) ?? ""
+                let country = (obj["country"] as? String) ?? ""
+                return (ip, isp, city, region, country)
+            }
+        }
+        if let url = URL(string: "https://api.ipify.org?format=json") {
+            if let (data, _) = try? await session.data(from: url),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let ip = obj["ip"] as? String, !ip.isEmpty {
+                return (ip, "", "", "", "")
+            }
+        }
+        return nil
     }
 
     private func performSingleProxyTest(
@@ -1382,34 +1459,31 @@ public final class LocalSocks5DnsBridge {
         // 2. For normal websites, if we already cached an IPv4 fallback for an ATYP=0x03-blocked domain (e.g. Chase, CapitalOne, Coinbase),
         //    use the cached IPv4 (ATYP=0x01) immediately in 0ms; otherwise forward ATYP=0x03 directly to the upstream SOCKS5 proxy in 0ms.
         let lowerHost = targetHost.lowercased()
+        let isProbeHost = isDnsResolverProbeHostname(lowerHost)
         cacheLock.lock()
         let bypassPort53 = port53BlockedByProxy
         cacheLock.unlock()
-        let cachedEntry = getCachedDnsEntry(lowerHost)
-        let now = Date()
 
-        if let cached = cachedEntry, let cachedIp = cached.ip, !cachedIp.isEmpty {
-            if now < cached.freshUntil {
-                connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
-                return
-            } else if now < cached.staleUntil {
-                // Stale-While-Revalidate (SWR): connect immediately in 0ms using cached IP and refresh in background
-                resolveIpv4Fallback(domain: targetHost, forceRefresh: true) { _ in }
-                connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
-                return
+        if !isProbeHost {
+            let cachedEntry = getCachedDnsEntry(lowerHost)
+            let now = Date()
+            if let cached = cachedEntry, let cachedIp = cached.ip, !cachedIp.isEmpty {
+                if now < cached.freshUntil {
+                    connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
+                    return
+                } else if now < cached.staleUntil {
+                    resolveIpv4Fallback(domain: targetHost, forceRefresh: true) { _ in }
+                    connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
+                    return
+                }
             }
         }
 
-        if bypassPort53 || !isDnsResolverProbeHostname(targetHost) {
-            // Pin dual-stack upstream SOCKS5 proxies to IPv4 (ATYP=0x01) so HTTP egress never flips to IPv6 while WebRTC/DNS use IPv4
-            resolveIpv4Fallback(domain: targetHost) { [weak self] ipv4 in
-                guard let self = self else { return }
-                if let resolvedIpv4 = ipv4, !resolvedIpv4.isEmpty {
-                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: resolvedIpv4, targetPort: targetPort, allowIpv4Fallback: false)
-                } else {
-                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: true)
-                }
-            }
+        if bypassPort53 || !isProbeHost {
+            // Always forward ATYP=0x03 (Domain Name) directly through the upstream SOCKS5 proxy so DNS resolution
+            // occurs remotely on the proxy's egress network and NEVER leaks the device's local OS DNS via getaddrinfo().
+            // Only allow local IPv4 fallback if a non-probe domain explicitly fails ATYP=0x03 on the upstream proxy.
+            connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: !isProbeHost)
             return
         }
 
@@ -1424,9 +1498,9 @@ public final class LocalSocks5DnsBridge {
                     })
                     return
                 }
-                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: finalHost, targetPort: targetPort)
+                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: finalHost, targetPort: targetPort, allowIpv4Fallback: false)
             } else {
-                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort)
+                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: false)
             }
         }
     }
@@ -1439,7 +1513,13 @@ public final class LocalSocks5DnsBridge {
                h.hasSuffix(".bash.ws") ||
                h.hasSuffix(".perfect-privacy.com") ||
                h.hasSuffix(".ipleak.net") ||
-               h.hasSuffix(".browserleaks.com")
+               h.hasSuffix(".browserleaks.com") ||
+               h.hasSuffix(".browserleaks.org") ||
+               h.hasSuffix(".browserleaks.net") ||
+               h.hasSuffix(".surfsharkdns.com") ||
+               h.hasSuffix(".sharkdns.com") ||
+               h.hasSuffix(".ip-api.com") ||
+               h.hasSuffix(".probe.flagmeter.com")
     }
 
     private func resolveDomainViaTunnelIspDns(domain: String, completion: @escaping (Bool, String?) -> Void) {
