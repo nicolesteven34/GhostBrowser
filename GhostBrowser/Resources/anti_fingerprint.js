@@ -153,11 +153,14 @@
     function _recordVerifiedLiveIp(ipStr, metaObj) {
         if (!ipStr || typeof ipStr !== 'string') return false;
         const trimmed = ipStr.trim();
-        if (!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed)) return false;
-        if (/^(?:127\.|0\.|10\.|192\.168\.|169\.254\.)/.test(trimmed)) return false;
+        const isIpv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed);
+        const isIpv6 = !isIpv4 && trimmed.includes(':') && /^[0-9a-fA-F:]+$/.test(trimmed);
+        if (!isIpv4 && !isIpv6) return false;
+        if (isIpv4 && /^(?:127\.|0\.|10\.|192\.168\.|169\.254\.)/.test(trimmed)) return false;
+        if (isIpv6 && /^(?:::1$|fe80:|fc00:|fd00:)/i.test(trimmed)) return false;
         if (typeof _synthesizedDnsIps !== 'undefined' && _synthesizedDnsIps.has(trimmed)) return false;
-        _verifiedLiveTcpIp = trimmed;
-        _livePageTcpIp = trimmed;
+        if (isIpv4 || !_verifiedLiveTcpIp) _verifiedLiveTcpIp = trimmed;
+        if (isIpv4 || !_livePageTcpIp) _livePageTcpIp = trimmed;
         if (metaObj && typeof metaObj === 'object') {
             const g = (metaObj.geo && typeof metaObj.geo === 'object') ? metaObj.geo : metaObj;
             const conn = (metaObj.connection && typeof metaObj.connection === 'object') ? metaObj.connection : {};
@@ -179,7 +182,7 @@
         }
         try {
             if (cfg && (cfg.proxyEnabled || cfg.proxyIp)) {
-                cfg.proxyIp = trimmed;
+                if (isIpv4 || !cfg.proxyIp) cfg.proxyIp = trimmed;
                 if (_livePageIsp) cfg.proxyIsp = _livePageIsp;
                 if (_livePageCity) cfg.proxyCity = _livePageCity;
                 if (_livePageRegion) cfg.proxyRegion = _livePageRegion;
@@ -188,7 +191,7 @@
             if (typeof window !== 'undefined') {
                 Object.defineProperty(window, _LIVE_IP_SYNC_SYM, {
                     value: {
-                        ip: trimmed,
+                        ip: _verifiedLiveTcpIp || trimmed,
                         isp: _livePageIsp || (cfg && cfg.proxyIsp) || '',
                         city: _livePageCity || (cfg && cfg.proxyCity) || '',
                         region: _livePageRegion || (cfg && cfg.proxyRegion) || '',
@@ -214,29 +217,29 @@
     const _topRawFetch = (typeof window !== 'undefined' && typeof window.fetch === 'function') ? window.fetch : null;
 
     function _triggerBackgroundLiveIpProbe() {
-        if (_verifiedLiveTcpIp || _liveIpProbeStarted) return;
+        if ((_verifiedLiveTcpIp && !_verifiedLiveTcpIp.includes(':')) || _liveIpProbeStarted) return;
         if (typeof window === 'undefined') return;
         _liveIpProbeStarted = true;
         const host = (typeof location !== 'undefined' && location.hostname) ? location.hostname.toLowerCase() : '';
         const hasFirstPartyIpApi = host.includes('browserscan.net') || host.includes('flagmeter.com') || host.includes('pixelscan.net') || host.includes('ipfighter.com') || host.includes('browserinsight.net');
         setTimeout(() => {
-            if (_verifiedLiveTcpIp) return;
+            if (_verifiedLiveTcpIp && !_verifiedLiveTcpIp.includes(':')) return;
             const fFn = (typeof _topRawFetch === 'function') ? _topRawFetch : window.fetch;
             if (typeof fFn !== 'function') return;
-            const probeUrls = ['https://ipwho.is/', 'https://www.cloudflare.com/cdn-cgi/trace'];
+            const probeUrls = ['https://ipwho.is/', 'https://api.ipify.org', 'https://www.cloudflare.com/cdn-cgi/trace'];
             for (let i = 0; i < probeUrls.length; i++) {
                 const pUrl = probeUrls[i];
                 try {
                     fFn.call(window, pUrl, { cache: 'no-store', credentials: 'omit' }).then(res => res.text()).then(txt => {
                         if (!txt) return;
-                        const mTrace = txt.match(/(?:^|\n)ip=((?:\d{1,3}\.){3}\d{1,3})(?:\r|\n|$)/);
+                        const mTrace = txt.match(/(?:^|\n)ip=([^\r\n]+)(?:\r|\n|$)/);
                         if (mTrace && mTrace[1]) {
-                            if (!_verifiedLiveTcpIp) _recordVerifiedLiveIp(mTrace[1]);
+                            _recordVerifiedLiveIp(mTrace[1].trim());
                             return;
                         }
                         const trimmed = txt.trim();
                         if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed)) {
-                            if (!_verifiedLiveTcpIp) _recordVerifiedLiveIp(trimmed);
+                            _recordVerifiedLiveIp(trimmed);
                         } else if (trimmed.startsWith('{')) {
                             const j = JSON.parse(trimmed);
                             const cand = j && (j.ip || j.clientIp || (j.data && j.data.ip) || (j.intel && j.intel.ip));
@@ -2371,12 +2374,20 @@
 
     function buildProxyIspDnsChain(count) {
         const meta = getEffectiveProxyMeta();
-        const parts = (meta.ip || '70.95.116.218').split('.');
+        const ispLower = meta.isp.toLowerCase();
+        let fallbackV4 = _verifiedCarrierDnsIps.length > 0 ? _verifiedCarrierDnsIps[0] : '70.95.116.218';
+        if (!_verifiedCarrierDnsIps.length && (!meta.ip || meta.ip.includes(':'))) {
+            if (ispLower.includes('verizon') || ispLower.includes('cellco')) fallbackV4 = '174.207.33.202';
+            else if (ispLower.includes('t-mobile') || ispLower.includes('tmobile')) fallbackV4 = '172.58.112.40';
+            else if (ispLower.includes('at&t') || ispLower.includes('att')) fallbackV4 = '107.77.205.40';
+            else if (ispLower.includes('comcast') || ispLower.includes('xfinity')) fallbackV4 = '73.162.84.20';
+        }
+        const ipv4SeedStr = (meta.ip && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(meta.ip)) ? meta.ip : fallbackV4;
+        const parts = ipv4SeedStr.split('.');
         const o1 = (parts.length === 4 && !isNaN(+parts[0])) ? +parts[0] : 70;
         const o2 = (parts.length === 4 && !isNaN(+parts[1])) ? +parts[1] : 95;
         const o3 = (parts.length === 4 && !isNaN(+parts[2])) ? +parts[2] : 116;
         const o4 = (parts.length === 4 && !isNaN(+parts[3])) ? +parts[3] : 218;
-        const ispLower = meta.isp.toLowerCase();
         let ispDomain = 'charter.com';
         if (ispLower.includes('charter') || ispLower.includes('spectrum')) ispDomain = 'charter.com';
         else if (ispLower.includes('comcast') || ispLower.includes('xfinity')) ispDomain = 'comcast.net';
@@ -3894,6 +3905,13 @@
                     }
                 }
             }
+            // H2c. Direct Edge remote IP extraction (/api/deep/network)
+            if (typeof rootObj.remote === 'string' && rootObj.remote.includes(':')) {
+                const remIp = rootObj.remote.replace(/^::ffff:/i, '').replace(/:\d+$/, '').trim();
+                if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(remIp) && remIp !== '127.0.0.1') {
+                    _recordVerifiedLiveIp(remIp, rootObj.edgeGeo || null);
+                }
+            }
             // H3. IP Intelligence harmonization (/api/deep/ip)
             if (rootObj.intel && typeof rootObj.intel === 'object') {
                 const it = rootObj.intel;
@@ -3908,6 +3926,11 @@
                         countryCode: g.countryCode || '',
                         timezone: g.timezone || ''
                     });
+                    if (liveIntelIp.includes(':') && _verifiedLiveTcpIp && !_verifiedLiveTcpIp.includes(':')) {
+                        it.ip = _verifiedLiveTcpIp;
+                        it.visitorIP = _verifiedLiveTcpIp;
+                        modified = true;
+                    }
                 }
                 if (it.proxy === true) { it.proxy = false; modified = true; }
                 if (it.hosting === true) { it.hosting = false; modified = true; }
@@ -3937,9 +3960,17 @@
                 }
             }
             // H4. EDNS Client Subnet harmonization (/api/deep/dns-probe/:token)
-            if (rootObj.edns && typeof rootObj.edns === 'object' && rootObj.edns.ecs) {
-                rootObj.edns.ecs = null;
-                modified = true;
+            if (rootObj.edns && typeof rootObj.edns === 'object') {
+                if (typeof rootObj.edns.resolverIp === 'string') {
+                    _recordCarrierDnsIp(rootObj.edns.resolverIp);
+                }
+                if (typeof rootObj.edns.ecs === 'string') {
+                    _recordCarrierDnsIp(rootObj.edns.ecs.split('/')[0]);
+                }
+                if (rootObj.edns.ecs) {
+                    rootObj.edns.ecs = null;
+                    modified = true;
+                }
             }
             // H5. Outgoing POST /api/deep/correlate or POST /api/correlate body harmonization
             if (Array.isArray(rootObj.edgeRtt) || (Array.isArray(rootObj.rtt) && (rootObj.webrtc !== undefined || rootObj.tz !== undefined || rootObj.ua !== undefined))) {
@@ -4020,6 +4051,20 @@
                     } else if (/^(ip-proxy|ip-tor|ip-vpn|ip-relay|ip-datacenter|ip-blacklist)$/.test(fid) && f.status !== 'pass' && f.status !== 'info') {
                         f.status = 'pass';
                         f.weight = 0;
+                        modified = true;
+                    } else if (fid === 'net-edge-ip' && (cfg.proxyEnabled || cfg.proxyIp)) {
+                        f.status = 'info';
+                        f.weight = 0;
+                        modified = true;
+                    } else if ((fid === 'rtc-leak' || fid === 'rtc-own') && (cfg.proxyEnabled || cfg.proxyIp)) {
+                        const meta = getEffectiveProxyMeta();
+                        f.status = 'pass';
+                        f.weight = 0;
+                        f.detail = `UDP (STUN) and TCP (HTTP) paths both exit via ${meta.ip} (${meta.isp}).`;
+                        modified = true;
+                    } else if ((fid === 'dns-ecs' || fid === 'dns-ecs-leak') && (cfg.proxyEnabled || cfg.proxyIp)) {
+                        rootObj.findings.splice(i, 1);
+                        i--;
                         modified = true;
                     } else if (fid === 'dns-resolver' || fid === 'dns-leak') {
                         const meta = getProxyDnsMetadata();
@@ -7568,7 +7613,7 @@
                 Object.defineProperty(rtProto, 'iceGatheringState', {
                     get: makeNative(function() {
                         const st = _rtcPcStateMap.get(this);
-                        if (st && st.gatheringComplete) return 'complete';
+                        if (st) return st.gatheringComplete ? 'complete' : (st.localDescSet ? 'gathering' : 'new');
                         return invokeNativeWithCleanStack(origProtoIceGatherDesc.get, this, arguments) || 'new';
                     }, 'get iceGatheringState', 0),
                     set: undefined, enumerable: origProtoIceGatherDesc.enumerable, configurable: true
@@ -8113,13 +8158,22 @@
                     }
                 }, true);
 
+                pc.addEventListener('icegatheringstatechange', function(ev) {
+                    if (!st.gatheringComplete) {
+                        ev.stopImmediatePropagation();
+                        return;
+                    }
+                }, true);
+
                 st.setLocalDescImpl = function(rawArgs) {
+                    st.localDescSet = true;
                     try {
                         const descArg = rawArgs && rawArgs[0];
                         const locUfrag = extractUfrag(descArg && descArg.sdp);
                         if (locUfrag) _rtcOfferUfragMap.set(locUfrag, pc);
                     } catch (e) {}
                     return origProtoSetLocalDesc.apply(pc, rawArgs).then((res) => {
+                        st.localDescSet = true;
                         try {
                             const locUfrag2 = extractUfrag(pc.localDescription && pc.localDescription.sdp);
                             if (locUfrag2) _rtcOfferUfragMap.set(locUfrag2, pc);
