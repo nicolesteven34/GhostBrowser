@@ -37,19 +37,55 @@ public struct BrowserView: UIViewRepresentable {
         self._wipeTrigger = wipeTrigger
     }
 
+    private static var liveWebViews: [UUID: WKWebView] = [:]
+    private static var liveCoordinators: [UUID: Coordinator] = [:]
+
+    public static func releaseWebView(for tabID: UUID) {
+        liveWebViews.removeValue(forKey: tabID)
+        liveCoordinators.removeValue(forKey: tabID)
+    }
+
+    public static func normalizeURL(_ raw: String?) -> String {
+        guard var s = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return "" }
+        if s == "local://startpage" { return s }
+        if !s.contains("://") { s = "https://" + s }
+        while s.count > 8 && s.hasSuffix("/") {
+            s.removeLast()
+        }
+        return s.lowercased()
+    }
+
+    public static func urlsAreEquivalent(_ a: String?, _ b: String?) -> Bool {
+        let na = normalizeURL(a)
+        let nb = normalizeURL(b)
+        return !na.isEmpty && na == nb
+    }
+
     public func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        if let existing = Self.liveCoordinators[tabID] {
+            existing.parent = self
+            return existing
+        }
+        let coord = Coordinator(self)
+        Self.liveCoordinators[tabID] = coord
+        return coord
     }
 
     public func makeUIView(context: Context) -> WKWebView {
+        if let existingWebView = Self.liveWebViews[tabID] {
+            context.coordinator.parent = self
+            context.coordinator.webView = existingWebView
+            return existingWebView
+        }
+
         let configuration = WKWebViewConfiguration()
-        configuration.processPool = ProxyService.shared.sharedProcessPool
+        configuration.processPool = ProxyService.shared.processPool(for: privacyProfile)
 
         // 1. Data Store: Shared profile data store across all tabs in the same profile
         let dataStore = ProxyService.shared.websiteDataStore(for: privacyProfile)
         configuration.websiteDataStore = dataStore
 
-        // Apply Native C++ Network Proxy (SOCKS5 / HTTP) to WKWebsiteDataStore
+        // Apply Native C++ Network Proxy (SOCKS5 / HTTP) strictly to this profile's WKWebsiteDataStore
         ProxyService.shared.applyProxy(to: dataStore, profile: privacyProfile)
 
         if !privacyProfile.ephemeralRAMMode {
@@ -101,6 +137,8 @@ public struct BrowserView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.customUserAgent = privacyProfile.effectiveUserAgent.isEmpty ? nil : privacyProfile.effectiveUserAgent
         webView.allowsBackForwardNavigationGestures = true
+
+        Self.liveWebViews[tabID] = webView
 
         context.coordinator.setupObservers(for: webView)
         context.coordinator.webView = webView
@@ -163,23 +201,23 @@ public struct BrowserView: UIViewRepresentable {
     public func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.parent = self
 
-        // Detect device profile, user agent, session seed, or proxy changes
+        // Detect device profile, user agent, session seed, or proxy tunnel vs metadata changes
         let profileChanged = context.coordinator.lastProfileDevice != privacyProfile.selectedDevice
         let uaChanged = context.coordinator.lastUserAgent != privacyProfile.effectiveUserAgent
         let seedChanged = context.coordinator.lastSessionSeed != privacyProfile.sessionSeed
         let tzChanged = context.coordinator.lastProxyTimezone != privacyProfile.effectiveProxyTimezone
-        let proxyChanged = context.coordinator.lastProxyEnabled != privacyProfile.proxyEnabled
+        let tunnelChanged = context.coordinator.lastProxyEnabled != privacyProfile.proxyEnabled
             || context.coordinator.lastProxyType != privacyProfile.proxyType
             || context.coordinator.lastProxyHost != privacyProfile.proxyHost
             || context.coordinator.lastProxyPort != privacyProfile.proxyPort
             || context.coordinator.lastProxyUsername != privacyProfile.proxyUsername
             || context.coordinator.lastProxyPassword != privacyProfile.proxyPassword
-            || context.coordinator.lastProxyDetectedIP != privacyProfile.proxyDetectedIP
+            || context.coordinator.lastEnableDnsProxyMatching != privacyProfile.enableDnsProxyMatching
+        let metaChanged = context.coordinator.lastProxyDetectedIP != privacyProfile.proxyDetectedIP
             || context.coordinator.lastProxyDetectedISP != privacyProfile.proxyDetectedISP
             || tzChanged
-            || context.coordinator.lastEnableDnsProxyMatching != privacyProfile.enableDnsProxyMatching
 
-        if profileChanged || uaChanged || seedChanged || proxyChanged {
+        if profileChanged || uaChanged || seedChanged || tunnelChanged || metaChanged {
             context.coordinator.lastProfileDevice = privacyProfile.selectedDevice
             context.coordinator.lastUserAgent = privacyProfile.effectiveUserAgent
             context.coordinator.lastSessionSeed = privacyProfile.sessionSeed
@@ -194,7 +232,9 @@ public struct BrowserView: UIViewRepresentable {
             context.coordinator.lastProxyTimezone = privacyProfile.effectiveProxyTimezone
             context.coordinator.lastEnableDnsProxyMatching = privacyProfile.enableDnsProxyMatching
 
-            ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: privacyProfile)
+            if tunnelChanged {
+                ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: privacyProfile)
+            }
             context.coordinator.reconfigurePrivacy(for: webView)
 
             let ipEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedIP.replacingOccurrences(of: "'", with: "") : ""
@@ -206,13 +246,7 @@ public struct BrowserView: UIViewRepresentable {
             let jsProxy = "try { window.dispatchEvent(new CustomEvent('__g_bridge__', { detail: { t: 'proxy', ip: '\(ipEsc)', tz: '\(tzEsc)', lat: \(privacyProfile.mockLatitude), lon: \(privacyProfile.mockLongitude), en: \(privacyProfile.proxyEnabled), isp: '\(ispEsc)', city: '\(cityEsc)', reg: '\(regEsc)', ctry: '\(ctryEsc)' } })); } catch(e) {}"
             webView.evaluateJavaScript(jsProxy) { _, _ in }
 
-            if tzChanged,
-               let loaded = context.coordinator.currentLoadedURL,
-               (loaded.hasPrefix("http://") || loaded.hasPrefix("https://")) {
-                webView.reload()
-            }
-
-            if proxyChanged && privacyProfile.proxyEnabled && (privacyProfile.proxyDetectedIP.isEmpty || privacyProfile.proxyDetectedTimezone.isEmpty) && !privacyProfile.proxyHost.isEmpty {
+            if tunnelChanged && privacyProfile.proxyEnabled && (privacyProfile.proxyDetectedIP.isEmpty || privacyProfile.proxyDetectedTimezone.isEmpty) && !privacyProfile.proxyHost.isEmpty {
                 let pType = privacyProfile.proxyType
                 let pHost = privacyProfile.proxyHost
                 let pPort = privacyProfile.proxyPort
@@ -279,19 +313,21 @@ public struct BrowserView: UIViewRepresentable {
             webView.evaluateJavaScript(js) { _, _ in }
         }
 
-        // Handle URL change from user navigation
-        if currentURLString != context.coordinator.currentLoadedURL && !currentURLString.isEmpty {
+        // Handle URL change from user navigation (compare normalized URLs so trailing slash never reloads)
+        if !Self.urlsAreEquivalent(currentURLString, context.coordinator.currentLoadedURL) &&
+           !Self.urlsAreEquivalent(currentURLString, webView.url?.absoluteString) &&
+           !currentURLString.isEmpty {
             context.coordinator.loadURL(currentURLString)
         }
 
         // Handle explicit reload trigger
-        if context.coordinator.lastReloadTrigger != reloadTrigger {
+        if context.coordinator.lastReloadTrigger != reloadTrigger && reloadTrigger > 0 {
             context.coordinator.lastReloadTrigger = reloadTrigger
             context.coordinator.reloadCurrentPage()
         }
 
         // Handle panic wipe trigger
-        if context.coordinator.lastWipeTrigger != wipeTrigger {
+        if context.coordinator.lastWipeTrigger != wipeTrigger && wipeTrigger > 0 {
             context.coordinator.lastWipeTrigger = wipeTrigger
             context.coordinator.nukeSession(reloadCurrent: false)
         }
@@ -406,6 +442,15 @@ public struct BrowserView: UIViewRepresentable {
                 self?.reloadCurrentPage(userInitiated: true)
             }
             notificationTokens.append(reloadToken)
+
+            let wipeToken = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("GhostWebViewWipe_\(tabID)"),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.nukeSession(reloadCurrent: false)
+            }
+            notificationTokens.append(wipeToken)
             
             let killSwitchToken = NotificationCenter.default.addObserver(
                 forName: NSNotification.Name("GhostTriggerIpKillSwitch"),
@@ -805,17 +850,34 @@ public struct BrowserView: UIViewRepresentable {
                       !liveIp.isEmpty else { return }
                 DispatchQueue.main.async {
                     guard self.parent.privacyProfile.proxyEnabled else { return }
-                    if self.parent.privacyProfile.proxyDetectedIP != liveIp {
+                    var didUpdate = false
+                    let currentHasIpv4 = !self.parent.privacyProfile.proxyDetectedIP.isEmpty && !self.parent.privacyProfile.proxyDetectedIP.contains(":")
+                    if (!liveIp.contains(":") || !currentHasIpv4) && self.parent.privacyProfile.proxyDetectedIP != liveIp {
                         self.parent.privacyProfile.proxyDetectedIP = liveIp
+                        didUpdate = true
                     }
                     if let isp = obj["isp"] as? String, !isp.isEmpty, self.parent.privacyProfile.proxyDetectedISP != isp {
                         self.parent.privacyProfile.proxyDetectedISP = isp
+                        didUpdate = true
                     }
                     if let city = obj["city"] as? String, !city.isEmpty, self.parent.privacyProfile.proxyDetectedCity != city {
                         self.parent.privacyProfile.proxyDetectedCity = city
+                        didUpdate = true
+                    }
+                    if let reg = obj["region"] as? String, !reg.isEmpty, self.parent.privacyProfile.proxyDetectedRegion != reg {
+                        self.parent.privacyProfile.proxyDetectedRegion = reg
+                        didUpdate = true
                     }
                     if let country = obj["country"] as? String, !country.isEmpty, self.parent.privacyProfile.proxyDetectedCountry != country {
                         self.parent.privacyProfile.proxyDetectedCountry = country
+                        didUpdate = true
+                    }
+                    if let tz = obj["timezone"] as? String, tz.contains("/"), self.parent.privacyProfile.proxyDetectedTimezone != tz {
+                        self.parent.privacyProfile.proxyDetectedTimezone = tz
+                        didUpdate = true
+                    }
+                    if didUpdate {
+                        ProfileManager.shared.saveProfileSensors(from: self.parent.privacyProfile)
                     }
                 }
             }

@@ -1,5 +1,11 @@
 import SwiftUI
 
+private struct MountedProfileTabItem: Identifiable {
+    let profileID: UUID
+    let tabID: UUID
+    var id: String { "\(profileID.uuidString)-\(tabID.uuidString)" }
+}
+
 public struct ContentView: View {
     @StateObject private var privacyProfile = PrivacyProfile()
     @StateObject private var profileManager = ProfileManager.shared
@@ -36,6 +42,18 @@ public struct ContentView: View {
 
     private var activeTab: BrowserTab? {
         tabs.first(where: { $0.id == activeTabID }) ?? tabs.first
+    }
+
+    private var mountedTabItems: [MountedProfileTabItem] {
+        var result: [MountedProfileTabItem] = []
+        for profile in profileManager.profiles where mountedProfileIDs.contains(profile.id) {
+            let isCurrent = (profile.id == profileManager.activeProfileID)
+            let pTabs = isCurrent ? tabs : (profile.tabs.isEmpty ? [BrowserTab()] : profile.tabs)
+            for tab in pTabs {
+                result.append(MountedProfileTabItem(profileID: profile.id, tabID: tab.id))
+            }
+        }
+        return result
     }
 
     private var filteredProfileHistory: [ProfileHistoryEntry] {
@@ -75,30 +93,27 @@ public struct ContentView: View {
                         .zIndex(5)
                         .allowsHitTesting(false)
 
-                    ForEach(profileManager.profiles.filter { mountedProfileIDs.contains($0.id) }) { profile in
-                        let isCurrentProfile = (profile.id == profileManager.activeProfileID)
-                        let profileTabs = isCurrentProfile ? tabs : (profile.tabs.isEmpty ? [BrowserTab()] : profile.tabs)
-                        let dedicatedPrivacy = profileManager.privacyProfile(for: profile.id)
+                    ForEach(mountedTabItems) { item in
+                        let isCurrentProfile = (item.profileID == profileManager.activeProfileID)
+                        let isVisible = isCurrentProfile && (item.tabID == activeTabID)
+                        let dedicatedPrivacy = profileManager.privacyProfile(for: item.profileID)
 
-                        ForEach(profileTabs) { tab in
-                            let isVisible = isCurrentProfile && (tab.id == activeTabID)
-                            BrowserView(
-                                privacyProfile: dedicatedPrivacy,
-                                tabID: tab.id,
-                                currentURLString: bindingForURL(profileID: profile.id, tabID: tab.id),
-                                pageTitle: bindingForTitle(profileID: profile.id, tabID: tab.id),
-                                canGoBack: bindingForBack(profileID: profile.id, tabID: tab.id),
-                                canGoForward: bindingForForward(profileID: profile.id, tabID: tab.id),
-                                isLoading: bindingForLoading(profileID: profile.id, tabID: tab.id),
-                                estimatedProgress: bindingForProgress(profileID: profile.id, tabID: tab.id),
-                                reloadTrigger: isCurrentProfile ? $reloadTrigger : .constant(0),
-                                wipeTrigger: isCurrentProfile ? $wipeTrigger : .constant(0)
-                            )
-                            .id("\(profile.id)-\(tab.id)")
-                            .opacity(isVisible ? 1.0 : 0.002)
-                            .zIndex(isVisible ? 10 : 0)
-                            .allowsHitTesting(isVisible)
-                        }
+                        BrowserView(
+                            privacyProfile: dedicatedPrivacy,
+                            tabID: item.tabID,
+                            currentURLString: bindingForURL(profileID: item.profileID, tabID: item.tabID),
+                            pageTitle: bindingForTitle(profileID: item.profileID, tabID: item.tabID),
+                            canGoBack: bindingForBack(profileID: item.profileID, tabID: item.tabID),
+                            canGoForward: bindingForForward(profileID: item.profileID, tabID: item.tabID),
+                            isLoading: bindingForLoading(profileID: item.profileID, tabID: item.tabID),
+                            estimatedProgress: bindingForProgress(profileID: item.profileID, tabID: item.tabID),
+                            reloadTrigger: .constant(0),
+                            wipeTrigger: .constant(0)
+                        )
+                        .id(item.id)
+                        .opacity(isVisible ? 1.0 : 0.002)
+                        .zIndex(isVisible ? 10 : 0)
+                        .allowsHitTesting(isVisible)
                     }
                 }
                 .edgesIgnoringSafeArea(.bottom)
@@ -508,6 +523,9 @@ public struct ContentView: View {
                 }
                 .alert("Panic Wipe Session?", isPresented: $showWipeAlert) {
                     Button("Wipe & Return Home", role: .destructive) {
+                        for oldTab in tabs {
+                            BrowserView.releaseWebView(for: oldTab.id)
+                        }
                         profileManager.clearProfileData(id: profileManager.activeProfileID)
                         profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: profileManager.activePrivacyProfile)
                         let freshTab = BrowserTab()
@@ -515,7 +533,6 @@ public struct ContentView: View {
                         activeTabID = freshTab.id
                         inputURLText = ""
                         profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
-                        wipeTrigger += 1
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
@@ -859,6 +876,7 @@ public struct ContentView: View {
 
     private func closeTab(id: UUID) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+        BrowserView.releaseWebView(for: id)
 
         if tabs.count <= 1 {
             let freshTab = BrowserTab()
@@ -1047,8 +1065,8 @@ public struct ContentView: View {
         if let index = tabs.firstIndex(where: { $0.id == activeTabID }) {
             let prev = tabs[index].urlString
             tabs[index].urlString = target
-            if prev == target || prev == "https://\(target)" || prev == "https://\(target)/" {
-                reloadTrigger += 1
+            if BrowserView.urlsAreEquivalent(prev, target) {
+                NotificationCenter.default.post(name: NSNotification.Name("GhostWebViewReload_\(activeTabID)"), object: nil)
             }
             profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
         }

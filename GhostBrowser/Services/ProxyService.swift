@@ -200,10 +200,12 @@ public final class ProxyService {
     }
 
     public let sharedProcessPool = WKProcessPool()
-    private var activeDnsBridge: LocalSocks5DnsBridge?
-    private var activeBridgeConfigKey: String = ""
-    private var activeBridgePort: UInt16 = 0
-    private var lastAppliedConfigKey: String = ""
+    private var sharedProcessPools: [UUID: WKProcessPool] = [:]
+    private var activeDnsBridges: [UUID: LocalSocks5DnsBridge] = [:]
+    private var activeBridgeConfigKeys: [UUID: String] = [:]
+    private var activeBridgePorts: [UUID: UInt16] = [:]
+    private var lastAppliedConfigKeys: [UUID: String] = [:]
+    private var activeProfilesByID: [UUID: PrivacyProfile] = [:]
     private weak var lastAppliedProfile: PrivacyProfile?
     private var lastBackgroundTimestamp: Date?
     private var didExpireInBackground: Bool = false
@@ -211,6 +213,25 @@ public final class ProxyService {
     private var lastBridgeRestartTimestamp: Date = .distantPast
     private var sharedDataStores: [String: WKWebsiteDataStore] = [:]
     private var activeDataStores = NSHashTable<WKWebsiteDataStore>.weakObjects()
+
+    public func processPool(for profile: PrivacyProfile) -> WKProcessPool {
+        let pid = profile.sessionDataStoreID
+        if let existing = sharedProcessPools[pid] {
+            return existing
+        }
+        let pool = WKProcessPool()
+        sharedProcessPools[pid] = pool
+        return pool
+    }
+
+    public func stopBridge(for profileID: UUID) {
+        activeDnsBridges[profileID]?.stop()
+        activeDnsBridges.removeValue(forKey: profileID)
+        activeBridgeConfigKeys.removeValue(forKey: profileID)
+        activeBridgePorts.removeValue(forKey: profileID)
+        lastAppliedConfigKeys.removeValue(forKey: profileID)
+        activeProfilesByID.removeValue(forKey: profileID)
+    }
 
     private func endBackgroundKeepAliveTask() {
         if backgroundTaskID != .invalid {
@@ -243,16 +264,15 @@ public final class ProxyService {
             let wasBackgrounded = (bgTimestamp != nil)
             let bgDuration = bgTimestamp.map { Date().timeIntervalSince($0) } ?? 0
             let expired = self.didExpireInBackground
-            let bridgeDead = (self.activeDnsBridge != nil && self.activeDnsBridge?.isListening == false)
-            guard wasBackgrounded || bridgeDead else { return }
+            let anyBridgeDead = self.activeDnsBridges.values.contains(where: { !$0.isListening })
+            guard wasBackgrounded || anyBridgeDead else { return }
             self.lastBackgroundTimestamp = nil
             self.didExpireInBackground = false
-            // Only tear down and re-bind the local SOCKS5 bridge if the bridge actually stopped listening
-            // or iPadOS suspended the process after background task expiration. Preserving the live bridge
-            // during normal app switches keeps in-flight streams (e.g. packetprobe.com tests) running seamlessly.
-            if bridgeDead || expired || bgDuration > 28.0 {
-                if Date().timeIntervalSince(self.lastBridgeRestartTimestamp) > 0.8 || bridgeDead {
-                    self.forceRestartBridge(for: self.lastAppliedProfile)
+            if anyBridgeDead || expired || bgDuration > 28.0 {
+                if Date().timeIntervalSince(self.lastBridgeRestartTimestamp) > 0.8 || anyBridgeDead {
+                    for (_, prof) in self.activeProfilesByID {
+                        self.forceRestartBridge(for: prof)
+                    }
                 }
             }
         }
@@ -271,34 +291,22 @@ public final class ProxyService {
         )
     }
 
-    /// Forces a fresh LocalSocks5DnsBridge on a new ephemeral loopback port and re-binds all active WKWebsiteDataStores.
-    /// Changing the loopback port forces Apple's out-of-process `com.apple.WebKit.Networking` daemon to drop all stale
-    /// or half-open sockets that were suspended or aborted by the iOS kernel during app switching.
+    /// Forces a fresh LocalSocks5DnsBridge on a new ephemeral loopback port for the given profile
+    /// and re-binds ONLY that profile's WKWebsiteDataStore without disturbing other active profiles.
     public func forceRestartBridge(for profile: PrivacyProfile? = nil) {
         let work = { [weak self] in
             guard let self = self else { return }
-            let targetProfile = profile ?? self.lastAppliedProfile
+            guard let prof = profile ?? self.lastAppliedProfile else { return }
+            let pid = prof.sessionDataStoreID
             self.lastBridgeRestartTimestamp = Date()
-            self.activeDnsBridge?.stop()
-            self.activeDnsBridge = nil
-            self.activeBridgeConfigKey = ""
-            self.activeBridgePort = 0
-            self.lastAppliedConfigKey = ""
-            if #available(iOS 17.0, *) {
-                NWParameters.PrivacyContext.default.flushCache()
-            }
-            guard let prof = targetProfile else { return }
-            var stores = self.activeDataStores.allObjects
-            for ds in self.sharedDataStores.values where !stores.contains(where: { $0 === ds }) {
-                stores.append(ds)
-            }
-            if let firstStore = stores.first {
-                self.applyProxy(to: firstStore, profile: prof)
-            } else {
-                let ds = self.websiteDataStore(for: prof)
-                self.applyProxy(to: ds, profile: prof)
-            }
-            NotificationCenter.default.post(name: NSNotification.Name("GhostProxyBridgeDidRestart"), object: nil)
+            self.activeDnsBridges[pid]?.stop()
+            self.activeDnsBridges.removeValue(forKey: pid)
+            self.activeBridgeConfigKeys.removeValue(forKey: pid)
+            self.activeBridgePorts.removeValue(forKey: pid)
+            self.lastAppliedConfigKeys.removeValue(forKey: pid)
+            let ds = self.websiteDataStore(for: prof)
+            self.applyProxy(to: ds, profile: prof)
+            NotificationCenter.default.post(name: NSNotification.Name("GhostProxyBridgeDidRestart"), object: pid)
         }
         if Thread.isMainThread {
             work()
@@ -333,13 +341,12 @@ public final class ProxyService {
         sharedDataStores.removeValue(forKey: key)
     }
 
-    /// Checks whether the active SOCKS5 tunnel sat idle long enough for upstream carrier/Starlink NAT
+    /// Checks whether the profile's SOCKS5 tunnel sat idle long enough for upstream carrier/Starlink NAT
     /// or Apple's out-of-process `com.apple.WebKit.Networking` socket pool to go stale.
-    /// If idle (or if user explicitly tapped Reload after >= 20s of inactivity), rotates the local loopback
-    /// bridge port while preserving the Stale-While-Revalidate DNS cache so the next navigation is 0ms fresh.
     public func ensureFreshRouteIfIdle(for profile: PrivacyProfile, userInitiatedReload: Bool = false) {
         guard profile.proxyEnabled, !profile.proxyHost.isEmpty else { return }
-        if let bridge = activeDnsBridge {
+        let pid = profile.sessionDataStoreID
+        if let bridge = activeDnsBridges[pid] {
             let idleSec = bridge.secondsSinceLastTraffic
             let threshold: TimeInterval = userInitiatedReload ? 20.0 : 75.0
             if !bridge.isListening || bridge.hasRecentUpstreamFailure || idleSec >= threshold {
@@ -347,16 +354,17 @@ public final class ProxyService {
                 return
             }
         }
-        if let store = activeDataStores.allObjects.first ?? sharedDataStores.values.first {
-            applyProxy(to: store, profile: profile)
-        }
+        let store = websiteDataStore(for: profile)
+        applyProxy(to: store, profile: profile)
     }
 
-    /// Applies native C++ Network.ProxyConfiguration to WKWebsiteDataStore on iOS 17+
-    /// and routes SOCKS5 traffic through a persistent LocalSocks5DnsBridge shared across all open tabs.
+    /// Applies native C++ Network.ProxyConfiguration strictly to the given profile's WKWebsiteDataStore on iOS 17+
+    /// and routes SOCKS5 traffic through a per-profile LocalSocks5DnsBridge so multiple active profiles never conflict.
     public func applyProxy(to dataStore: WKWebsiteDataStore, profile: PrivacyProfile) {
         if #available(iOS 17.0, *) {
+            let pid = profile.sessionDataStoreID
             lastAppliedProfile = profile
+            activeProfilesByID[pid] = profile
             activeDataStores.add(dataStore)
             let sanitized = sanitizeCredentials(
                 type: profile.proxyType,
@@ -371,20 +379,21 @@ public final class ProxyService {
             let pass = sanitized.password
 
             let configKey = "\(profile.proxyEnabled)|\(isHttp ? "HTTP" : "SOCKS5")|\(host.lowercased())|\(sanitized.port)|\(user)|\(pass)|\(profile.enableDnsProxyMatching)"
-            let configDidChange = (configKey != lastAppliedConfigKey)
+            let configDidChange = (configKey != lastAppliedConfigKeys[pid])
             if configDidChange {
-                lastAppliedConfigKey = configKey
-                NWParameters.PrivacyContext.default.flushCache()
+                lastAppliedConfigKeys[pid] = configKey
             }
 
-            let applyToAllStores: ([ProxyConfiguration]) -> Void = { [weak self] configs in
+            let applyToProfileStore: ([ProxyConfiguration]) -> Void = { [weak self] configs in
                 dataStore.proxyConfigurations = configs
                 guard let self = self else { return }
-                for store in self.activeDataStores.allObjects where store !== dataStore {
-                    store.proxyConfigurations = configs
+                let ramKey = "\(pid.uuidString)_ram"
+                let diskKey = "\(pid.uuidString)_disk"
+                if let s1 = self.sharedDataStores[ramKey], s1 !== dataStore {
+                    s1.proxyConfigurations = configs
                 }
-                for store in self.sharedDataStores.values where store !== dataStore {
-                    store.proxyConfigurations = configs
+                if let s2 = self.sharedDataStores[diskKey], s2 !== dataStore {
+                    s2.proxyConfigurations = configs
                 }
             }
 
@@ -393,28 +402,31 @@ public final class ProxyService {
                   sanitized.port > 0,
                   sanitized.port <= 65535,
                   let nwPort = NWEndpoint.Port(rawValue: UInt16(sanitized.port)) else {
-                activeDnsBridge?.stop()
-                activeDnsBridge = nil
-                activeBridgeConfigKey = ""
-                activeBridgePort = 0
-                applyToAllStores([])
+                activeDnsBridges[pid]?.stop()
+                activeDnsBridges.removeValue(forKey: pid)
+                activeBridgeConfigKeys.removeValue(forKey: pid)
+                activeBridgePorts.removeValue(forKey: pid)
+                applyToProfileStore([])
                 return
             }
 
             if !isHttp && profile.enableDnsProxyMatching {
-                if let existingBridge = activeDnsBridge,
+                if let existingBridge = activeDnsBridges[pid],
                    existingBridge.isListening,
-                   activeBridgePort > 0,
-                   activeBridgeConfigKey == configKey,
-                   let bridgeNwPort = NWEndpoint.Port(rawValue: activeBridgePort) {
+                   let existingPort = activeBridgePorts[pid],
+                   existingPort > 0,
+                   activeBridgeConfigKeys[pid] == configKey,
+                   let bridgeNwPort = NWEndpoint.Port(rawValue: existingPort) {
                     existingBridge.updateDetectedMetadata(isp: profile.proxyDetectedISP, asn: profile.proxyDetectedASN)
-                    let localEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: bridgeNwPort)
-                    let proxyConfig = ProxyConfiguration(socksv5Proxy: localEndpoint)
-                    applyToAllStores([proxyConfig])
+                    if configDidChange {
+                        let localEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: bridgeNwPort)
+                        let proxyConfig = ProxyConfiguration(socksv5Proxy: localEndpoint)
+                        applyToProfileStore([proxyConfig])
+                    }
                     return
                 }
 
-                activeDnsBridge?.stop()
+                activeDnsBridges[pid]?.stop()
                 let bridge = LocalSocks5DnsBridge(
                     upstreamHost: host,
                     upstreamPort: UInt16(sanitized.port),
@@ -423,27 +435,27 @@ public final class ProxyService {
                     detectedIsp: profile.proxyDetectedISP,
                     detectedAsn: profile.proxyDetectedASN
                 )
-                bridge.onUnexpectedStop = { [weak self, weak bridge] in
+                bridge.onUnexpectedStop = { [weak self, weak bridge, weak profile] in
                     DispatchQueue.main.async {
-                        guard let self = self, self.activeDnsBridge === bridge else { return }
-                        self.forceRestartBridge(for: self.lastAppliedProfile)
+                        guard let self = self, let prof = profile, self.activeDnsBridges[pid] === bridge else { return }
+                        self.forceRestartBridge(for: prof)
                     }
                 }
                 if let localPort = bridge.start(),
                    let bridgeNwPort = NWEndpoint.Port(rawValue: localPort) {
-                    activeDnsBridge = bridge
-                    activeBridgePort = localPort
-                    activeBridgeConfigKey = configKey
+                    activeDnsBridges[pid] = bridge
+                    activeBridgePorts[pid] = localPort
+                    activeBridgeConfigKeys[pid] = configKey
                     let localEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: bridgeNwPort)
                     let proxyConfig = ProxyConfiguration(socksv5Proxy: localEndpoint)
-                    applyToAllStores([proxyConfig])
+                    applyToProfileStore([proxyConfig])
                     return
                 }
             } else {
-                activeDnsBridge?.stop()
-                activeDnsBridge = nil
-                activeBridgeConfigKey = ""
-                activeBridgePort = 0
+                activeDnsBridges[pid]?.stop()
+                activeDnsBridges.removeValue(forKey: pid)
+                activeBridgeConfigKeys.removeValue(forKey: pid)
+                activeBridgePorts.removeValue(forKey: pid)
             }
 
             let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: nwPort)
@@ -458,7 +470,7 @@ public final class ProxyService {
                 proxyConfig.applyCredential(username: user, password: pass)
             }
 
-            applyToAllStores([proxyConfig])
+            applyToProfileStore([proxyConfig])
         }
     }
 
@@ -517,22 +529,27 @@ public final class ProxyService {
                 username: cleanUser,
                 password: cleanPass
             ) {
-                primaryResult.ip = httpsInfo.ip
+                if !httpsInfo.ip.contains(":") || primaryResult.ip.isEmpty || primaryResult.ip.contains(":") {
+                    primaryResult.ip = httpsInfo.ip
+                }
                 if !httpsInfo.isp.isEmpty { primaryResult.isp = httpsInfo.isp }
+                if !httpsInfo.asn.isEmpty { primaryResult.asn = httpsInfo.asn }
                 if !httpsInfo.city.isEmpty { primaryResult.city = httpsInfo.city }
                 if !httpsInfo.region.isEmpty { primaryResult.regionCode = httpsInfo.region }
                 if !httpsInfo.country.isEmpty { primaryResult.country = httpsInfo.country }
+                if !httpsInfo.timezone.isEmpty && httpsInfo.timezone.contains("/") {
+                    primaryResult.timezoneId = httpsInfo.timezone
+                }
+                if httpsInfo.lat != 0 || httpsInfo.lon != 0 {
+                    primaryResult.latitude = httpsInfo.lat
+                    primaryResult.longitude = httpsInfo.lon
+                }
             }
             primaryResult.resolvedType = primaryType
             primaryResult.resolvedHost = cleanHost
             primaryResult.resolvedPort = cleanPort
             primaryResult.resolvedUsername = cleanUser
             primaryResult.resolvedPassword = cleanPass
-            await MainActor.run {
-                if self.lastAppliedProfile != nil && (self.activeDnsBridge == nil || self.activeDnsBridge?.isListening == false) {
-                    self.forceRestartBridge(for: self.lastAppliedProfile)
-                }
-            }
             return primaryResult
         }
 
@@ -555,22 +572,27 @@ public final class ProxyService {
                 username: cleanUser,
                 password: cleanPass
             ) {
-                altResult.ip = httpsInfo.ip
+                if !httpsInfo.ip.contains(":") || altResult.ip.isEmpty || altResult.ip.contains(":") {
+                    altResult.ip = httpsInfo.ip
+                }
                 if !httpsInfo.isp.isEmpty { altResult.isp = httpsInfo.isp }
+                if !httpsInfo.asn.isEmpty { altResult.asn = httpsInfo.asn }
                 if !httpsInfo.city.isEmpty { altResult.city = httpsInfo.city }
                 if !httpsInfo.region.isEmpty { altResult.regionCode = httpsInfo.region }
                 if !httpsInfo.country.isEmpty { altResult.country = httpsInfo.country }
+                if !httpsInfo.timezone.isEmpty && httpsInfo.timezone.contains("/") {
+                    altResult.timezoneId = httpsInfo.timezone
+                }
+                if httpsInfo.lat != 0 || httpsInfo.lon != 0 {
+                    altResult.latitude = httpsInfo.lat
+                    altResult.longitude = httpsInfo.lon
+                }
             }
             altResult.resolvedType = altType
             altResult.resolvedHost = cleanHost
             altResult.resolvedPort = cleanPort
             altResult.resolvedUsername = cleanUser
             altResult.resolvedPassword = cleanPass
-            await MainActor.run {
-                if self.lastAppliedProfile != nil && (self.activeDnsBridge == nil || self.activeDnsBridge?.isListening == false) {
-                    self.forceRestartBridge(for: self.lastAppliedProfile)
-                }
-            }
             return altResult
         }
 
@@ -586,15 +608,15 @@ public final class ProxyService {
         return primaryResult
     }
 
-    /// Queries the live HTTPS (:443) exit IP through the proxy so carrier proxies that route port 80
-    /// through a transparent HTTP gateway report the exact same TLS :443 exit IP seen by websites.
+    /// Queries the live HTTPS (:443) IPv4 exit IP and Geo/ISP/Timezone through the proxy so carrier proxies
+    /// that route port 80 through a different gateway report the exact same TLS :443 IPv4 exit IP and Timezone seen by websites.
     private func verifyHttpsExitIp(
         type: String,
         host: String,
         port: Int,
         username: String,
         password: String
-    ) async -> (ip: String, isp: String, city: String, region: String, country: String)? {
+    ) async -> (ip: String, isp: String, asn: String, city: String, region: String, country: String, timezone: String, lat: Double, lon: Double)? {
         guard #available(iOS 17.0, *),
               let nwPort = NWEndpoint.Port(rawValue: UInt16(port)) else {
             return nil
@@ -614,25 +636,42 @@ public final class ProxyService {
         let session = URLSession(configuration: sessionConfig)
         defer { session.invalidateAndCancel() }
 
-        if let url = URL(string: "https://ipwho.is/") {
+        // First try IPv4-specific endpoint so dual-stack mobile proxies always resolve their IPv4 exit IP
+        var knownIpv4 = ""
+        if let v4Url = URL(string: "https://api4.ipify.org?format=json") {
+            if let (v4Data, _) = try? await session.data(from: v4Url),
+               let v4Obj = try? JSONSerialization.jsonObject(with: v4Data) as? [String: Any],
+               let ip4 = v4Obj["ip"] as? String, !ip4.isEmpty, !ip4.contains(":") {
+                knownIpv4 = ip4
+            }
+        }
+
+        let whoUrlStr = knownIpv4.isEmpty ? "https://ipwho.is/" : "https://ipwho.is/\(knownIpv4)"
+        if let url = URL(string: whoUrlStr) {
             if let (data, _) = try? await session.data(from: url),
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                (obj["success"] as? Bool) != false,
                let ip = obj["ip"] as? String, !ip.isEmpty {
+                let finalIp = (!knownIpv4.isEmpty && ip.contains(":")) ? knownIpv4 : ip
                 let connDict = obj["connection"] as? [String: Any]
+                let tzDict = obj["timezone"] as? [String: Any]
                 let isp = (connDict?["isp"] as? String) ?? (connDict?["org"] as? String) ?? ""
+                let asn: String = {
+                    if let asnInt = connDict?["asn"] as? Int { return "AS\(asnInt)" }
+                    if let asnStr = connDict?["asn"] as? String, !asnStr.isEmpty { return asnStr.hasPrefix("AS") ? asnStr : "AS\(asnStr)" }
+                    return ""
+                }()
                 let city = (obj["city"] as? String) ?? ""
-                let region = (obj["region_code"] as? String) ?? ""
+                let region = (obj["region_code"] as? String) ?? (obj["region"] as? String) ?? ""
                 let country = (obj["country"] as? String) ?? ""
-                return (ip, isp, city, region, country)
+                let tz = (tzDict?["id"] as? String) ?? ""
+                let lat = (obj["latitude"] as? Double) ?? 0.0
+                let lon = (obj["longitude"] as? Double) ?? 0.0
+                return (finalIp, isp, asn, city, region, country, tz, lat, lon)
             }
         }
-        if let url = URL(string: "https://api.ipify.org?format=json") {
-            if let (data, _) = try? await session.data(from: url),
-               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let ip = obj["ip"] as? String, !ip.isEmpty {
-                return (ip, "", "", "", "")
-            }
+        if !knownIpv4.isEmpty {
+            return (knownIpv4, "", "", "", "", "", "", 0.0, 0.0)
         }
         return nil
     }
@@ -1080,18 +1119,24 @@ public final class LocalSocks5DnsBridge {
         }
     }
 
+    private func scopedDnsCacheKey(_ lowerHost: String) -> String {
+        return "\(upstreamHost.lowercased()):\(upstreamPort):\(username)|\(lowerHost)"
+    }
+
     private func getCachedDnsEntry(_ lowerHost: String) -> (ip: String?, freshUntil: Date, staleUntil: Date)? {
+        let key = scopedDnsCacheKey(lowerHost)
         Self.sharedCacheLock.lock()
         defer { Self.sharedCacheLock.unlock() }
         Self.ensurePersistentDnsCacheLoadedLocked()
-        return Self.sharedDnsCache[lowerHost]
+        return Self.sharedDnsCache[key]
     }
 
     private func setCachedDnsEntry(_ lowerHost: String, ip: String?, freshTtl: TimeInterval, staleTtl: TimeInterval) {
+        let key = scopedDnsCacheKey(lowerHost)
         let now = Date()
         Self.sharedCacheLock.lock()
         Self.ensurePersistentDnsCacheLoadedLocked()
-        Self.sharedDnsCache[lowerHost] = (ip, now.addingTimeInterval(freshTtl), now.addingTimeInterval(staleTtl))
+        Self.sharedDnsCache[key] = (ip, now.addingTimeInterval(freshTtl), now.addingTimeInterval(staleTtl))
         Self.sharedCacheLock.unlock()
         if let ip = ip, !ip.isEmpty {
             Self.savePersistentDnsCacheThrottled()

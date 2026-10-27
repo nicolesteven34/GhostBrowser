@@ -282,16 +282,22 @@ public class ProfileManager: ObservableObject {
 
     public func switchProfile(to id: UUID, privacyProfile: PrivacyProfile? = nil) {
         guard let target = profiles.first(where: { $0.id == id }) else { return }
+        if activeProfileID != id, let prevDedicated = privacyProfileCache[activeProfileID] {
+            saveProfileSensors(from: prevDedicated)
+        }
         activeProfileID = id
         if let idx = profiles.firstIndex(where: { $0.id == id }) {
             profiles[idx].lastUsedAt = Date()
         }
+        let hadExistingCache = (privacyProfileCache[id] != nil)
         let dedicated = self.privacyProfile(for: id)
-        syncPrivacyProfile(dedicated, from: target)
+        if !hadExistingCache {
+            syncPrivacyProfile(dedicated, from: target)
+        }
         saveProfiles()
 
         if let privacyProfile = privacyProfile, privacyProfile !== dedicated {
-            syncPrivacyProfile(privacyProfile, from: target)
+            syncPrivacyProfile(privacyProfile, from: profiles.first(where: { $0.id == id }) ?? target)
         }
     }
 
@@ -565,6 +571,10 @@ public class ProfileManager: ObservableObject {
         guard profiles.count > 1 else { return }
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return }
 
+        for tab in profiles[index].tabs {
+            BrowserView.releaseWebView(for: tab.id)
+        }
+        ProxyService.shared.stopBridge(for: id)
         clearProfileData(id: id)
         privacyCancellables.removeValue(forKey: id)
         privacyProfileCache.removeValue(forKey: id)

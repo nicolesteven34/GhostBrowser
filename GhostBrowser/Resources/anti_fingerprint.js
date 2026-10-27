@@ -185,7 +185,20 @@
             if (typeof countryVal === 'string' && countryVal.trim()) _livePageCountry = countryVal.trim();
             if (typeof ccVal === 'string' && ccVal.trim()) _livePageCountryCode = ccVal.trim().toUpperCase();
             if (typeof tzVal === 'string' && tzVal.includes('/')) {
-                if (!_livePageTimezone) _livePageTimezone = tzVal.trim();
+                _livePageTimezone = tzVal.trim();
+                if (cfg) cfg.timezone = _livePageTimezone;
+            }
+        }
+        if (isIpv4) {
+            if (/^172\.5[6-9]\./.test(trimmed) && !/t-mobile|tmobile|sprint/i.test(_livePageIsp || '')) {
+                _livePageIsp = 'T-Mobile USA, Inc.';
+                if (cfg) cfg.proxyAsn = 'AS21928';
+            } else if (/^107\.(?:7[2-9]|1[12]\d)\./.test(trimmed) && !/at&t|att|sbcglobal|bellsouth/i.test(_livePageIsp || '')) {
+                _livePageIsp = 'AT&T Mobility LLC';
+                if (cfg) cfg.proxyAsn = 'AS20057';
+            } else if (/^174\.(?:19\d|2\d\d)\./.test(trimmed) && !/verizon|cellco|fios|vzw/i.test(_livePageIsp || '')) {
+                _livePageIsp = 'Verizon Business';
+                if (cfg) cfg.proxyAsn = 'AS6167';
             }
         }
         try {
@@ -195,6 +208,7 @@
                 if (_livePageCity) cfg.proxyCity = _livePageCity;
                 if (_livePageRegion) cfg.proxyRegion = _livePageRegion;
                 if (_livePageCountry) cfg.proxyCountry = _livePageCountry;
+                if (_livePageTimezone) cfg.timezone = _livePageTimezone;
             }
             if (typeof window !== 'undefined') {
                 Object.defineProperty(window, _LIVE_IP_SYNC_SYM, {
@@ -204,7 +218,8 @@
                         city: _livePageCity || (cfg && cfg.proxyCity) || '',
                         region: _livePageRegion || (cfg && cfg.proxyRegion) || '',
                         country: _livePageCountry || (cfg && cfg.proxyCountry) || '',
-                        countryCode: _livePageCountryCode || (cfg && cfg.countryCode) || 'US'
+                        countryCode: _livePageCountryCode || (cfg && cfg.countryCode) || 'US',
+                        timezone: _livePageTimezone || (cfg && cfg.timezone) || ''
                     },
                     writable: true,
                     enumerable: false,
@@ -2305,11 +2320,17 @@
 
         const ip = (_verifiedLiveTcpIp || _livePageTcpIp || (cfg && cfg.proxyIp) || '72.108.70.100').trim();
         let inferredIsp = 'Charter Communications';
-        if (/^172\.5[6-9]\./.test(ip)) inferredIsp = 'T-Mobile USA, Inc.';
-        else if (/^107\.(?:7[2-9]|1[12]\d)\./.test(ip)) inferredIsp = 'AT&T Mobility LLC';
-        else if (/^174\.(?:19\d|2\d\d)\./.test(ip)) inferredIsp = 'Verizon Wireless';
-        else if (/^172\.12[4-7]\./.test(ip)) inferredIsp = 'AT&T Enterprises, LLC';
-        const isp = (_livePageIsp || (cfg && (cfg.proxyIsp || cfg.isp)) || inferredIsp).trim();
+        let strictCarrierMatch = false;
+        if (/^172\.5[6-9]\./.test(ip)) { inferredIsp = 'T-Mobile USA, Inc.'; strictCarrierMatch = true; }
+        else if (/^107\.(?:7[2-9]|1[12]\d)\./.test(ip)) { inferredIsp = 'AT&T Mobility LLC'; strictCarrierMatch = true; }
+        else if (/^174\.(?:19\d|2\d\d)\./.test(ip)) { inferredIsp = 'Verizon Business'; strictCarrierMatch = true; }
+        else if (/^172\.12[4-7]\./.test(ip)) { inferredIsp = 'AT&T Enterprises, LLC'; strictCarrierMatch = true; }
+        let isp = (_livePageIsp || (cfg && (cfg.proxyIsp || cfg.isp)) || inferredIsp).trim();
+        if (strictCarrierMatch && !doesResolverMatchProxyIsp(inferredIsp, isp)) {
+            isp = inferredIsp;
+            _livePageIsp = inferredIsp;
+            if (cfg) cfg.proxyIsp = inferredIsp;
+        }
         const city = (_livePageCity || (cfg && (cfg.proxyCity || cfg.city)) || (/^172\.5[6-9]\./.test(ip) ? 'Milwaukee' : 'Richardson')).trim();
         const region = (_livePageRegion || (cfg && (cfg.proxyRegion || cfg.region)) || (/^172\.5[6-9]\./.test(ip) ? 'Wisconsin' : 'TX')).trim();
         const country = (_livePageCountry || (cfg && (cfg.proxyCountry || cfg.country)) || 'United States').trim();
