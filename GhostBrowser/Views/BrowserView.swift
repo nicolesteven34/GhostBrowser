@@ -508,7 +508,7 @@ public struct BrowserView: UIViewRepresentable {
                 html = html.replacingOccurrences(of: "{{SCREEN_RES}}", with: "\(parent.privacyProfile.effectiveScreenWidth)×\(parent.privacyProfile.effectiveScreenHeight)")
                 html = html.replacingOccurrences(of: "{{DPR}}", with: String(format: "%.1f", parent.privacyProfile.effectiveDevicePixelRatio))
                 html = html.replacingOccurrences(of: "{{SEED}}", with: "\(parent.privacyProfile.sessionSeed)")
-                html = html.replacingOccurrences(of: "{{PROFILE_NAME}}", with: ProfileManager.shared.activeProfile.name.uppercased())
+                html = html.replacingOccurrences(of: "{{PROFILE_NAME}}", with: ProfileManager.shared.profileName(for: parent.privacyProfile.sessionDataStoreID).uppercased())
 
                 self.currentLoadedURL = "local://startpage"
                 self.parent.pageTitle = "Start Page"
@@ -765,7 +765,7 @@ public struct BrowserView: UIViewRepresentable {
                     currentLoadedURL = url
                     parent.currentURLString = url
                     if !parent.privacyProfile.ephemeralRAMMode {
-                        ProfileManager.shared.recordHistoryVisit(url: url, title: webView.title ?? "")
+                        ProfileManager.shared.recordHistoryVisit(url: url, title: webView.title ?? "", forProfileID: parent.privacyProfile.sessionDataStoreID)
                     }
                 }
             }
@@ -875,15 +875,7 @@ public struct BrowserView: UIViewRepresentable {
                 return nil
             }()
 
-            // Purge system URLCache and HTTPCookieStorage
-            URLCache.shared.removeAllCachedResponses()
-            if let cookies = HTTPCookieStorage.shared.cookies {
-                for cookie in cookies {
-                    HTTPCookieStorage.shared.deleteCookie(cookie)
-                }
-            }
-
-            // Purge WKHTTPCookieStore
+            // Purge WKHTTPCookieStore for this profile only
             dataStore.httpCookieStore.getAllCookies { cookies in
                 for cookie in cookies {
                     dataStore.httpCookieStore.delete(cookie)

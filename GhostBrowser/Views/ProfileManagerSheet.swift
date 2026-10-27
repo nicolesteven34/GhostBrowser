@@ -436,18 +436,42 @@ public struct ProfileManagerSheet: View {
 
     private func shortDevice(_ raw: String) -> String {
         if raw.contains("Native Host") { return "Native Host" }
+        if raw.contains("iPad Pro 13") { return "iPad Pro 13\"" }
+        if raw.contains("iPad Pro 12.9") { return "iPad Pro 12.9\"" }
+        if raw.contains("iPad Pro 11") && raw.contains("M4") { return "iPad Pro 11\" M4" }
+        if raw.contains("iPad Pro 11") { return "iPad Pro 11\" M2" }
+        if raw.contains("iPad Air 13") && raw.contains("M3") { return "iPad Air 13\" M3" }
+        if raw.contains("iPad Air 11") && raw.contains("M3") { return "iPad Air 11\" M3" }
+        if raw.contains("iPad Air 13") { return "iPad Air 13\"" }
+        if raw.contains("iPad Air 11") { return "iPad Air 11\"" }
+        if raw.contains("iPad 11th") { return "iPad 11th Gen" }
+        if raw.contains("iPad 10th") { return "iPad 10th Gen" }
+        if raw.contains("iPad 9th") { return "iPad 9th Gen" }
+        if raw.contains("iPad Mini 7") { return "iPad Mini 7" }
+        if raw.contains("iPad Mini 6") { return "iPad Mini 6" }
         if raw.contains("iPhone 18 Pro Max") { return "iPhone 18 PM" }
         if raw.contains("iPhone 17 Pro Max") { return "iPhone 17 PM" }
-        if raw.contains("iPad Pro 13") { return "iPad Pro 13\"" }
-        if raw.contains("iPad Air 11") { return "iPad Air 11\"" }
-        if raw.contains("iPad Mini 6") { return "iPad Mini 6" }
+        if raw.contains("iPhone 17 Pro") { return "iPhone 17 Pro" }
+        if raw.contains("iPhone 17 Air") { return "iPhone 17 Air" }
+        if raw.contains("iPhone 17") { return "iPhone 17" }
         if raw.contains("iPhone 16 Pro Max") { return "iPhone 16 PM" }
+        if raw.contains("iPhone 16 Pro") { return "iPhone 16 Pro" }
+        if raw.contains("iPhone 16 Plus") { return "iPhone 16 Plus" }
+        if raw.contains("iPhone 16e") { return "iPhone 16e" }
         if raw.contains("iPhone 16") { return "iPhone 16" }
         if raw.contains("iPhone 15 Pro Max") { return "iPhone 15 PM" }
+        if raw.contains("iPhone 15 Pro") { return "iPhone 15 Pro" }
+        if raw.contains("iPhone 15") { return "iPhone 15" }
+        if raw.contains("iPhone 14 Pro Max") { return "iPhone 14 PM" }
+        if raw.contains("iPhone 14 Pro") { return "iPhone 14 Pro" }
         if raw.contains("iPhone 14") { return "iPhone 14" }
-        if raw.contains("MacBook Pro 16") { return "MacBook Pro" }
-        if raw.contains("MacBook Air 13") { return "MacBook Air" }
-        return "Apple Device"
+        if raw.contains("iPhone 13") { return "iPhone 13" }
+        if raw.contains("iPhone SE") { return "iPhone SE" }
+        if raw.contains("MacBook Pro 16") { return "MacBook Pro 16\"" }
+        if raw.contains("MacBook Pro 14") { return "MacBook Pro 14\"" }
+        if raw.contains("MacBook Air 15") { return "MacBook Air 15\"" }
+        if raw.contains("MacBook Air 13") { return "MacBook Air 13\"" }
+        return "Custom"
     }
 }
 
@@ -1082,6 +1106,7 @@ public struct ProfileEditorSheet: View {
                 icon: icon,
                 themeColorHex: themeColorHex,
                 deviceProfile: deviceProfile,
+                sessionSeed: sessionSeed,
                 proxyEnabled: effectiveProxyEnabled,
                 proxyType: sanitized.type,
                 proxyHost: sanitized.host,

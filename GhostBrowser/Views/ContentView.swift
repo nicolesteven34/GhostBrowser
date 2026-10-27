@@ -7,6 +7,7 @@ public struct ContentView: View {
 
     @State private var tabs: [BrowserTab]
     @State private var activeTabID: UUID
+    @State private var mountedProfileIDs: Set<UUID>
     @State private var inputURLText: String = ""
     @State private var reloadTrigger: Int = 0
     @State private var wipeTrigger: Int = 0
@@ -30,6 +31,7 @@ public struct ContentView: View {
 
         self._tabs = State(initialValue: initialTabs)
         self._activeTabID = State(initialValue: initialTabID)
+        self._mountedProfileIDs = State(initialValue: [active.id])
     }
 
     private var activeTab: BrowserTab? {
@@ -67,29 +69,36 @@ public struct ContentView: View {
 
                 Divider()
 
-                // 4. Multi-Tab WebKit Canvas (Zero-reload state preservation per profile)
+                // 4. Multi-Tab & Multi-Profile WebKit Canvas (Zero-reload state preservation across profiles & tabs)
                 ZStack {
                     Color(UIColor.systemBackground)
                         .zIndex(5)
                         .allowsHitTesting(false)
 
-                    ForEach(tabs) { tab in
-                        BrowserView(
-                            privacyProfile: privacyProfile,
-                            tabID: tab.id,
-                            currentURLString: bindingForURL(tab.id),
-                            pageTitle: bindingForTitle(tab.id),
-                            canGoBack: bindingForBack(tab.id),
-                            canGoForward: bindingForForward(tab.id),
-                            isLoading: bindingForLoading(tab.id),
-                            estimatedProgress: bindingForProgress(tab.id),
-                            reloadTrigger: $reloadTrigger,
-                            wipeTrigger: $wipeTrigger
-                        )
-                        .id("\(tab.id)-\(privacyProfile.sessionDataStoreID)")
-                        .opacity(tab.id == activeTabID ? 1.0 : 0.02)
-                        .zIndex(tab.id == activeTabID ? 10 : 0)
-                        .allowsHitTesting(tab.id == activeTabID)
+                    ForEach(profileManager.profiles.filter { mountedProfileIDs.contains($0.id) }) { profile in
+                        let isCurrentProfile = (profile.id == profileManager.activeProfileID)
+                        let profileTabs = isCurrentProfile ? tabs : (profile.tabs.isEmpty ? [BrowserTab()] : profile.tabs)
+                        let dedicatedPrivacy = profileManager.privacyProfile(for: profile.id)
+
+                        ForEach(profileTabs) { tab in
+                            let isVisible = isCurrentProfile && (tab.id == activeTabID)
+                            BrowserView(
+                                privacyProfile: dedicatedPrivacy,
+                                tabID: tab.id,
+                                currentURLString: bindingForURL(profileID: profile.id, tabID: tab.id),
+                                pageTitle: bindingForTitle(profileID: profile.id, tabID: tab.id),
+                                canGoBack: bindingForBack(profileID: profile.id, tabID: tab.id),
+                                canGoForward: bindingForForward(profileID: profile.id, tabID: tab.id),
+                                isLoading: bindingForLoading(profileID: profile.id, tabID: tab.id),
+                                estimatedProgress: bindingForProgress(profileID: profile.id, tabID: tab.id),
+                                reloadTrigger: isCurrentProfile ? $reloadTrigger : .constant(0),
+                                wipeTrigger: isCurrentProfile ? $wipeTrigger : .constant(0)
+                            )
+                            .id("\(profile.id)-\(tab.id)")
+                            .opacity(isVisible ? 1.0 : 0.002)
+                            .zIndex(isVisible ? 10 : 0)
+                            .allowsHitTesting(isVisible)
+                        }
                     }
                 }
                 .edgesIgnoringSafeArea(.bottom)
@@ -126,38 +135,9 @@ public struct ContentView: View {
         }
         .onAppear {
             let active = profileManager.activeProfile
-            privacyProfile.selectedDevice = active.deviceProfile
-            privacyProfile.sessionSeed = active.sessionSeed
-            privacyProfile.buildIndex = active.buildIndex
-            privacyProfile.sessionDataStoreID = active.id
-            privacyProfile.searchEngine = active.searchEngine
-            privacyProfile.customUserAgent = active.customUserAgent
-            privacyProfile.mockLocationEnabled = active.mockLocationEnabled
-            privacyProfile.mockLatitude = active.mockLatitude
-            privacyProfile.mockLongitude = active.mockLongitude
-            privacyProfile.mockLocationName = active.mockLocationName
-            privacyProfile.virtualCameraEnabled = active.virtualCameraEnabled
-            privacyProfile.virtualCameraImageBase64 = active.virtualCameraImageBase64
-            privacyProfile.virtualCameraPanX = active.virtualCameraPanX
-            privacyProfile.virtualCameraPanY = active.virtualCameraPanY
-            privacyProfile.virtualCameraZoom = active.virtualCameraZoom
-            privacyProfile.proxyEnabled = active.proxyEnabled
-            privacyProfile.proxyType = active.proxyType
-            privacyProfile.proxyHost = active.proxyHost
-            privacyProfile.proxyPort = active.proxyPort
-            privacyProfile.proxyUsername = active.proxyUsername
-            privacyProfile.proxyPassword = active.proxyPassword
-            privacyProfile.proxyDetectedIP = active.proxyDetectedIP
-            privacyProfile.proxyDetectedCity = active.proxyDetectedCity
-            privacyProfile.proxyDetectedRegion = active.proxyDetectedRegion
-            privacyProfile.proxyDetectedCountry = active.proxyDetectedCountry
-            privacyProfile.proxyDetectedISP = active.proxyDetectedISP
-            privacyProfile.proxyDetectedASN = active.proxyDetectedASN
-            privacyProfile.proxyDetectedTimezone = active.proxyDetectedTimezone
-            privacyProfile.proxyUsageType = active.proxyUsageType
-            privacyProfile.proxyConnectionType = active.proxyConnectionType
-            privacyProfile.enableDnsProxyMatching = active.enableDnsProxyMatching
-            privacyProfile.enableIpChangeKillSwitch = active.enableIpChangeKillSwitch
+            mountedProfileIDs.insert(active.id)
+            privacyProfile.apply(from: active)
+            _ = profileManager.privacyProfile(for: active.id)
 
             if tabs.isEmpty {
                 let initial = BrowserTab()
@@ -370,6 +350,7 @@ public struct ContentView: View {
             }
 
             // ROW 2: Profile & SOCKS5 Status Pill + Session Controls
+            let activePrivacy = profileManager.activePrivacyProfile
             HStack(spacing: 10) {
                 // Profile Switcher & Session Monitor Indicator Pill (shows IP • ISP • Type • State when Proxy Active)
                 Button(action: {
@@ -389,15 +370,15 @@ public struct ContentView: View {
                             .foregroundColor(.secondary)
                             .font(.system(size: 9))
 
-                        if privacyProfile.proxyEnabled {
+                        if activePrivacy.proxyEnabled {
                             Image(systemName: "lock.shield.fill")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.green)
                         }
 
-                        Text(privacyProfile.proxyEnabled ? privacyProfile.compactProxyBadge : shortPersonaName(privacyProfile.selectedDevice.rawValue))
-                            .font(.system(size: 11, weight: .semibold, design: privacyProfile.proxyEnabled ? .monospaced : .default))
-                            .foregroundColor(privacyProfile.proxyEnabled ? .green : .secondary)
+                        Text(activePrivacy.proxyEnabled ? activePrivacy.compactProxyBadge : shortPersonaName(activePrivacy.selectedDevice.rawValue))
+                            .font(.system(size: 11, weight: .semibold, design: activePrivacy.proxyEnabled ? .monospaced : .default))
+                            .foregroundColor(activePrivacy.proxyEnabled ? .green : .secondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
@@ -413,7 +394,7 @@ public struct ContentView: View {
                 .sheet(isPresented: $showProfileSheet) {
                     ProfileManagerSheet(
                         profileManager: profileManager,
-                        privacyProfile: privacyProfile,
+                        privacyProfile: profileManager.activePrivacyProfile,
                         onProfileSwitched: { newProfile in
                             switchActiveProfile(newProfile)
                         },
@@ -466,9 +447,9 @@ public struct ContentView: View {
                     sessionToolsInitialTab = .proxy
                     showSessionToolsSheet = true
                 }) {
-                    let isHudActive = privacyProfile.proxyEnabled || privacyProfile.mockLocationEnabled || privacyProfile.virtualCameraEnabled
+                    let isHudActive = activePrivacy.proxyEnabled || activePrivacy.mockLocationEnabled || activePrivacy.virtualCameraEnabled
                     HStack(spacing: 4) {
-                        Image(systemName: privacyProfile.proxyEnabled ? "network.badge.shield.half.filled" : (privacyProfile.virtualCameraEnabled ? "camera.viewfinder" : "location.viewfinder"))
+                        Image(systemName: activePrivacy.proxyEnabled ? "network.badge.shield.half.filled" : (activePrivacy.virtualCameraEnabled ? "camera.viewfinder" : "location.viewfinder"))
                             .font(.system(size: 14, weight: .semibold))
                         if isHudActive {
                             Circle()
@@ -482,7 +463,7 @@ public struct ContentView: View {
                     .clipShape(Circle())
                 }
                 .sheet(isPresented: $showSessionToolsSheet) {
-                    SessionToolsSheet(privacyProfile: privacyProfile, profileManager: profileManager, initialTab: sessionToolsInitialTab)
+                    SessionToolsSheet(privacyProfile: profileManager.activePrivacyProfile, profileManager: profileManager, initialTab: sessionToolsInitialTab)
                 }
 
                 // Evergreen Engine & Stealth Update Center Quick-Launch Button
@@ -510,7 +491,7 @@ public struct ContentView: View {
                         .clipShape(Circle())
                 }
                 .popover(isPresented: $showSettingsSheet) {
-                    PrivacySettingsView(privacyProfile: privacyProfile)
+                    PrivacySettingsView(privacyProfile: profileManager.activePrivacyProfile)
                         .frame(minWidth: 480, minHeight: 620)
                 }
 
@@ -528,7 +509,7 @@ public struct ContentView: View {
                 .alert("Panic Wipe Session?", isPresented: $showWipeAlert) {
                     Button("Wipe & Return Home", role: .destructive) {
                         profileManager.clearProfileData(id: profileManager.activeProfileID)
-                        profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: privacyProfile)
+                        profileManager.rotateProfileSeed(id: profileManager.activeProfileID, privacyProfile: profileManager.activePrivacyProfile)
                         let freshTab = BrowserTab()
                         tabs = [freshTab]
                         activeTabID = freshTab.id
@@ -811,21 +792,25 @@ public struct ContentView: View {
 
     // MARK: - Profile Switching
     private func switchActiveProfile(_ newProfile: BrowserProfile) {
-        // 1. Save current tabs to old profile
+        // 1. Save current tabs to old profile so its tab list stays in sync while mounted in background
         profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
 
-        // 2. Switch profile in manager and update privacyProfile
+        // 2. Ensure new profile is mounted in the persistent multi-profile ZStack
+        mountedProfileIDs.insert(newProfile.id)
+
+        // 3. Switch profile in manager (keeps each profile's dedicated PrivacyProfile untouched)
         profileManager.switchProfile(to: newProfile.id, privacyProfile: privacyProfile)
 
-        // 3. Load new profile's tabs
-        let loadedTabs = newProfile.tabs.isEmpty ? [BrowserTab()] : newProfile.tabs
+        // 4. Load target profile's latest saved tabs
+        let latestTarget = profileManager.profiles.first(where: { $0.id == newProfile.id }) ?? newProfile
+        let loadedTabs = latestTarget.tabs.isEmpty ? [BrowserTab()] : latestTarget.tabs
         tabs = loadedTabs
-        activeTabID = loadedTabs.contains(where: { $0.id == newProfile.activeTabID }) ? newProfile.activeTabID : loadedTabs[0].id
+        activeTabID = loadedTabs.contains(where: { $0.id == latestTarget.activeTabID }) ? latestTarget.activeTabID : loadedTabs[0].id
 
         let active = tabs.first(where: { $0.id == activeTabID })
         inputURLText = active?.urlString == "local://startpage" ? "" : (active?.urlString ?? "")
 
-        showIdentityToast("Switched to '\(newProfile.name)' • \(shortPersonaName(newProfile.deviceProfile.rawValue))")
+        showIdentityToast("Switched to '\(latestTarget.name)' • \(shortPersonaName(latestTarget.deviceProfile.rawValue))")
     }
 
     // MARK: - Tab Management Methods
@@ -896,89 +881,135 @@ public struct ContentView: View {
         profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
     }
 
-    // MARK: - Dynamic Tab Bindings
-    private func bindingForURL(_ id: UUID) -> Binding<String> {
+    // MARK: - Dynamic Tab Bindings (Per-Profile & Per-Tab)
+    private func bindingForURL(profileID: UUID, tabID: UUID) -> Binding<String> {
         Binding(
             get: {
-                tabs.first(where: { $0.id == id })?.urlString ?? "local://startpage"
+                if profileID == profileManager.activeProfileID {
+                    return tabs.first(where: { $0.id == tabID })?.urlString ?? "local://startpage"
+                }
+                return profileManager.profiles.first(where: { $0.id == profileID })?.tabs.first(where: { $0.id == tabID })?.urlString ?? "local://startpage"
             },
             set: { newValue in
-                if let index = tabs.firstIndex(where: { $0.id == id }) {
-                    tabs[index].urlString = newValue
-                    if id == activeTabID {
-                        if newValue == "local://startpage" {
-                            inputURLText = ""
-                        } else {
-                            inputURLText = newValue
+                if profileID == profileManager.activeProfileID {
+                    if let index = tabs.firstIndex(where: { $0.id == tabID }) {
+                        tabs[index].urlString = newValue
+                        if tabID == activeTabID {
+                            inputURLText = (newValue == "local://startpage") ? "" : newValue
                         }
+                        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
                     }
-                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                } else if let pIdx = profileManager.profiles.firstIndex(where: { $0.id == profileID }),
+                          let tIdx = profileManager.profiles[pIdx].tabs.firstIndex(where: { $0.id == tabID }) {
+                    profileManager.profiles[pIdx].tabs[tIdx].urlString = newValue
+                    profileManager.saveProfiles()
                 }
             }
         )
     }
 
-    private func bindingForTitle(_ id: UUID) -> Binding<String> {
+    private func bindingForTitle(profileID: UUID, tabID: UUID) -> Binding<String> {
         Binding(
             get: {
-                tabs.first(where: { $0.id == id })?.title ?? "Start Page"
+                if profileID == profileManager.activeProfileID {
+                    return tabs.first(where: { $0.id == tabID })?.title ?? "Start Page"
+                }
+                return profileManager.profiles.first(where: { $0.id == profileID })?.tabs.first(where: { $0.id == tabID })?.title ?? "Start Page"
             },
             set: { newValue in
-                if let index = tabs.firstIndex(where: { $0.id == id }) {
-                    tabs[index].title = newValue
-                    profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                if profileID == profileManager.activeProfileID {
+                    if let index = tabs.firstIndex(where: { $0.id == tabID }) {
+                        tabs[index].title = newValue
+                        profileManager.saveCurrentTabs(tabs: tabs, activeTabID: activeTabID)
+                    }
+                } else if let pIdx = profileManager.profiles.firstIndex(where: { $0.id == profileID }),
+                          let tIdx = profileManager.profiles[pIdx].tabs.firstIndex(where: { $0.id == tabID }) {
+                    profileManager.profiles[pIdx].tabs[tIdx].title = newValue
+                    profileManager.saveProfiles()
                 }
             }
         )
     }
 
-    private func bindingForBack(_ id: UUID) -> Binding<Bool> {
+    private func bindingForBack(profileID: UUID, tabID: UUID) -> Binding<Bool> {
         Binding(
             get: {
-                tabs.first(where: { $0.id == id })?.canGoBack ?? false
+                if profileID == profileManager.activeProfileID {
+                    return tabs.first(where: { $0.id == tabID })?.canGoBack ?? false
+                }
+                return profileManager.profiles.first(where: { $0.id == profileID })?.tabs.first(where: { $0.id == tabID })?.canGoBack ?? false
             },
             set: { newValue in
-                if let index = tabs.firstIndex(where: { $0.id == id }) {
-                    tabs[index].canGoBack = newValue
+                if profileID == profileManager.activeProfileID {
+                    if let index = tabs.firstIndex(where: { $0.id == tabID }) {
+                        tabs[index].canGoBack = newValue
+                    }
+                } else if let pIdx = profileManager.profiles.firstIndex(where: { $0.id == profileID }),
+                          let tIdx = profileManager.profiles[pIdx].tabs.firstIndex(where: { $0.id == tabID }) {
+                    profileManager.profiles[pIdx].tabs[tIdx].canGoBack = newValue
                 }
             }
         )
     }
 
-    private func bindingForForward(_ id: UUID) -> Binding<Bool> {
+    private func bindingForForward(profileID: UUID, tabID: UUID) -> Binding<Bool> {
         Binding(
             get: {
-                tabs.first(where: { $0.id == id })?.canGoForward ?? false
+                if profileID == profileManager.activeProfileID {
+                    return tabs.first(where: { $0.id == tabID })?.canGoForward ?? false
+                }
+                return profileManager.profiles.first(where: { $0.id == profileID })?.tabs.first(where: { $0.id == tabID })?.canGoForward ?? false
             },
             set: { newValue in
-                if let index = tabs.firstIndex(where: { $0.id == id }) {
-                    tabs[index].canGoForward = newValue
+                if profileID == profileManager.activeProfileID {
+                    if let index = tabs.firstIndex(where: { $0.id == tabID }) {
+                        tabs[index].canGoForward = newValue
+                    }
+                } else if let pIdx = profileManager.profiles.firstIndex(where: { $0.id == profileID }),
+                          let tIdx = profileManager.profiles[pIdx].tabs.firstIndex(where: { $0.id == tabID }) {
+                    profileManager.profiles[pIdx].tabs[tIdx].canGoForward = newValue
                 }
             }
         )
     }
 
-    private func bindingForLoading(_ id: UUID) -> Binding<Bool> {
+    private func bindingForLoading(profileID: UUID, tabID: UUID) -> Binding<Bool> {
         Binding(
             get: {
-                tabs.first(where: { $0.id == id })?.isLoading ?? false
+                if profileID == profileManager.activeProfileID {
+                    return tabs.first(where: { $0.id == tabID })?.isLoading ?? false
+                }
+                return profileManager.profiles.first(where: { $0.id == profileID })?.tabs.first(where: { $0.id == tabID })?.isLoading ?? false
             },
             set: { newValue in
-                if let index = tabs.firstIndex(where: { $0.id == id }) {
-                    tabs[index].isLoading = newValue
+                if profileID == profileManager.activeProfileID {
+                    if let index = tabs.firstIndex(where: { $0.id == tabID }) {
+                        tabs[index].isLoading = newValue
+                    }
+                } else if let pIdx = profileManager.profiles.firstIndex(where: { $0.id == profileID }),
+                          let tIdx = profileManager.profiles[pIdx].tabs.firstIndex(where: { $0.id == tabID }) {
+                    profileManager.profiles[pIdx].tabs[tIdx].isLoading = newValue
                 }
             }
         )
     }
 
-    private func bindingForProgress(_ id: UUID) -> Binding<Double> {
+    private func bindingForProgress(profileID: UUID, tabID: UUID) -> Binding<Double> {
         Binding(
             get: {
-                tabs.first(where: { $0.id == id })?.estimatedProgress ?? 0.0
+                if profileID == profileManager.activeProfileID {
+                    return tabs.first(where: { $0.id == tabID })?.estimatedProgress ?? 0.0
+                }
+                return profileManager.profiles.first(where: { $0.id == profileID })?.tabs.first(where: { $0.id == tabID })?.estimatedProgress ?? 0.0
             },
             set: { newValue in
-                if let index = tabs.firstIndex(where: { $0.id == id }) {
-                    tabs[index].estimatedProgress = newValue
+                if profileID == profileManager.activeProfileID {
+                    if let index = tabs.firstIndex(where: { $0.id == tabID }) {
+                        tabs[index].estimatedProgress = newValue
+                    }
+                } else if let pIdx = profileManager.profiles.firstIndex(where: { $0.id == profileID }),
+                          let tIdx = profileManager.profiles[pIdx].tabs.firstIndex(where: { $0.id == tabID }) {
+                    profileManager.profiles[pIdx].tabs[tIdx].estimatedProgress = newValue
                 }
             }
         )
@@ -1006,7 +1037,7 @@ public struct ContentView: View {
         if trimmed.contains(".") && !trimmed.contains(" ") {
             target = trimmed
         } else {
-            if let searchURL = privacyProfile.searchEngine.searchURL(for: trimmed) {
+            if let searchURL = profileManager.activePrivacyProfile.searchEngine.searchURL(for: trimmed) {
                 target = searchURL.absoluteString
             } else {
                 target = "ghost-search://" + (trimmed.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) ?? trimmed)
@@ -1025,17 +1056,41 @@ public struct ContentView: View {
 
     private func shortPersonaName(_ raw: String) -> String {
         if raw.contains("Native Host") { return "Native Host" }
+        if raw.contains("iPad Pro 13") { return "iPad Pro 13\"" }
+        if raw.contains("iPad Pro 12.9") { return "iPad Pro 12.9\"" }
+        if raw.contains("iPad Pro 11") && raw.contains("M4") { return "iPad Pro 11\" M4" }
+        if raw.contains("iPad Pro 11") { return "iPad Pro 11\" M2" }
+        if raw.contains("iPad Air 13") && raw.contains("M3") { return "iPad Air 13\" M3" }
+        if raw.contains("iPad Air 11") && raw.contains("M3") { return "iPad Air 11\" M3" }
+        if raw.contains("iPad Air 13") { return "iPad Air 13\"" }
+        if raw.contains("iPad Air 11") { return "iPad Air 11\"" }
+        if raw.contains("iPad 11th") { return "iPad 11th Gen" }
+        if raw.contains("iPad 10th") { return "iPad 10th Gen" }
+        if raw.contains("iPad 9th") { return "iPad 9th Gen" }
+        if raw.contains("iPad Mini 7") { return "iPad Mini 7" }
+        if raw.contains("iPad Mini 6") { return "iPad Mini 6" }
         if raw.contains("iPhone 18 Pro Max") { return "iPhone 18 PM" }
         if raw.contains("iPhone 17 Pro Max") { return "iPhone 17 PM" }
-        if raw.contains("iPad Pro 13") { return "iPad Pro 13\"" }
-        if raw.contains("iPad Air 11") { return "iPad Air 11\"" }
-        if raw.contains("iPad Mini 6") { return "iPad Mini 6" }
+        if raw.contains("iPhone 17 Pro") { return "iPhone 17 Pro" }
+        if raw.contains("iPhone 17 Air") { return "iPhone 17 Air" }
+        if raw.contains("iPhone 17") { return "iPhone 17" }
         if raw.contains("iPhone 16 Pro Max") { return "iPhone 16 PM" }
+        if raw.contains("iPhone 16 Pro") { return "iPhone 16 Pro" }
+        if raw.contains("iPhone 16 Plus") { return "iPhone 16 Plus" }
+        if raw.contains("iPhone 16e") { return "iPhone 16e" }
         if raw.contains("iPhone 16") { return "iPhone 16" }
         if raw.contains("iPhone 15 Pro Max") { return "iPhone 15 PM" }
+        if raw.contains("iPhone 15 Pro") { return "iPhone 15 Pro" }
+        if raw.contains("iPhone 15") { return "iPhone 15" }
+        if raw.contains("iPhone 14 Pro Max") { return "iPhone 14 PM" }
+        if raw.contains("iPhone 14 Pro") { return "iPhone 14 Pro" }
         if raw.contains("iPhone 14") { return "iPhone 14" }
-        if raw.contains("MacBook Pro 16") { return "MacBook Pro" }
-        if raw.contains("MacBook Air 13") { return "MacBook Air" }
+        if raw.contains("iPhone 13") { return "iPhone 13" }
+        if raw.contains("iPhone SE") { return "iPhone SE" }
+        if raw.contains("MacBook Pro 16") { return "MacBook Pro 16\"" }
+        if raw.contains("MacBook Pro 14") { return "MacBook Pro 14\"" }
+        if raw.contains("MacBook Air 15") { return "MacBook Air 15\"" }
+        if raw.contains("MacBook Air 13") { return "MacBook Air 13\"" }
         return "Custom"
     }
 }

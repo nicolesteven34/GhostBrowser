@@ -200,9 +200,13 @@ public struct PrivacySettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
+                        ProfileManager.shared.saveProfileSensors(from: privacyProfile)
                         dismiss()
                     }
                 }
+            }
+            .onDisappear {
+                ProfileManager.shared.saveProfileSensors(from: privacyProfile)
             }
         }
     }
