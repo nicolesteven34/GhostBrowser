@@ -1819,29 +1819,36 @@ public final class LocalSocks5DnsBridge {
     }
 
     private static let cleanSessionFallbackTokens: [String] = [
-        "k06u60t8vsp",
-        "yoogsp2wufs",
-        "e0j8pa9oi9",
-        "4mvwxyuma9",
-        "fwf9d2gnwtx",
-        "juuqtv7j9c",
-        "7x6pi1nl8z",
-        "ca90210b",
-        "ca90210d",
-        "ca90210e"
+        "t4y5u6i7o8",
+        "p1o2i3u4y5",
+        "l9k8j7h6g5",
+        "v3b4n5m6c7",
+        "m3n4b5v6c7",
+        "r8t9y0u1i2",
+        "q2w3e4r5t6",
+        "a1s2d3f4g5",
+        "z9x8c7v6b5",
+        "h5j6k7l8p9"
     ]
 
     private static func rotateSessionUsername(_ rawUsername: String, attempt: Int) -> String {
         guard !rawUsername.isEmpty else { return rawUsername }
         let idx = max(0, attempt - 1) % cleanSessionFallbackTokens.count
         let newSid = cleanSessionFallbackTokens[idx]
-        if let r = rawUsername.range(of: #"-sid-[a-zA-Z0-9_]+"#, options: .regularExpression) {
-            return rawUsername.replacingCharacters(in: r, with: "-sid-\(newSid)")
+        var updated = rawUsername.replacingOccurrences(
+            of: #"-city-[a-zA-Z0-9_]+"#,
+            with: "",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        if let r = updated.range(of: #"-sid-[a-zA-Z0-9_]+"#, options: [.regularExpression, .caseInsensitive]) {
+            updated = updated.replacingCharacters(in: r, with: "-sid-\(newSid)")
+            return updated
         }
-        if let r = rawUsername.range(of: #"session-[a-zA-Z0-9_]+"#, options: .regularExpression) {
-            return rawUsername.replacingCharacters(in: r, with: "session-\(newSid)")
+        if let r = updated.range(of: #"session-[a-zA-Z0-9_]+"#, options: [.regularExpression, .caseInsensitive]) {
+            updated = updated.replacingCharacters(in: r, with: "session-\(newSid)")
+            return updated
         }
-        return rawUsername
+        return updated
     }
 
     private func negotiateUpstreamSocks5(
@@ -1913,7 +1920,8 @@ public final class LocalSocks5DnsBridge {
         clientConn: NWConnection,
         connectHost: String,
         originalHost: String? = nil,
-        targetPort: UInt16
+        targetPort: UInt16,
+        failoverAttempt: Int = 0
     ) {
         let hostKey = (originalHost ?? connectHost).lowercased()
         guard let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
@@ -1921,22 +1929,33 @@ public final class LocalSocks5DnsBridge {
             return
         }
         cacheLock.lock()
-        let sessionUser: String = (cujoBlockedHosts.contains(hostKey) && cleanFailoverUsername != nil)
-            ? cleanFailoverUsername!
-            : username
+        let sessionUser: String = failoverAttempt > 0
+            ? Self.rotateSessionUsername(username, attempt: failoverAttempt)
+            : ((cujoBlockedHosts.contains(hostKey) && cleanFailoverUsername != nil) ? cleanFailoverUsername! : username)
         cacheLock.unlock()
 
         let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(upConn)
         var handshaked = false
-        queue.asyncAfter(deadline: .now() + 6.5) { [weak self] in
+        let timeoutSec: Double = failoverAttempt == 0 ? 3.5 : 5.0
+        queue.asyncAfter(deadline: .now() + timeoutSec) { [weak self] in
             guard let self = self, !handshaked else { return }
             handshaked = true
-            self.cacheLock.lock()
-            self.recentUpstreamFailure = true
-            self.cacheLock.unlock()
             self.unregisterAndCancel(upConn)
-            self.unregisterAndCancel(clientConn)
+            if failoverAttempt < 3 && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+                self.connectUpstreamAndRelay(
+                    clientConn: clientConn,
+                    connectHost: connectHost,
+                    originalHost: originalHost,
+                    targetPort: targetPort,
+                    failoverAttempt: failoverAttempt + 1
+                )
+            } else {
+                self.cacheLock.lock()
+                self.recentUpstreamFailure = true
+                self.cacheLock.unlock()
+                self.unregisterAndCancel(clientConn)
+            }
         }
         upConn.stateUpdateHandler = { [weak self] state in
             guard let self = self else { return }
@@ -1947,12 +1966,28 @@ public final class LocalSocks5DnsBridge {
                     guard ok else {
                         handshaked = true
                         self.unregisterAndCancel(upConn)
-                        clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
-                            self?.unregisterAndCancel(clientConn)
-                        })
+                        if failoverAttempt < 3 && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+                            self.connectUpstreamAndRelay(
+                                clientConn: clientConn,
+                                connectHost: connectHost,
+                                originalHost: originalHost,
+                                targetPort: targetPort,
+                                failoverAttempt: failoverAttempt + 1
+                            )
+                        } else {
+                            clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
+                                self?.unregisterAndCancel(clientConn)
+                            })
+                        }
                         return
                     }
                     handshaked = true
+                    if failoverAttempt > 0 {
+                        self.cacheLock.lock()
+                        self.cujoBlockedHosts.insert(hostKey)
+                        self.cleanFailoverUsername = sessionUser
+                        self.cacheLock.unlock()
+                    }
                     self.markTrafficActivity()
                     clientConn.send(content: Data([0x05, 0x00, 0x00, 0x01, 127, 0, 0, 1, 0, 0]), completion: .contentProcessed { [weak self] err in
                         guard let self = self, err == nil else {
@@ -2085,11 +2120,14 @@ public final class LocalSocks5DnsBridge {
                         }
 
                         let sBytes = Array(firstServerData.prefix(16))
-                        let isCujoBlockPacket = sBytes.count >= 16 &&
+                        let isCujoBlockPacket = (sBytes.count >= 16 &&
                             sBytes[0] == 0xFF &&
                             sBytes[1] == 0xFF &&
                             sBytes[2] == 0xFF &&
-                            sBytes[3] == 0xFF
+                            sBytes[3] == 0xFF) ||
+                            (sBytes.count >= 5 &&
+                             sBytes[0] == 0x15 &&
+                             sBytes[1] == 0x03)
 
                         if !isCujoBlockPacket {
                             // Valid TLS ServerHello — forward to WebKit and relay normally
@@ -2105,11 +2143,11 @@ public final class LocalSocks5DnsBridge {
                             return
                         }
 
-                        // CUJO AI 256-byte 0xFF packet detected on TLS ClientHello — fail over to clean sibling session!
+                        // CUJO AI 256-byte 0xFF packet or 0x15 TLS Fatal Alert detected on TLS ClientHello — fail over to clean sibling session!
                         self.unregisterAndCancel(upConn)
                         self.cacheLock.lock()
                         self.cujoBlockedHosts.insert(hostKey)
-                        let existingFailover = self.cleanFailoverUsername
+                        self.cleanFailoverUsername = nil
                         self.cacheLock.unlock()
 
                         self.attemptTlsFailover(
@@ -2117,7 +2155,7 @@ public final class LocalSocks5DnsBridge {
                             connectHost: connectHost,
                             targetPort: targetPort,
                             firstClientData: firstClientData,
-                            existingFailover: existingFailover,
+                            existingFailover: nil,
                             attempt: 1
                         )
                     }
@@ -2134,7 +2172,7 @@ public final class LocalSocks5DnsBridge {
         existingFailover: String?,
         attempt: Int
     ) {
-        guard attempt <= 4, let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
+        guard attempt <= 6, let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
             unregisterAndCancel(clientConn)
             return
         }
@@ -2144,7 +2182,7 @@ public final class LocalSocks5DnsBridge {
         let altConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(altConn)
         var completedAttempt = false
-        queue.asyncAfter(deadline: .now() + 6.5) { [weak self] in
+        queue.asyncAfter(deadline: .now() + 5.0) { [weak self] in
             if !completedAttempt {
                 completedAttempt = true
                 self?.unregisterAndCancel(altConn)
@@ -2194,7 +2232,7 @@ public final class LocalSocks5DnsBridge {
                         }
                         altConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] altServerData, _, sComplete, rErr in
                             guard let self = self, !completedAttempt else { return }
-                            if let altServerData = altServerData, !altServerData.isEmpty, rErr == nil, altServerData.first != 0xFF {
+                            if let altServerData = altServerData, !altServerData.isEmpty, rErr == nil, altServerData.first != 0xFF, altServerData.first != 0x15 {
                                 completedAttempt = true
                                 self.cacheLock.lock()
                                 self.cleanFailoverUsername = rotatedUser
