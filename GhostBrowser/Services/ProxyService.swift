@@ -1818,22 +1818,27 @@ public final class LocalSocks5DnsBridge {
         return (true, firstIpv4)
     }
 
+    private static let cleanSessionFallbackTokens: [String] = [
+        "k06u60t8vsp",
+        "yoogsp2wufs",
+        "e0j8pa9oi9",
+        "4mvwxyuma9",
+        "fwf9d2gnwtx",
+        "juuqtv7j9c",
+        "7x6pi1nl8z",
+        "ca90210b",
+        "ca90210d",
+        "ca90210e"
+    ]
+
     private static func rotateSessionUsername(_ rawUsername: String, attempt: Int) -> String {
         guard !rawUsername.isEmpty else { return rawUsername }
-        let chars = Array("abcdefghijklmnopqrstuvwxyz0123456789")
-        var hash = UInt64(attempt) &* 0x9E3779B97F4A7C15
-        for b in rawUsername.utf8 {
-            hash = (hash ^ UInt64(b)) &* 0x100000001B3
-        }
-        var newSid = ""
-        for i in 0..<11 {
-            let idx = Int((hash >> (i * 5)) % UInt64(chars.count))
-            newSid.append(chars[idx])
-        }
-        if let r = rawUsername.range(of: #"-sid-[a-zA-Z0-9]+"#, options: .regularExpression) {
+        let idx = max(0, attempt - 1) % cleanSessionFallbackTokens.count
+        let newSid = cleanSessionFallbackTokens[idx]
+        if let r = rawUsername.range(of: #"-sid-[a-zA-Z0-9_]+"#, options: .regularExpression) {
             return rawUsername.replacingCharacters(in: r, with: "-sid-\(newSid)")
         }
-        if let r = rawUsername.range(of: #"session-[a-zA-Z0-9]+"#, options: .regularExpression) {
+        if let r = rawUsername.range(of: #"session-[a-zA-Z0-9_]+"#, options: .regularExpression) {
             return rawUsername.replacingCharacters(in: r, with: "session-\(newSid)")
         }
         return rawUsername
@@ -1908,7 +1913,8 @@ public final class LocalSocks5DnsBridge {
         clientConn: NWConnection,
         connectHost: String,
         originalHost: String? = nil,
-        targetPort: UInt16
+        targetPort: UInt16,
+        isFailoverRetry: Bool = false
     ) {
         let hostKey = (originalHost ?? connectHost).lowercased()
         guard let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
@@ -1924,13 +1930,29 @@ public final class LocalSocks5DnsBridge {
         let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(upConn)
         var handshaked = false
-        queue.asyncAfter(deadline: .now() + 8.0) { [weak self] in
-            if !handshaked {
-                self?.cacheLock.lock()
-                self?.recentUpstreamFailure = true
-                self?.cacheLock.unlock()
-                self?.unregisterAndCancel(upConn)
-                self?.unregisterAndCancel(clientConn)
+        let connectTimeoutSec: Double = isFailoverRetry ? 6.5 : 5.0
+        queue.asyncAfter(deadline: .now() + connectTimeoutSec) { [weak self] in
+            guard let self = self, !handshaked else { return }
+            handshaked = true
+            self.unregisterAndCancel(upConn)
+            if !isFailoverRetry && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+                let rotated = Self.rotateSessionUsername(self.username, attempt: 1)
+                self.cacheLock.lock()
+                self.cujoBlockedHosts.insert(hostKey)
+                if self.cleanFailoverUsername == nil { self.cleanFailoverUsername = rotated }
+                self.cacheLock.unlock()
+                self.connectUpstreamAndRelay(
+                    clientConn: clientConn,
+                    connectHost: connectHost,
+                    originalHost: originalHost,
+                    targetPort: targetPort,
+                    isFailoverRetry: true
+                )
+            } else {
+                self.cacheLock.lock()
+                self.recentUpstreamFailure = true
+                self.cacheLock.unlock()
+                self.unregisterAndCancel(clientConn)
             }
         }
         upConn.stateUpdateHandler = { [weak self] state in
@@ -1938,12 +1960,28 @@ public final class LocalSocks5DnsBridge {
             switch state {
             case .ready:
                 self.negotiateUpstreamSocks5(conn: upConn, targetHost: connectHost, targetPort: targetPort, customUsername: sessionUser) { [weak self] ok in
-                    guard let self = self else { return }
+                    guard let self = self, !handshaked else { return }
                     guard ok else {
+                        handshaked = true
                         self.unregisterAndCancel(upConn)
-                        clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
-                            self?.unregisterAndCancel(clientConn)
-                        })
+                        if !isFailoverRetry && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+                            let rotated = Self.rotateSessionUsername(self.username, attempt: 1)
+                            self.cacheLock.lock()
+                            self.cujoBlockedHosts.insert(hostKey)
+                            if self.cleanFailoverUsername == nil { self.cleanFailoverUsername = rotated }
+                            self.cacheLock.unlock()
+                            self.connectUpstreamAndRelay(
+                                clientConn: clientConn,
+                                connectHost: connectHost,
+                                originalHost: originalHost,
+                                targetPort: targetPort,
+                                isFailoverRetry: true
+                            )
+                        } else {
+                            clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
+                                self?.unregisterAndCancel(clientConn)
+                            })
+                        }
                         return
                     }
                     handshaked = true
