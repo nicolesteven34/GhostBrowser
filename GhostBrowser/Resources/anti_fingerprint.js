@@ -22,6 +22,12 @@
 (function() {
     'use strict';
 
+    const _rawInjectedCfg = (typeof window !== 'undefined' && (window.__GHOST_CONFIG__ || window.__GHOST_PROFILE__ || window.__GHOST_LOCAL_CONFIG__)) || {};
+    if (_rawInjectedCfg.seed !== undefined && _rawInjectedCfg.sessionSeed === undefined) _rawInjectedCfg.sessionSeed = _rawInjectedCfg.seed;
+    if (_rawInjectedCfg.pixelRatio !== undefined && _rawInjectedCfg.devicePixelRatio === undefined) _rawInjectedCfg.devicePixelRatio = _rawInjectedCfg.pixelRatio;
+    if (_rawInjectedCfg.gpuVendor !== undefined && _rawInjectedCfg.webglVendor === undefined) _rawInjectedCfg.webglVendor = _rawInjectedCfg.gpuVendor;
+    if (_rawInjectedCfg.gpuRenderer !== undefined && _rawInjectedCfg.webglRenderer === undefined) _rawInjectedCfg.webglRenderer = _rawInjectedCfg.gpuRenderer;
+
     const cfg = Object.assign({
         stealthMode: true,
         visitorId: (typeof window !== 'undefined' && window.__GHOST_VISITOR_ID__) || "0123456789abcdefghij",
@@ -42,7 +48,7 @@
         proxyCountry: "",
         proxyIsp: "",
         timezone: ""
-    }, (typeof window !== 'undefined' && window.__GHOST_CONFIG__) ? window.__GHOST_CONFIG__ : {});
+    }, _rawInjectedCfg);
 
     const _earlyPlatLower = String((cfg && cfg.platform) || (typeof navigator !== 'undefined' && navigator.platform) || 'MacIntel').toLowerCase();
     const _earlyIsWinPersona = _earlyPlatLower.includes('win');
@@ -274,7 +280,7 @@
         }, hasFirstPartyIpApi ? 650 : 25);
     }
 
-    if (cfg && (cfg.proxyEnabled || cfg.proxyIp)) {
+    if (cfg) {
         try { _triggerBackgroundLiveIpProbe(); } catch (e) {}
     }
 
@@ -922,6 +928,21 @@
         if (cfg.timezone && typeof cfg.timezone === 'string' && cfg.timezone.includes('/')) {
             return cfg.timezone;
         }
+        try {
+            if (typeof window !== 'undefined' && window.__SERVER__ && typeof window.__SERVER__ === 'object') {
+                const srv = window.__SERVER__;
+                if (typeof srv.timezone === 'string' && srv.timezone.includes('/')) {
+                    _livePageTimezone = srv.timezone;
+                    return _livePageTimezone;
+                }
+                const cc = String(srv.cfCountry || srv.country || srv.countryCode || (srv.geo && srv.geo.countryCode) || '').toUpperCase();
+                const ccTzMap = { 'GH': 'Africa/Accra', 'NG': 'Africa/Lagos', 'GB': 'Europe/London', 'UK': 'Europe/London', 'DE': 'Europe/Berlin', 'FR': 'Europe/Paris', 'NL': 'Europe/Amsterdam', 'JP': 'Asia/Tokyo', 'SG': 'Asia/Singapore', 'AU': 'Australia/Sydney', 'CA': 'America/Toronto', 'US': 'America/New_York' };
+                if (cc && ccTzMap[cc]) {
+                    _livePageTimezone = ccTzMap[cc];
+                    return _livePageTimezone;
+                }
+            }
+        } catch (e) {}
         if (cfg.proxyEnabled) {
             const hint = ((_livePageRegion || cfg.proxyRegion || '') + ' ' + (_livePageCity || cfg.proxyCity || '') + ' ' + (_livePageCountry || cfg.proxyCountry || '')).toLowerCase();
             if (/\b(ca|california|los angeles|san jose|san francisco|seattle|wa|washington|or|oregon|nv|nevada|las vegas)\b/.test(hint)) return 'America/Los_Angeles';
@@ -8392,6 +8413,216 @@
     // =========================================================================
     let _sharedWrappedRTCPC = null;
     try {
+        if (typeof window.RTCPeerConnection !== 'function' && typeof window.webkitRTCPeerConnection !== 'function') {
+            const etProto = (typeof EventTarget !== 'undefined' && EventTarget.prototype) ? EventTarget.prototype : Object.prototype;
+            if (typeof window.RTCStatsReport !== 'function') {
+                const SynthStatsReport = makeNative(function RTCStatsReport() {
+                    throw new TypeError('Illegal constructor');
+                }, 'RTCStatsReport', 0);
+                window.RTCStatsReport = SynthStatsReport;
+            }
+            if (typeof window.RTCIceCandidate !== 'function') {
+                const SynthIceCand = makeNative(function RTCIceCandidate(init) {
+                    const o = init || {};
+                    this.candidate = String(o.candidate || '');
+                    this.sdpMid = o.sdpMid !== undefined ? o.sdpMid : '0';
+                    this.sdpMLineIndex = o.sdpMLineIndex !== undefined ? o.sdpMLineIndex : 0;
+                    this.usernameFragment = o.usernameFragment || null;
+                }, 'RTCIceCandidate', 0);
+                SynthIceCand.prototype.toJSON = makeNative(function toJSON() {
+                    return { candidate: this.candidate, sdpMid: this.sdpMid, sdpMLineIndex: this.sdpMLineIndex, usernameFragment: this.usernameFragment };
+                }, 'toJSON', 0);
+                window.RTCIceCandidate = SynthIceCand;
+            }
+            if (typeof window.RTCSessionDescription !== 'function') {
+                const SynthSessDesc = makeNative(function RTCSessionDescription(init) {
+                    const o = init || {};
+                    this.type = String(o.type || 'offer');
+                    this.sdp = String(o.sdp || '');
+                }, 'RTCSessionDescription', 0);
+                SynthSessDesc.prototype.toJSON = makeNative(function toJSON() {
+                    return { type: this.type, sdp: this.sdp };
+                }, 'toJSON', 0);
+                window.RTCSessionDescription = SynthSessDesc;
+            }
+            const _synthPcSlots = new WeakMap();
+            const SynthRTCPC = makeNative(function RTCPeerConnection(config) {
+                const listeners = new Map();
+                _synthPcSlots.set(this, {
+                    config: config || {},
+                    localDesc: null,
+                    remoteDesc: null,
+                    iceGather: 'new',
+                    iceConn: 'new',
+                    conn: 'new',
+                    onice: null,
+                    listeners
+                });
+            }, 'RTCPeerConnection', 0);
+            SynthRTCPC.prototype = Object.create(etProto);
+            Object.defineProperties(SynthRTCPC.prototype, {
+                constructor: { value: SynthRTCPC, writable: true, enumerable: false, configurable: true },
+                addEventListener: {
+                    value: makeNative(function addEventListener(type, cb) {
+                        const s = _synthPcSlots.get(this);
+                        if (!s || typeof cb !== 'function') return;
+                        if (!s.listeners.has(type)) s.listeners.set(type, new Set());
+                        s.listeners.get(type).add(cb);
+                    }, 'addEventListener', 2),
+                    writable: true, enumerable: true, configurable: true
+                },
+                removeEventListener: {
+                    value: makeNative(function removeEventListener(type, cb) {
+                        const s = _synthPcSlots.get(this);
+                        if (!s || !s.listeners.has(type)) return;
+                        s.listeners.get(type).delete(cb);
+                    }, 'removeEventListener', 2),
+                    writable: true, enumerable: true, configurable: true
+                },
+                dispatchEvent: {
+                    value: makeNative(function dispatchEvent(ev) {
+                        const s = _synthPcSlots.get(this);
+                        if (!s || !ev) return true;
+                        const set = s.listeners.get(ev.type);
+                        if (set) {
+                            for (const fn of Array.from(set)) {
+                                try { fn.call(this, ev); } catch (e) {}
+                            }
+                        }
+                        return true;
+                    }, 'dispatchEvent', 1),
+                    writable: true, enumerable: true, configurable: true
+                },
+                localDescription: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.localDesc : null; }, 'get localDescription', 0),
+                    enumerable: true, configurable: true
+                },
+                currentLocalDescription: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.localDesc : null; }, 'get currentLocalDescription', 0),
+                    enumerable: true, configurable: true
+                },
+                pendingLocalDescription: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.localDesc : null; }, 'get pendingLocalDescription', 0),
+                    enumerable: true, configurable: true
+                },
+                remoteDescription: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.remoteDesc : null; }, 'get remoteDescription', 0),
+                    enumerable: true, configurable: true
+                },
+                iceGatheringState: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.iceGather : 'new'; }, 'get iceGatheringState', 0),
+                    enumerable: true, configurable: true
+                },
+                iceConnectionState: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.iceConn : 'new'; }, 'get iceConnectionState', 0),
+                    enumerable: true, configurable: true
+                },
+                connectionState: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.conn : 'new'; }, 'get connectionState', 0),
+                    enumerable: true, configurable: true
+                },
+                onicecandidate: {
+                    get: makeNative(function() { const s = _synthPcSlots.get(this); return s ? s.onice : null; }, 'get onicecandidate', 0),
+                    set: makeNative(function(fn) { const s = _synthPcSlots.get(this); if (s) s.onice = typeof fn === 'function' ? fn : null; }, 'set onicecandidate', 1),
+                    enumerable: true, configurable: true
+                },
+                getConfiguration: {
+                    value: makeNative(function getConfiguration() { const s = _synthPcSlots.get(this); return s ? s.config : {}; }, 'getConfiguration', 0),
+                    writable: true, enumerable: true, configurable: true
+                },
+                setConfiguration: {
+                    value: makeNative(function setConfiguration(c) { const s = _synthPcSlots.get(this); if (s) s.config = c || {}; }, 'setConfiguration', 1),
+                    writable: true, enumerable: true, configurable: true
+                },
+                createDataChannel: {
+                    value: makeNative(function createDataChannel(label) {
+                        const dcListeners = new Map();
+                        return {
+                            label: String(label || ''),
+                            ordered: true,
+                            protocol: '',
+                            id: 1,
+                            readyState: 'connecting',
+                            bufferedAmount: 0,
+                            binaryType: 'arraybuffer',
+                            onopen: null,
+                            onmessage: null,
+                            onclose: null,
+                            onerror: null,
+                            close() {},
+                            send() {},
+                            addEventListener(t, fn) {
+                                if (!dcListeners.has(t)) dcListeners.set(t, new Set());
+                                dcListeners.get(t).add(fn);
+                            },
+                            removeEventListener(t, fn) {
+                                if (dcListeners.has(t)) dcListeners.get(t).delete(fn);
+                            },
+                            dispatchEvent(ev) {
+                                const set = ev && dcListeners.get(ev.type);
+                                if (set) { for (const fn of Array.from(set)) { try { fn.call(this, ev); } catch (e) {} } }
+                                return true;
+                            }
+                        };
+                    }, 'createDataChannel', 1),
+                    writable: true, enumerable: true, configurable: true
+                },
+                createOffer: {
+                    value: makeNative(function createOffer(a, b) {
+                        const ufrag = ((fmix32(profileSeed, 918) >>> 0).toString(16)).slice(0, 4) || '7f9a';
+                        const offerObj = {
+                            type: 'offer',
+                            sdp: `v=0\r\no=- 4611731400430051336 2 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=ice-ufrag:${ufrag}\r\na=ice-pwd:a8b9c0d1e2f3g4h5i6j7k8l9\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=mid:0\r\n`
+                        };
+                        if (typeof a === 'function') {
+                            setTimeout(() => { try { a(offerObj); } catch (e) {} }, 4);
+                        }
+                        return Promise.resolve(offerObj);
+                    }, 'createOffer', 0),
+                    writable: true, enumerable: true, configurable: true
+                },
+                createAnswer: {
+                    value: makeNative(function createAnswer(a) {
+                        const ansObj = { type: 'answer', sdp: 'v=0\r\no=- 4611731400430051336 2 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\n' };
+                        if (typeof a === 'function') setTimeout(() => { try { a(ansObj); } catch (e) {} }, 4);
+                        return Promise.resolve(ansObj);
+                    }, 'createAnswer', 0),
+                    writable: true, enumerable: true, configurable: true
+                },
+                setLocalDescription: {
+                    value: makeNative(function setLocalDescription(desc, a) {
+                        const s = _synthPcSlots.get(this);
+                        if (s) s.localDesc = desc || { type: 'offer', sdp: '' };
+                        if (typeof a === 'function') setTimeout(() => { try { a(); } catch (e) {} }, 2);
+                        return Promise.resolve();
+                    }, 'setLocalDescription', 0),
+                    writable: true, enumerable: true, configurable: true
+                },
+                setRemoteDescription: {
+                    value: makeNative(function setRemoteDescription(desc, a) {
+                        const s = _synthPcSlots.get(this);
+                        if (s) s.remoteDesc = desc || { type: 'answer', sdp: '' };
+                        if (typeof a === 'function') setTimeout(() => { try { a(); } catch (e) {} }, 2);
+                        return Promise.resolve();
+                    }, 'setRemoteDescription', 1),
+                    writable: true, enumerable: true, configurable: true
+                },
+                getStats: {
+                    value: makeNative(function getStats() {
+                        return Promise.resolve(new Map());
+                    }, 'getStats', 0),
+                    writable: true, enumerable: true, configurable: true
+                },
+                close: {
+                    value: makeNative(function close() {
+                        const s = _synthPcSlots.get(this);
+                        if (s) { s.iceConn = 'closed'; s.conn = 'closed'; }
+                    }, 'close', 0),
+                    writable: true, enumerable: true, configurable: true
+                }
+            });
+            window.RTCPeerConnection = SynthRTCPC;
+        }
         const NativeRTCPC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
         if (typeof NativeRTCPC === 'function') {
             const mDnsHost = (function() {
@@ -8417,6 +8648,13 @@
                         return _livePageTcpIp.trim();
                     }
                     if (typeof window !== 'undefined') {
+                        if (window.__SERVER__ && typeof window.__SERVER__.ip === 'string') {
+                            const srvIp = window.__SERVER__.ip.replace(/^::ffff:/i, '').trim();
+                            if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(srvIp)) {
+                                _recordVerifiedLiveIp(srvIp);
+                                return srvIp;
+                            }
+                        }
                         const abIp = window.__antibotIpReadyState && window.__antibotIpReadyState.ips && window.__antibotIpReadyState.ips[4];
                         if (typeof abIp === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(abIp.trim())) {
                             _recordVerifiedLiveIp(abIp.trim());
@@ -8763,7 +9001,7 @@
 
                 function emitSyntheticCandidatesIfNeeded() {
                     if (syntheticEmitted || syntheticEmissionPending) return;
-                    if (!_verifiedLiveTcpIp && (cfg.proxyEnabled || cfg.proxyIp)) {
+                    if (!_verifiedLiveTcpIp && !getEffectiveProxyIp()) {
                         syntheticEmissionPending = true;
                         _waitForVerifiedLiveIp(1800).then(() => {
                             syntheticEmissionPending = false;
@@ -9177,15 +9415,84 @@
 
                 st.getStatsImpl = function(rawArgs) {
                     return origProtoGetStats.apply(pc, rawArgs).then((nativeReport) => {
+                        const map = new Map();
+                        if (nativeReport && typeof nativeReport.forEach === 'function') {
+                            nativeReport.forEach((v, k) => map.set(k, v));
+                        }
+                        const now = (typeof performance !== 'undefined' && performance.timeOrigin ? performance.timeOrigin : Date.now()) + performance.now();
+                        const pkts = Math.max(50, rtpPacketsSent);
+                        const bytes = Math.max(8600, rtpBytesSent);
+                        const rttSec = +(getHarmonizedBaseTcpRtt() * 0.00095).toFixed(4);
+                        const activeRtcIp = getEffectiveProxyIp() || (cfg && cfg.proxyIp) || '76.82.200.120';
+                        const hostPort = 54100 + (Math.abs(seedNum * 3) % 10000);
+                        const srflxPort = 51000 + (Math.abs(seedNum) % 12000);
+                        const ufrag = extractUfrag(pc.localDescription && pc.localDescription.sdp) || '7f9a';
+
+                        map.set('RTCIceCandidate_host', {
+                            id: 'RTCIceCandidate_host',
+                            timestamp: now,
+                            type: 'local-candidate',
+                            transportId: 'RTCTransport_0_1',
+                            isRemote: false,
+                            networkType: 'wifi',
+                            ip: mDnsHost,
+                            address: mDnsHost,
+                            port: hostPort,
+                            protocol: 'udp',
+                            candidateType: 'host',
+                            priority: 2122260223,
+                            foundation: '1083982112',
+                            usernameFragment: ufrag
+                        });
+                        map.set('RTCIceCandidate_srflx', {
+                            id: 'RTCIceCandidate_srflx',
+                            timestamp: now,
+                            type: 'local-candidate',
+                            transportId: 'RTCTransport_0_1',
+                            isRemote: false,
+                            networkType: 'wifi',
+                            ip: activeRtcIp,
+                            address: activeRtcIp,
+                            port: srflxPort,
+                            protocol: 'udp',
+                            candidateType: 'srflx',
+                            priority: 1686052607,
+                            foundation: '2999745851',
+                            usernameFragment: ufrag
+                        });
+                        map.set('RTCIceCandidate_prflx', {
+                            id: 'RTCIceCandidate_prflx',
+                            timestamp: now,
+                            type: 'remote-candidate',
+                            transportId: 'RTCTransport_0_1',
+                            isRemote: true,
+                            ip: activeRtcIp,
+                            address: activeRtcIp,
+                            port: 3478,
+                            protocol: 'udp',
+                            candidateType: 'prflx',
+                            priority: 1853824767,
+                            foundation: '3881920441',
+                            usernameFragment: ufrag
+                        });
+                        map.set('candidate-pair-active', {
+                            id: 'candidate-pair-active',
+                            timestamp: now,
+                            type: 'candidate-pair',
+                            transportId: 'RTCTransport_0_1',
+                            localCandidateId: 'RTCIceCandidate_srflx',
+                            remoteCandidateId: 'RTCIceCandidate_prflx',
+                            state: 'succeeded',
+                            nominated: true,
+                            writable: true,
+                            currentRoundTripTime: rttSec,
+                            totalRoundTripTime: +(rttSec * 2).toFixed(4),
+                            responsesReceived: Math.max(2, dcMessagesReceived),
+                            requestsSent: Math.max(2, dcMessagesSent),
+                            bytesSent: Math.max(192, dcBytesSent),
+                            bytesReceived: Math.max(176, dcBytesReceived)
+                        });
                         if (st.simulatedIceState === 'connected' || createdDataChannels.length > 0 || (isRelayOnly && hasUdpTurnServer)) {
-                            const map = new Map();
-                            if (nativeReport && typeof nativeReport.forEach === 'function') {
-                                nativeReport.forEach((v, k) => map.set(k, v));
-                            }
-                            const now = performance.now();
-                            const pkts = Math.max(50, rtpPacketsSent);
-                            const bytes = Math.max(8600, rtpBytesSent);
-                            const rttSec = +(getHarmonizedBaseTcpRtt() * 0.00095).toFixed(4);
                             map.set('outbound-rtp-audio', {
                                 id: 'outbound-rtp-audio',
                                 timestamp: now,
@@ -9206,18 +9513,6 @@
                                 packetsLost: 0,
                                 jitter: 0.004
                             });
-                            map.set('candidate-pair-active', {
-                                id: 'candidate-pair-active',
-                                timestamp: now,
-                                type: 'candidate-pair',
-                                state: 'succeeded',
-                                nominated: true,
-                                currentRoundTripTime: rttSec,
-                                totalRoundTripTime: +(rttSec * 10).toFixed(4),
-                                responsesReceived: Math.max(10, dcMessagesReceived),
-                                bytesSent: Math.max(bytes, dcBytesSent),
-                                bytesReceived: Math.max(bytes, dcBytesReceived)
-                            });
                             if (createdDataChannels.length > 0) {
                                 map.set('data-channel-0', {
                                     id: 'data-channel-0',
@@ -9233,9 +9528,50 @@
                                     bytesReceived: dcBytesReceived
                                 });
                             }
-                            return map;
                         }
-                        return nativeReport;
+                        const statsProto = (nativeReport && Object.getPrototypeOf(nativeReport)) ||
+                            (typeof window !== 'undefined' && window.RTCStatsReport && window.RTCStatsReport.prototype) ||
+                            Map.prototype;
+                        const reportObj = Object.create(statsProto);
+                        Object.defineProperties(reportObj, {
+                            forEach: {
+                                value: makeNative(function forEach(cb, thisArg) {
+                                    return map.forEach((v, k) => cb.call(thisArg, v, k, reportObj));
+                                }, 'forEach', 1),
+                                writable: true, enumerable: false, configurable: true
+                            },
+                            get: {
+                                value: makeNative(function get(k) { return map.get(k); }, 'get', 1),
+                                writable: true, enumerable: false, configurable: true
+                            },
+                            has: {
+                                value: makeNative(function has(k) { return map.has(k); }, 'has', 1),
+                                writable: true, enumerable: false, configurable: true
+                            },
+                            values: {
+                                value: makeNative(function values() { return map.values(); }, 'values', 0),
+                                writable: true, enumerable: false, configurable: true
+                            },
+                            keys: {
+                                value: makeNative(function keys() { return map.keys(); }, 'keys', 0),
+                                writable: true, enumerable: false, configurable: true
+                            },
+                            entries: {
+                                value: makeNative(function entries() { return map.entries(); }, 'entries', 0),
+                                writable: true, enumerable: false, configurable: true
+                            },
+                            size: {
+                                get: makeNative(function() { return map.size; }, 'get size', 0),
+                                enumerable: false, configurable: true
+                            }
+                        });
+                        if (typeof Symbol !== 'undefined' && Symbol.iterator) {
+                            Object.defineProperty(reportObj, Symbol.iterator, {
+                                value: makeNative(function entries() { return map.entries(); }, 'entries', 0),
+                                writable: true, enumerable: false, configurable: true
+                            });
+                        }
+                        return reportObj;
                     });
                 };
 
@@ -10796,6 +11132,60 @@
                 }
             }
 
+            // Harmonize Element.prototype.clientWidth / clientHeight on documentElement / body so clientWidth <= innerWidth across all presets
+            if (win.Element && win.Element.prototype && !_hookedProtos.has(win.Element.prototype)) {
+                const elProto = win.Element.prototype;
+                _hookedProtos.add(elProto);
+                for (const [cProp, isH] of [['clientWidth', false], ['clientHeight', true]]) {
+                    const origCDesc = Object.getOwnPropertyDescriptor(elProto, cProp);
+                    const origCGet = origCDesc && origCDesc.get;
+                    if (origCGet) {
+                        Object.defineProperty(elProto, cProp, {
+                            get: makeNative(function() {
+                                let rawC = 0;
+                                try { rawC = invokeNativeWithCleanStack(origCGet, this, arguments); } catch (e) {}
+                                try {
+                                    const doc = win.document;
+                                    if (doc && (this === doc.documentElement || this === doc.body)) {
+                                        const innerBound = isH ? (Number(win.innerHeight) || maxAvailH) : (Number(win.innerWidth) || maxScreenW);
+                                        if (typeof rawC !== 'number' || rawC <= 0 || rawC > innerBound) {
+                                            return innerBound;
+                                        }
+                                    }
+                                } catch (e) {}
+                                return rawC;
+                            }, `get ${cProp}`, 0, origCGet),
+                            set: undefined,
+                            enumerable: origCDesc.enumerable,
+                            configurable: true
+                        });
+                    }
+                }
+            }
+
+            // Harmonize CSS.supports('-webkit-touch-callout', 'none') for iOS/iPadOS vs macOS/Windows desktop exclusivity
+            if (win.CSS && typeof win.CSS.supports === 'function' && !_hookedProtos.has(win.CSS)) {
+                _hookedProtos.add(win.CSS);
+                const origCssSupports = win.CSS.supports;
+                const isIosTouchPreset = Boolean(!_isWinPersona && !_isMacPersona && !_isAndroidPersona && (cfg.maxTouchPoints || 0) > 0);
+                Object.defineProperty(win.CSS, 'supports', {
+                    value: makeNative(function supports(propOrCond, val) {
+                        let raw = false;
+                        try { raw = invokeNativeWithCleanStack(origCssSupports, this, arguments); } catch (e) {}
+                        try {
+                            const combined = String(propOrCond || '') + (val !== undefined ? ':' + String(val) : '');
+                            if (/-webkit-touch-callout/i.test(combined)) {
+                                return isIosTouchPreset;
+                            }
+                        } catch (e) {}
+                        return raw;
+                    }, 'supports', origCssSupports.length || 1, origCssSupports),
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+
             // Leave win.matchMedia / Window.prototype.matchMedia 100% untouched native C++!
             // Harmonize MediaQueryList.prototype.matches directly using this.media.
             const origMatchMedia = typeof win.matchMedia === 'function' ? win.matchMedia : null;
@@ -10813,7 +11203,7 @@
                         const rawMatches = invokeNativeWithCleanStack(origMatchesGet, this, arguments);
                         try {
                             const mediaStr = origMediaGet ? invokeNativeWithCleanStack(origMediaGet, this, []) : '';
-                            if (typeof mediaStr === 'string' && /(?:(?:min-|max-)?(?:device-)?(?:width|height)|(?:min-|max-)?resolution|(?:-(?:webkit|moz|o|ms)-)?(?:min-|max-|-moz-min-|-moz-max-)?device-pixel-ratio|(?:min-|max-)?color(?!-)|color-gamut|(?:any-)?(?:pointer|hover)|touch-enabled)/i.test(mediaStr)) {
+                            if (typeof mediaStr === 'string' && /(?:(?:min-|max-)?(?:device-)?(?:width|height)|(?:min-|max-)?resolution|(?:(?:min|max)-)?(?:-(?:webkit|moz|o|ms)-)?(?:min-|max-|-moz-min-|-moz-max-)?device-pixel-ratio|(?:min-|max-)?color(?!-)|color-gamut|orientation|(?:any-)?(?:pointer|hover)|touch-enabled|-webkit-transform-3d)/i.test(mediaStr)) {
                                 const evalClause = (kind, numStr, unit) => {
                                     let val = NaN;
                                     if (typeof numStr === 'string' && numStr.includes('/')) {
@@ -10834,8 +11224,8 @@
                                         const u = (unit || 'dppx').toLowerCase();
                                         if (u === 'dpi') dppxVal = val / 96;
                                         else if (u === 'dpcm') dppxVal = val / (96 / 2.54);
-                                        if (k.includes('min-')) return dpr >= dppxVal;
-                                        if (k.includes('max-')) return dpr <= dppxVal;
+                                        if (k.includes('min-') || k.startsWith('min')) return dpr >= dppxVal;
+                                        if (k.includes('max-') || k.startsWith('max')) return dpr <= dppxVal;
                                         return Math.abs(dpr - dppxVal) < 0.02;
                                     }
                                     const isDeviceDim = k.includes('device-');
@@ -10854,8 +11244,9 @@
                                 };
                                 let touched = false;
                                 let allTrue = true;
-                                const clauseRe = /\(\s*((?:min-|max-)?(?:device-)?(?:width|height)|(?:min-|max-)?resolution|(?:-(?:webkit|moz|o|ms)-)?(?:min-|max-|-moz-min-|-moz-max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\s*:\s*([0-9.]+(?:\s*\/\s*[0-9.]+)?)\s*(px|em|rem|in|cm|mm|dppx|dpi|dpcm|x)?\s*\)/gi;
+                                const clauseRe = /\(\s*((?:min-|max-)?(?:device-)?(?:width|height)|(?:min-|max-)?resolution|(?:(?:min|max)-)?(?:-(?:webkit|moz|o|ms)-)?(?:min-|max-|-moz-min-|-moz-max-)?device-pixel-ratio|(?:min-|max-)?color(?!-))\s*:\s*([0-9.]+(?:\s*\/\s*[0-9.]+)?)\s*(px|em|rem|in|cm|mm|dppx|dpi|dpcm|x)?\s*\)/gi;
                                 const gamutRe = /\(\s*color-gamut\s*:\s*(srgb|p3|rec2020)\s*\)/gi;
+                                const orientRe = /\(\s*orientation\s*:\s*(portrait|landscape)\s*\)/gi;
                                 const pointerRe = /\(\s*(any-pointer|pointer|any-hover|hover)\s*:\s*(fine|coarse|hover|none)\s*\)/gi;
                                 const touchRe = /\(\s*(?:-(?:webkit|moz|o|ms)-)?touch-enabled(?:\s*:\s*([0-9]+))?\s*\)/gi;
                                 let stripped = mediaStr.replace(clauseRe, (full, kind, numStr, unit) => {
@@ -10869,6 +11260,15 @@
                                     touched = true;
                                     const gv = String(gVal || '').toLowerCase();
                                     const ok = gv === 'srgb' || (gv === 'p3' && targetColorDepth >= 30);
+                                    if (!ok) allTrue = false;
+                                    return '';
+                                });
+                                stripped = stripped.replace(orientRe, (full, oVal) => {
+                                    touched = true;
+                                    const curW = Number(win.innerWidth) || w;
+                                    const curH = Number(win.innerHeight) || h;
+                                    const isLand = curW >= curH;
+                                    const ok = String(oVal || '').toLowerCase() === 'landscape' ? isLand : !isLand;
                                     if (!ok) allTrue = false;
                                     return '';
                                 });
@@ -10887,6 +11287,10 @@
                                     if (!ok) allTrue = false;
                                     return '';
                                 });
+                                stripped = stripped.replace(/\(\s*-webkit-transform-3d\s*\)/gi, () => {
+                                    touched = true;
+                                    return '';
+                                });
                                 if (touched) {
                                     if (!/[(),]/.test(stripped) && !/\bnot\b/i.test(stripped)) {
                                         return allTrue;
@@ -10899,6 +11303,13 @@
                                     rewritten = rewritten.replace(gamutRe, (full, gVal) => {
                                         const gv = String(gVal || '').toLowerCase();
                                         const ok = gv === 'srgb' || (gv === 'p3' && targetColorDepth >= 30);
+                                        return ok ? '(color)' : '(max-color: -1)';
+                                    });
+                                    rewritten = rewritten.replace(orientRe, (full, oVal) => {
+                                        const curW = Number(win.innerWidth) || w;
+                                        const curH = Number(win.innerHeight) || h;
+                                        const isLand = curW >= curH;
+                                        const ok = String(oVal || '').toLowerCase() === 'landscape' ? isLand : !isLand;
                                         return ok ? '(color)' : '(max-color: -1)';
                                     });
                                     rewritten = rewritten.replace(pointerRe, (full, prop, val) => {
@@ -11249,6 +11660,10 @@
                     const src = this.getChannelData(ch || 0);
                     if (dest && dest.set) dest.set(src.subarray(offset || 0, (offset || 0) + dest.length));
                 }, 'copyFromChannel', 2);
+                SynthAudioBuffer.prototype.copyToChannel = makeNative(function copyToChannel(src, ch, offset) {
+                    const dst = this.getChannelData(ch || 0);
+                    if (src && dst && dst.set) dst.set(src.subarray(0, Math.max(0, dst.length - (offset || 0))), offset || 0);
+                }, 'copyToChannel', 2);
                 const makeParam = (defVal) => ({ value: defVal, defaultValue: defVal, setValueAtTime: makeNative(function() { return this; }, 'setValueAtTime', 2), linearRampToValueAtTime: makeNative(function() { return this; }, 'linearRampToValueAtTime', 2), exponentialRampToValueAtTime: makeNative(function() { return this; }, 'exponentialRampToValueAtTime', 2) });
                 const makeNode = () => ({ connect: makeNative(function(dest) { return dest || this; }, 'connect', 1), disconnect: makeNative(function() {}, 'disconnect', 0), start: makeNative(function() {}, 'start', 0), stop: makeNative(function() {}, 'stop', 0) });
                 const SynthOfflineAudioContext = makeNative(function OfflineAudioContext(a, b, c) {
@@ -11270,6 +11685,25 @@
                 SynthOfflineAudioContext.prototype.createGain = makeNative(function createGain() {
                     const n = makeNode(); n.gain = makeParam(1); return n;
                 }, 'createGain', 0);
+                const makeAnalyserNode = () => {
+                    const n = makeNode();
+                    let _fft = 2048;
+                    Object.defineProperties(n, {
+                        fftSize: { get: () => _fft, set: (v) => { _fft = Number(v) || 2048; }, enumerable: true, configurable: true },
+                        frequencyBinCount: { get: () => _fft >> 1, enumerable: true, configurable: true },
+                        minDecibels: { value: -100, writable: true, enumerable: true, configurable: true },
+                        maxDecibels: { value: -30, writable: true, enumerable: true, configurable: true },
+                        smoothingTimeConstant: { value: 0.8, writable: true, enumerable: true, configurable: true },
+                        getByteFrequencyData: { value: makeNative(function getByteFrequencyData(a) { if (a && a.fill) a.fill(128); }, 'getByteFrequencyData', 1), writable: true, enumerable: true, configurable: true },
+                        getFloatFrequencyData: { value: makeNative(function getFloatFrequencyData(a) { if (a && a.fill) a.fill(-54.25); }, 'getFloatFrequencyData', 1), writable: true, enumerable: true, configurable: true },
+                        getByteTimeDomainData: { value: makeNative(function getByteTimeDomainData(a) { if (a && a.fill) a.fill(128); }, 'getByteTimeDomainData', 1), writable: true, enumerable: true, configurable: true },
+                        getFloatTimeDomainData: { value: makeNative(function getFloatTimeDomainData(a) { if (a && a.fill) a.fill(0); }, 'getFloatTimeDomainData', 1), writable: true, enumerable: true, configurable: true }
+                    });
+                    return n;
+                };
+                SynthOfflineAudioContext.prototype.createAnalyser = makeNative(function createAnalyser() {
+                    return makeAnalyserNode();
+                }, 'createAnalyser', 0);
                 SynthOfflineAudioContext.prototype.createBiquadFilter = makeNative(function createBiquadFilter() {
                     const n = makeNode(); n.type = 'lowpass'; n.frequency = makeParam(350); n.Q = makeParam(1); n.gain = makeParam(0); return n;
                 }, 'createBiquadFilter', 0);
@@ -11297,6 +11731,43 @@
                 Object.defineProperty(win, 'webkitOfflineAudioContext', { value: SynthOfflineAudioContext, writable: true, enumerable: false, configurable: true });
                 _hookedProtos.add(SynthAudioBuffer.prototype);
                 _hookedProtos.add(SynthOfflineAudioContext.prototype);
+            }
+            if (typeof win.AudioWorklet !== 'function') {
+                const SynthWorklet = makeNative(function AudioWorklet() { throw new TypeError('Illegal constructor'); }, 'AudioWorklet', 0);
+                SynthWorklet.prototype.addModule = makeNative(function addModule() { return Promise.resolve(); }, 'addModule', 1);
+                Object.defineProperty(win, 'AudioWorklet', { value: SynthWorklet, writable: true, enumerable: false, configurable: true });
+            }
+            if (typeof win.AudioWorkletNode !== 'function') {
+                const SynthWorkletNode = makeNative(function AudioWorkletNode() {}, 'AudioWorkletNode', 2);
+                Object.defineProperty(win, 'AudioWorkletNode', { value: SynthWorkletNode, writable: true, enumerable: false, configurable: true });
+            }
+            if (!win.AudioContext && !win.webkitAudioContext) {
+                const oacProtoRef = (win.OfflineAudioContext || win.webkitOfflineAudioContext).prototype;
+                const targetBaseLat = 0.01 + ((fmix32(profileSeed, 801) % 13) * 0.00025);
+                const targetOutLat = 0.02 + ((fmix32(profileSeed, 802) % 17) * 0.0005);
+                const SynthAudioContext = makeNative(function AudioContext(opts) {
+                    this.sampleRate = (opts && opts.sampleRate) || 48000;
+                    this.state = 'running';
+                    this.currentTime = 0.012;
+                    this.destination = { maxChannelCount: 2, channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers', numberOfInputs: 1, numberOfOutputs: 0, connect: makeNative(function(d) { return d || this; }, 'connect', 1), disconnect: makeNative(function() {}, 'disconnect', 0) };
+                    this.audioWorklet = Object.create(win.AudioWorklet.prototype);
+                }, 'AudioContext', 0);
+                SynthAudioContext.prototype.createOscillator = oacProtoRef.createOscillator;
+                SynthAudioContext.prototype.createDynamicsCompressor = oacProtoRef.createDynamicsCompressor;
+                SynthAudioContext.prototype.createGain = oacProtoRef.createGain;
+                SynthAudioContext.prototype.createBiquadFilter = oacProtoRef.createBiquadFilter;
+                SynthAudioContext.prototype.createAnalyser = oacProtoRef.createAnalyser;
+                SynthAudioContext.prototype.createBuffer = oacProtoRef.createBuffer;
+                SynthAudioContext.prototype.close = makeNative(function close() { this.state = 'closed'; return Promise.resolve(); }, 'close', 0);
+                SynthAudioContext.prototype.suspend = makeNative(function suspend() { this.state = 'suspended'; return Promise.resolve(); }, 'suspend', 0);
+                SynthAudioContext.prototype.resume = makeNative(function resume() { this.state = 'running'; return Promise.resolve(); }, 'resume', 0);
+                Object.defineProperties(SynthAudioContext.prototype, {
+                    baseLatency: { get: makeNative(function() { return targetBaseLat; }, 'get baseLatency', 0), enumerable: true, configurable: true },
+                    outputLatency: { get: makeNative(function() { return targetOutLat; }, 'get outputLatency', 0), enumerable: true, configurable: true }
+                });
+                Object.defineProperty(win, 'AudioContext', { value: SynthAudioContext, writable: true, enumerable: false, configurable: true });
+                Object.defineProperty(win, 'webkitAudioContext', { value: SynthAudioContext, writable: true, enumerable: false, configurable: true });
+                _hookedProtos.add(SynthAudioContext.prototype);
             }
             const acCtor = win.AudioContext || win.webkitAudioContext;
             if (acCtor && acCtor.prototype && !_hookedProtos.has(acCtor.prototype)) {
@@ -11696,8 +12167,47 @@
             }
         } catch (e) {}
 
-        // Ensure MediaCapabilities.prototype.decodingInfo (Visa Cybersource Cardinal 3DS 8-Codec Probe, UC-505 / T14)
+        // Ensure MediaCapabilities.prototype.decodingInfo (Visa Cybersource Cardinal 3DS 8-Codec Probe, UC-505 / T14 / TS-BBY-10)
         try {
+            if (typeof win.MediaCapabilities !== 'function') {
+                const McCtor = makeNative(function MediaCapabilities() {
+                    throw scrubHookStack(new win.TypeError('Illegal constructor'));
+                }, 'MediaCapabilities', 0);
+                Object.defineProperty(McCtor.prototype, 'decodingInfo', {
+                    value: makeNative(function decodingInfo(configuration) {
+                        if (!(this instanceof McCtor)) {
+                            return Promise.reject(scrubHookStack(new win.TypeError('Illegal invocation')));
+                        }
+                        if (!configuration || typeof configuration !== 'object') {
+                            return Promise.reject(scrubHookStack(new win.TypeError('Invalid MediaDecodingConfiguration')));
+                        }
+                        return Promise.resolve({
+                            supported: true,
+                            smooth: true,
+                            powerEfficient: true,
+                            keySystemAccess: null,
+                            configuration: configuration
+                        });
+                    }, 'decodingInfo', 1),
+                    writable: true, enumerable: true, configurable: true
+                });
+                Object.defineProperty(win, 'MediaCapabilities', {
+                    value: McCtor, writable: true, enumerable: false, configurable: true
+                });
+            }
+            const navPForMc = (win.Navigator && win.Navigator.prototype) || (win.navigator ? Object.getPrototypeOf(win.navigator) : null);
+            if (navPForMc && (!win.navigator || !win.navigator.mediaCapabilities)) {
+                const mcInstance = Object.create(win.MediaCapabilities.prototype);
+                Object.defineProperty(navPForMc, 'mediaCapabilities', {
+                    get: makeNative(function() {
+                        if (!(this instanceof win.Navigator)) {
+                            throw scrubHookStack(new win.TypeError('Illegal invocation'));
+                        }
+                        return mcInstance;
+                    }, 'get mediaCapabilities', 0),
+                    set: undefined, enumerable: true, configurable: true
+                });
+            }
             const mcProtos = new Set();
             if (win.MediaCapabilities && win.MediaCapabilities.prototype) mcProtos.add(win.MediaCapabilities.prototype);
             if (win.navigator && win.navigator.mediaCapabilities) {
@@ -11724,7 +12234,7 @@
                                 /mp4a|opus|vorbis|flac/.test(aCt)
                             );
                             if (isStandardCodec) {
-                                return invokeNativeWithCleanStack(origDecodingInfo, this, arguments).then(res => {
+                                return Promise.resolve().then(() => invokeNativeWithCleanStack(origDecodingInfo, this, arguments)).then(res => {
                                     if (res && typeof res === 'object' && res.supported && res.smooth && res.powerEfficient) {
                                         return res;
                                     }
@@ -12378,6 +12888,41 @@
                 const h8 = (fmix32(profileSeed, saltA + saltB + 999) >>> 0).toString(16).padStart(8, '0');
                 return h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8;
             };
+
+            if (typeof window !== 'undefined' && typeof window.MediaDeviceInfo !== 'function') {
+                const SynthMdi = makeNative(function MediaDeviceInfo() { throw new TypeError('Illegal constructor'); }, 'MediaDeviceInfo', 0);
+                Object.defineProperties(SynthMdi.prototype, {
+                    deviceId: { get: makeNative(function() { return ''; }, 'get deviceId', 0), enumerable: true, configurable: true },
+                    groupId: { get: makeNative(function() { return ''; }, 'get groupId', 0), enumerable: true, configurable: true },
+                    kind: { get: makeNative(function() { return 'audioinput'; }, 'get kind', 0), enumerable: true, configurable: true },
+                    label: { get: makeNative(function() { return ''; }, 'get label', 0), enumerable: true, configurable: true },
+                    toJSON: { value: makeNative(function toJSON() { return { deviceId: this.deviceId, kind: this.kind, label: this.label, groupId: this.groupId }; }, 'toJSON', 0), writable: true, enumerable: true, configurable: true }
+                });
+                window.MediaDeviceInfo = SynthMdi;
+            }
+            if (typeof window !== 'undefined' && typeof window.MediaDevices !== 'function') {
+                const etP = (typeof EventTarget !== 'undefined' && EventTarget.prototype) ? EventTarget.prototype : Object.prototype;
+                const SynthMd = makeNative(function MediaDevices() { throw new TypeError('Illegal constructor'); }, 'MediaDevices', 0);
+                SynthMd.prototype = Object.create(etP);
+                Object.defineProperties(SynthMd.prototype, {
+                    constructor: { value: SynthMd, writable: true, enumerable: false, configurable: true },
+                    enumerateDevices: { value: makeNative(function enumerateDevices() { return Promise.resolve([]); }, 'enumerateDevices', 0), writable: true, enumerable: true, configurable: true },
+                    getUserMedia: { value: makeNative(function getUserMedia() { return Promise.reject(new DOMException('Permission denied', 'NotAllowedError')); }, 'getUserMedia', 1), writable: true, enumerable: true, configurable: true },
+                    getDisplayMedia: { value: makeNative(function getDisplayMedia() { return Promise.reject(new DOMException('Permission denied', 'NotAllowedError')); }, 'getDisplayMedia', 0), writable: true, enumerable: true, configurable: true },
+                    getSupportedConstraints: { value: makeNative(function getSupportedConstraints() { return { aspectRatio: true, deviceId: true, echoCancellation: true, facingMode: true, frameRate: true, groupId: true, height: true, sampleRate: true, sampleSize: true, volume: true, width: true }; }, 'getSupportedConstraints', 0), writable: true, enumerable: true, configurable: true }
+                });
+                window.MediaDevices = SynthMd;
+            }
+            if (!navigator.mediaDevices && typeof window !== 'undefined' && window.MediaDevices) {
+                const mdInst = Object.create(window.MediaDevices.prototype);
+                const navP = (window.Navigator && window.Navigator.prototype) || Object.getPrototypeOf(navigator);
+                if (navP) {
+                    Object.defineProperty(navP, 'mediaDevices', {
+                        get: makeNative(function() { return mdInst; }, 'get mediaDevices', 0),
+                        set: undefined, enumerable: true, configurable: true
+                    });
+                }
+            }
 
             if (typeof MediaDeviceInfo !== 'undefined' && MediaDeviceInfo.prototype && !_hookedProtos.has(MediaDeviceInfo.prototype)) {
                 const mdiProto = MediaDeviceInfo.prototype;
@@ -13559,23 +14104,27 @@
             const wGlVendor = targetVendor;
             const wGlRenderer = targetRenderer;
             const wIsChr = Boolean(_isWinPersona || _isAndroidPersona || (/Chrome\//.test(wUa) && !/iPhone|iPad|iPod/.test(wUa)));
-            const wWorkerCfgJson = JSON.stringify({
-                ua: wUa,
-                appVer: wAppVer,
-                plat: wPlat,
-                hwc: wHwc,
-                dm: wDm,
-                isChr: wIsChr,
-                lang: wLang,
-                langs: wLangs,
-                tz: cfg.timezone || '',
-                glVendor: wGlVendor,
-                glRenderer: wGlRenderer,
-                dx: ((fmix32(profileSeed, 101) % 15) + 1) * 0.03125,
-                dy: ((fmix32(profileSeed, 102) % 15) + 1) * 0.03125
-            });
-
-            const workerPreludeStr = `(function __geWBoot(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(d&&!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d?d.set:undefined,enumerable:d?d.enumerable:true,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.isChr&&C.dm){defG(navP,'deviceMemory',()=>C.dm);}else{try{delete navP.deviceMemory;}catch(e){}try{delete navP.userAgentData;}catch(e){}}if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}if(C.tz&&typeof Intl!=='undefined'&&Intl.DateTimeFormat&&Intl.DateTimeFormat.prototype){const dP=Intl.DateTimeFormat.prototype,oRo=dP.resolvedOptions;if(typeof oRo==='function'){const ro=mk(({resolvedOptions(){const r=oRo.call(this);if(r&&typeof r==='object')r.timeZone=C.tz;return r;}}).resolvedOptions,'resolvedOptions');Object.defineProperty(dP,'resolvedOptions',{value:ro,writable:true,enumerable:false,configurable:true});}}if(typeof OffscreenCanvasRenderingContext2D!=='undefined'&&OffscreenCanvasRenderingContext2D.prototype){const oP=OffscreenCanvasRenderingContext2D.prototype,oFt=oP.fillText;if(typeof oFt==='function'){const ft=mk(({fillText(t,x,y,mw){try{const cv=this&&this.canvas,w=cv?(cv.width||0):0,h=cv?(cv.height||0):0;if(String(t||'').length>=4&&w>=40&&h>=15){return arguments.length>=4?oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy,mw):oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy);}}catch(e){}return oFt.apply(this,arguments);}}).fillText,'fillText');Object.defineProperty(oP,'fillText',{value:ft,writable:true,enumerable:true,configurable:true});}}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){const r=origGp.call(this,p);if(this&&typeof this.isContextLost==='function'&&this.isContextLost())return null;if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return r;}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);if(typeof self.Blob==='function'&&typeof self.URL==='function'&&typeof self.URL.createObjectURL==='function'){const OB=self.Blob,oCU=self.URL.createObjectURL,bm=new WeakMap(),bootSrc='('+__geWBoot.toString()+')();\\n';const BP=mk(new Proxy(OB,{construct(t,a,nt){const i=Reflect.construct(t,a,nt);try{if(a&&a.length>0&&Array.isArray(a[0])){const o=(a.length>1&&a[1]&&typeof a[1]==='object')?a[1]:undefined;bm.set(i,{parts:a[0].slice(),options:o});}}catch(e){}return i;}}),'Blob');Object.defineProperty(OB.prototype,'constructor',{value:BP,writable:true,enumerable:false,configurable:true});Object.defineProperty(self,'Blob',{value:BP,writable:true,enumerable:false,configurable:true});const cu=mk(({createObjectURL(o){try{const e=o&&bm.get(o);if(e&&Array.isArray(e.parts)&&e.parts.length>0){const sp=e.parts.map(p=>typeof p==='string'?p.replace(/\\bdebugger\\s*;?/g,''):p);const pb=e.options?new OB([bootSrc,...sp],e.options):new OB([bootSrc,...sp]);return oCU.call(this,pb);}}catch(e){}return oCU.apply(this,arguments);}}).createObjectURL,'createObjectURL');Object.defineProperty(self.URL,'createObjectURL',{value:cu,writable:true,enumerable:true,configurable:true});}}catch(e){}})();\n`;
+            function buildWorkerPreludeStr() {
+                const dynTz = (typeof getEffectiveTimezone === 'function' && getEffectiveTimezone()) || cfg.timezone || '';
+                const dynTzMeta = dynTz ? getTargetTzMeta(dynTz) : null;
+                const wWorkerCfgJson = JSON.stringify({
+                    ua: wUa,
+                    appVer: wAppVer,
+                    plat: wPlat,
+                    hwc: wHwc,
+                    dm: wDm,
+                    isChr: wIsChr,
+                    lang: wLang,
+                    langs: wLangs,
+                    tz: dynTz,
+                    tzOff: dynTzMeta ? dynTzMeta.offsetMin : null,
+                    glVendor: wGlVendor,
+                    glRenderer: wGlRenderer,
+                    dx: ((fmix32(profileSeed, 101) % 15) + 1) * 0.03125,
+                    dy: ((fmix32(profileSeed, 102) % 15) + 1) * 0.03125
+                });
+                return `(function __geWBoot(){try{if(typeof WorkerGlobalScope==='undefined'||!(self instanceof WorkerGlobalScope)||self.__geWorkerHarmonized)return;Object.defineProperty(self,'__geWorkerHarmonized',{value:true,enumerable:false,configurable:false});const C=${wWorkerCfgJson};const wm=new WeakMap();const origToStr=Function.prototype.toString;const mk=(fn,n)=>{if(typeof fn==='function'){try{delete fn.prototype;}catch(e){}wm.set(fn,'function '+(n||fn.name||'')+'() {\\n    [native code]\\n}');}return fn;};const ts=({toString(){return wm.has(this)?wm.get(this):origToStr.call(this);}}).toString;mk(ts,'toString');Object.defineProperty(Function.prototype,'toString',{value:ts,writable:true,enumerable:false,configurable:true});const defG=(proto,prop,valFn)=>{if(!proto)return;const d=Object.getOwnPropertyDescriptor(proto,prop);if(d&&!d.configurable)return;const g=mk(({['get '+prop](){return valFn.call(this);}})['get '+prop],'get '+prop);Object.defineProperty(proto,prop,{get:g,set:d?d.set:undefined,enumerable:d?d.enumerable:true,configurable:true});};const navP=(typeof WorkerNavigator!=='undefined'&&WorkerNavigator.prototype)?WorkerNavigator.prototype:(self.navigator?Object.getPrototypeOf(self.navigator):null);if(navP){defG(navP,'webdriver',()=>false);if(C.hwc)defG(navP,'hardwareConcurrency',()=>C.hwc);if(C.isChr&&C.dm){defG(navP,'deviceMemory',()=>C.dm);}else{try{delete navP.deviceMemory;}catch(e){}try{delete navP.userAgentData;}catch(e){}}if(C.plat)defG(navP,'platform',()=>C.plat);if(C.ua)defG(navP,'userAgent',()=>C.ua);if(C.appVer)defG(navP,'appVersion',()=>C.appVer);if(C.lang)defG(navP,'language',()=>C.lang);if(C.langs)defG(navP,'languages',()=>Object.freeze(C.langs.slice()));}if(C.tz&&typeof Intl!=='undefined'&&Intl.DateTimeFormat&&Intl.DateTimeFormat.prototype){const dP=Intl.DateTimeFormat.prototype,oRo=dP.resolvedOptions;if(typeof oRo==='function'){const ro=mk(({resolvedOptions(){const r=oRo.call(this);if(r&&typeof r==='object')r.timeZone=C.tz;return r;}}).resolvedOptions,'resolvedOptions');Object.defineProperty(dP,'resolvedOptions',{value:ro,writable:true,enumerable:false,configurable:true});}}if(typeof C.tzOff==='number'&&typeof Date!=='undefined'&&Date.prototype){const gto=mk(({getTimezoneOffset(){return C.tzOff;}}).getTimezoneOffset,'getTimezoneOffset');Object.defineProperty(Date.prototype,'getTimezoneOffset',{value:gto,writable:true,enumerable:false,configurable:true});}if(typeof OffscreenCanvasRenderingContext2D!=='undefined'&&OffscreenCanvasRenderingContext2D.prototype){const oP=OffscreenCanvasRenderingContext2D.prototype,oFt=oP.fillText;if(typeof oFt==='function'){const ft=mk(({fillText(t,x,y,mw){try{const cv=this&&this.canvas,w=cv?(cv.width||0):0,h=cv?(cv.height||0):0;if(String(t||'').length>=4&&w>=40&&h>=15){return arguments.length>=4?oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy,mw):oFt.call(this,t,Number(x)+C.dx,Number(y)+C.dy);}}catch(e){}return oFt.apply(this,arguments);}}).fillText,'fillText');Object.defineProperty(oP,'fillText',{value:ft,writable:true,enumerable:true,configurable:true});}}const hookGl=(P)=>{if(!P||typeof P.getParameter!=='function')return;const origGp=P.getParameter;const gp=mk(({getParameter(p){const r=origGp.call(this,p);if(this&&typeof this.isContextLost==='function'&&this.isContextLost())return null;if(p===37445)return C.glVendor;if(p===37446)return C.glRenderer;return r;}}).getParameter,'getParameter');Object.defineProperty(P,'getParameter',{value:gp,writable:true,enumerable:true,configurable:true});};if(typeof WebGLRenderingContext!=='undefined')hookGl(WebGLRenderingContext.prototype);if(typeof WebGL2RenderingContext!=='undefined')hookGl(WebGL2RenderingContext.prototype);if(typeof self.Blob==='function'&&typeof self.URL==='function'&&typeof self.URL.createObjectURL==='function'){const OB=self.Blob,oCU=self.URL.createObjectURL,bm=new WeakMap(),bootSrc='('+__geWBoot.toString()+')();\\n';const BP=mk(new Proxy(OB,{construct(t,a,nt){const i=Reflect.construct(t,a,nt);try{if(a&&a.length>0&&Array.isArray(a[0])){const o=(a.length>1&&a[1]&&typeof a[1]==='object')?a[1]:undefined;bm.set(i,{parts:a[0].slice(),options:o});}}catch(e){}return i;}}),'Blob');Object.defineProperty(OB.prototype,'constructor',{value:BP,writable:true,enumerable:false,configurable:true});Object.defineProperty(self,'Blob',{value:BP,writable:true,enumerable:false,configurable:true});const cu=mk(({createObjectURL(o){try{const e=o&&bm.get(o);if(e&&Array.isArray(e.parts)&&e.parts.length>0){const sp=e.parts.map(p=>typeof p==='string'?p.replace(/\\bdebugger\\s*;?/g,''):p);const pb=e.options?new OB([bootSrc,...sp],e.options):new OB([bootSrc,...sp]);return oCU.call(this,pb);}}catch(e){}return oCU.apply(this,arguments);}}).createObjectURL,'createObjectURL');Object.defineProperty(self.URL,'createObjectURL',{value:cu,writable:true,enumerable:true,configurable:true});}}catch(e){}})();\n`;
+            }
 
             const BlobProxy = makeNative(new Proxy(OrigBlob, {
                 construct(target, args, newTarget) {
@@ -13639,10 +14188,11 @@
                                         const benchBlob = entry.options ? new OrigBlob([fastBenchSrc], entry.options) : new OrigBlob([fastBenchSrc]);
                                         return invokeNativeWithCleanStack(origCreateObjectURL, this, [benchBlob]);
                                     }
+                                    const dynPrelude = buildWorkerPreludeStr();
                                     const sanitizedParts = entry.parts.map(p => typeof p === 'string' ? p.replace(/\bdebugger\s*;?/g, '') : p);
                                     const patchedBlob = entry.options
-                                        ? new OrigBlob([workerPreludeStr, ...sanitizedParts], entry.options)
-                                        : new OrigBlob([workerPreludeStr, ...sanitizedParts]);
+                                        ? new OrigBlob([dynPrelude, ...sanitizedParts], entry.options)
+                                        : new OrigBlob([dynPrelude, ...sanitizedParts]);
                                     return invokeNativeWithCleanStack(origCreateObjectURL, this, [patchedBlob]);
                                 }
                             }

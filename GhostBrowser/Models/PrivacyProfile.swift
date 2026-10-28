@@ -132,53 +132,7 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
     }
 
     public static func detectPhysicalHostPreset() -> AppleDeviceProfile {
-        let bounds = UIScreen.main.bounds
-        let w = Int(min(bounds.width, bounds.height))
-        let h = Int(max(bounds.width, bounds.height))
-        let cores = ProcessInfo.processInfo.activeProcessorCount
-        let ramGB = Int(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024))
-
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            switch (w, h) {
-            case (1024, 1366):
-                return cores >= 9 ? .iPadProM4_13 : .iPadProM2_12_9
-            case (834, 1210):
-                return .iPadProM4_11
-            case (834, 1194):
-                return .iPadProM2_11
-            case (820, 1180):
-                if cores >= 8 {
-                    return .iPadAirM2_11
-                } else if ramGB >= 6 {
-                    return .iPad11_A16
-                } else {
-                    return .iPad10_A14
-                }
-            case (810, 1080):
-                return .iPad9_A13
-            case (744, 1133):
-                return ramGB >= 6 ? .iPadMini7_A17Pro : .iPadMini6_A15
-            default:
-                return .nativeHost
-            }
-        } else {
-            switch (w, h) {
-            case (440, 956):
-                return .iPhone16ProMax_A18
-            case (402, 874):
-                return .iPhone16Pro_A18
-            case (430, 932):
-                return .iPhone15ProMax_A17
-            case (393, 852):
-                return .iPhone16_A18
-            case (390, 844):
-                return .iPhone14_A15
-            case (375, 667):
-                return .iPhoneSE3_A15
-            default:
-                return .nativeHost
-            }
-        }
+        return .nativeHost
     }
 
     private static func nativeHostSafariUserAgent(buildIndex: Int) -> String {
@@ -219,17 +173,17 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
             return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15"
         case .iPhone18ProMax_A20:
             let builds = [
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.1 Mobile/15E148 Safari/604.1"
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Mobile/15E148 Safari/604.1"
             ]
             return builds[abs(buildIndex) % builds.count]
         case .iPhone17ProMax_A19, .iPhone17Pro_A19, .iPhone17Air_A19, .iPhone17_A19:
             let builds = [
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1"
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Mobile/15E148 Safari/604.1"
             ]
             return builds[abs(buildIndex) % builds.count]
         case .iPhone16ProMax_A18, .iPhone16Pro_A18, .iPhone16Plus_A18, .iPhone16e_A18:
@@ -463,7 +417,7 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
 }
 
 public class PrivacyProfile: ObservableObject {
-    @Published public var selectedDevice: AppleDeviceProfile = .iPadProM4_13
+    @Published public var selectedDevice: AppleDeviceProfile = .nativeHost
     @Published public var customUserAgent: String = ""
     @Published public var searchEngine: SearchEngine = .localStartPage
 

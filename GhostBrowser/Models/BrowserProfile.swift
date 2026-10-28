@@ -129,7 +129,7 @@ public struct BrowserProfile: Identifiable, Codable, Equatable {
         name: String = "Default Profile",
         icon: String = "person.crop.circle.fill",
         themeColorHex: String = "#0A84FF",
-        deviceProfile: AppleDeviceProfile = .iPadProM4_13,
+        deviceProfile: AppleDeviceProfile = .nativeHost,
         sessionSeed: Int = Int.random(in: 100000...999999),
         buildIndex: Int = Int.random(in: 0...4),
         customUserAgent: String = "",

@@ -283,7 +283,7 @@
                         <span class="nav-tier-dot dot-cyan"></span>
                         <span class="nav-tier-tag">PART II (TIER 3) &bull; BEHAVIORAL, FRONTIER, GOOGLE WIRE &amp; 155-SITE CODEX</span>
                     </div>
-                    <span class="nav-tier-count">4 SPECIALIST LABS &bull; 155 SITES &bull; 20 MATH ENGINES</span>
+                    <span class="nav-tier-count">4 SPECIALIST LABS &bull; 155 SITES &bull; 22 MATH ENGINES</span>
                 </div>
                 <div class="nav-tier-grid fm-tier3-grid">
                     <button class="nav-tab" id="tabBehaviorBtn" onclick="switchTab('behavior')">
@@ -305,8 +305,8 @@
                             </svg>
                         </div>
                         <div class="nav-tab-content">
-                            <span class="nav-tab-title">Uncovered Frontier (22 Probes)</span>
-                            <span class="nav-tab-sub" id="tabUncoveredSubLabel">Auditing 22 Novel Probes…</span>
+                            <span class="nav-tab-title">Uncovered Frontier (54 Probes)</span>
+                            <span class="nav-tab-sub" id="tabUncoveredSubLabel">Auditing 54 Novel Probes…</span>
                         </div>
                     </button>
 
@@ -334,7 +334,7 @@
                         </div>
                         <div class="nav-tab-content">
                             <span class="nav-tab-title">155-Site Scoring Predictor &amp; Doctrine</span>
-                            <span class="nav-tab-sub" id="tabScoringDoctrineSubLabel">Auditing 21 Math Engines…</span>
+                            <span class="nav-tab-sub" id="tabScoringDoctrineSubLabel">Auditing 22 Math Engines…</span>
                         </div>
                     </button>
 
@@ -347,6 +347,19 @@
                         <div class="nav-tab-content">
                             <span class="nav-tab-title">UltimateCheck™ (8 Spectrums)</span>
                             <span class="nav-tab-sub" id="tabUltimateCheckSubLabel" style="color: #c084fc;">80 Past • Present • Future Gates</span>
+                        </div>
+                    </button>
+
+                    <button class="nav-tab nav-tab-clean" id="tabTitanSiegeBtn" onclick="switchTab('titansiege')">
+                        <div class="nav-tab-icon" style="color: #38bdf8;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <polyline points="9 12 11 14 15 10"></polyline>
+                            </svg>
+                        </div>
+                        <div class="nav-tab-content">
+                            <span class="nav-tab-title">Titan Siege &amp; Fortress™ (102 Gates)</span>
+                            <span class="nav-tab-sub" id="tabTitanSiegeSubLabel" style="color: #38bdf8;">6-Layer RTT Handshakes • AMZ/BBY/APL • Multi-Profile</span>
                         </div>
                     </button>
                 </div>
@@ -433,7 +446,7 @@
                     <span class="sub-pill-status">AUDITING…</span>
                 </div>
                 <div id="subUncovered" class="sub-pill sub-scanning" onclick="switchTab('uncovered')">
-                    <span class="sub-pill-name">8. Uncovered 16 Probes &amp; Titans</span>
+                    <span class="sub-pill-name">8. Uncovered 54 Probes &amp; Titans</span>
                     <span class="sub-pill-status">AUDITING…</span>
                 </div>
                 <div id="subBrowserScan" class="sub-pill sub-clean" onclick="switchTab('browserscan')">
@@ -6979,21 +6992,21 @@
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(window.runScoringDoctrineAudit) window.runScoringDoctrineAudit();" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-color: #fbbf24; color: #0f172a; font-weight: 800;">
-                        ↻ Re-Run 21 Math Scoring Engines
+                        ↻ Re-Run 26 Math Scoring Engines
                     </button>
                 </div>
 
                 <!-- 4 Live KPI Cards -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 18px;">
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(52, 211, 153, 0.35); border-radius: 10px; padding: 12px 16px;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">21 Unlocked Math Engines</div>
-                        <div id="sdMetricEngines" style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px; font-family: var(--mono);">21 / 21 CLEAN</div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Apple, Zoey, DataDome, BestBuy, Walmart, MS Store, BrowserScan</div>
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">26 Unlocked Math Engines</div>
+                        <div id="sdMetricEngines" style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px; font-family: var(--mono);">26 / 26 CLEAN</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Apple, Zoey, DataDome, BestBuy, Walmart, MS Store, Session 6 &amp; 7</div>
                     </div>
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 12px 16px;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">155-Site Privilege Matrix (55+100)</div>
-                        <div id="sdMetricSites" style="font-size: 19px; font-weight: 800; color: #38bdf8; margin-top: 4px; font-family: var(--mono);">155 / 155 (55+100 PASS)</div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">55 Baseline + 100 Phase-2 7-Layer Audited Sites</div>
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">172-Site Privilege Matrix (72+100)</div>
+                        <div id="sdMetricSites" style="font-size: 19px; font-weight: 800; color: #38bdf8; margin-top: 4px; font-family: var(--mono);">172 / 172 (72+100 PASS)</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">72 Deep-Funnel Dossiers + 100 Phase-2 7-Layer Audited Sites</div>
                     </div>
                     <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 10px; padding: 12px 16px;">
                         <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">GhostBrowser Preset Audit</div>
@@ -7010,13 +7023,13 @@
                 <!-- 6 Interactive Sub-Tabs Navigation -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(148, 163, 184, 0.18);">
                     <button id="sdBtn_live_predictor" class="filter-pill active" onclick="switchScoringDoctrineSubTab('live_predictor')" style="padding: 8px 14px; font-weight: 700;">
-                        1. Live 21-Engine Math Predictor
+                        1. Live 26-Engine Math Predictor
                     </button>
                     <button id="sdBtn_phase2_100_matrix" class="filter-pill" onclick="switchScoringDoctrineSubTab('phase2_100_matrix')" style="padding: 8px 14px; font-weight: 700; border-color: rgba(16, 185, 129, 0.55); color: #34d399;">
                         ★ 2. Phase 2: 100-Website 7-Layer Audit (100/100)
                     </button>
                     <button id="sdBtn_sites_matrix" class="filter-pill" onclick="switchScoringDoctrineSubTab('sites_matrix')" style="padding: 8px 14px; font-weight: 700;">
-                        3. Phase 1: 55-Website Privilege &amp; Funnel Matrix
+                        3. Phase 1 + S6/S7: 72-Website Privilege &amp; Funnel Matrix
                     </button>
                     <button id="sdBtn_persona_audit" class="filter-pill" onclick="switchScoringDoctrineSubTab('persona_audit')" style="padding: 8px 14px; font-weight: 700;">
                         4. GhostBrowser 22-Persona Assessment
@@ -7137,14 +7150,14 @@
                             </button>
                         </div>
                         <div id="sdSitesFilterBar" style="display: flex; gap: 6px; flex-wrap: wrap; width: 100%;">
-                            <button class="filter-pill sd-site-filter-btn active" data-sd-filter="all" onclick="filterScoringDoctrineSites('all', this)">All Sites (55)</button>
+                            <button class="filter-pill sd-site-filter-btn active" data-sd-filter="all" onclick="filterScoringDoctrineSites('all', this)">All Sites (72)</button>
                             <button class="filter-pill sd-site-filter-btn" data-sd-filter="arch1" onclick="filterScoringDoctrineSites('arch1', this)">Arch 1: Continuous Score</button>
                             <button class="filter-pill sd-site-filter-btn" data-sd-filter="arch2" onclick="filterScoringDoctrineSites('arch2', this)">Arch 2: Cookie State Machine</button>
                             <button class="filter-pill sd-site-filter-btn" data-sd-filter="arch3" onclick="filterScoringDoctrineSites('arch3', this)">Arch 3: Dynamic PoW / VM</button>
                             <button class="filter-pill sd-site-filter-btn" data-sd-filter="arch4" onclick="filterScoringDoctrineSites('arch4', this)">Arch 4: Identity Graph</button>
-                            <button class="filter-pill sd-site-filter-btn" data-sd-filter="ecom" onclick="filterScoringDoctrineSites('ecom', this)">E-Commerce (21)</button>
-                            <button class="filter-pill sd-site-filter-btn" data-sd-filter="payments" onclick="filterScoringDoctrineSites('payments', this)">Banking &amp; Payments (19)</button>
-                            <button class="filter-pill sd-site-filter-btn" data-sd-filter="travel_social" onclick="filterScoringDoctrineSites('travel_social', this)">Travel, Social &amp; Search (15)</button>
+                            <button class="filter-pill sd-site-filter-btn" data-sd-filter="ecom" onclick="filterScoringDoctrineSites('ecom', this)">E-Commerce (27)</button>
+                            <button class="filter-pill sd-site-filter-btn" data-sd-filter="payments" onclick="filterScoringDoctrineSites('payments', this)">Banking, Payments &amp; KYC (23)</button>
+                            <button class="filter-pill sd-site-filter-btn" data-sd-filter="travel_social" onclick="filterScoringDoctrineSites('travel_social', this)">Travel, Dating, Sportsbook &amp; Tech (22)</button>
                         </div>
                     </div>
                     <div class="table-container">
@@ -7431,6 +7444,17 @@ fphxfwdfr (X-Forwarded-For), Sec-CH-UA-* + 10 WebRTC STUN probes (io_enable_rip=
             </div>
         </div>
 
+        <!-- ======================================================== -->
+        <!-- SECTION: TITAN SIEGE & PROTOCOL FORTRESS™ (102 GATES)    -->
+        <!-- ======================================================== -->
+        <div id="titanSiegeView" class="tab-view" style="display: none; flex-direction: column; gap: 18px;">
+            <div id="titanSiegeRootContainer">
+                <div class="card" style="padding: 28px; text-align: center; color: var(--text-muted);">
+                    Initializing Titan Siege &amp; Protocol Fortress™ (102 Live Gates across 10 Fortresses + 6-Layer RTT Handshake Deep Audit)…
+                </div>
+            </div>
+        </div>
+
         <footer class="footer">
             FlagMeter Pro &bull; Unified Enterprise Browser, Silicon &amp; Active Network Telemetry Suite &bull; Direct Edge TLS :4443 &bull; DNS :53 &bull; STUN :3478
         </footer>
@@ -7452,11 +7476,12 @@ fphxfwdfr (X-Forwarded-For), Sec-CH-UA-* + 10 WebRTC STUN probes (io_enable_rip=
     <script src="/shopping.js?pv={{PV}}"></script>
     <script src="/ecomm3.js?pv={{PV}}"></script>
     <script src="/payments.js?pv={{PV}}"></script>
-    <script src="/ghost-app.js?pv={{PV}}"></script>
-    <script src="/uncovered_lab.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/ghost-app.js?pv={{PV}}&amp;v=81.0"></script>
+    <script src="/uncovered_lab.js?pv={{PV}}&amp;v=80.9"></script>
     <script src="/google_integrity.js?pv={{PV}}&amp;v=80.5"></script>
-    <script src="/scoring_doctrine.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/scoring_doctrine.js?pv={{PV}}&amp;v=80.9"></script>
     <script src="/ultimate_check.js?pv={{PV}}&amp;v=80.5"></script>
+    <script src="/titan_siege.js?pv={{PV}}&amp;v=81.0"></script>
     <script src="/app.js?pv={{PV}}&amp;v=80.5"></script>
     <script src="/deep-app.js?pv={{PV}}&amp;v=80.5"></script>
 </body>

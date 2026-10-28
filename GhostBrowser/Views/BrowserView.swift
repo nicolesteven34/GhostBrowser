@@ -236,6 +236,9 @@ public struct BrowserView: UIViewRepresentable {
                 ProxyService.shared.applyProxy(to: webView.configuration.websiteDataStore, profile: privacyProfile)
             }
             context.coordinator.reconfigurePrivacy(for: webView)
+            if (profileChanged || uaChanged || seedChanged) && webView.url != nil {
+                webView.reload()
+            }
 
             let ipEsc = privacyProfile.proxyEnabled ? privacyProfile.proxyDetectedIP.replacingOccurrences(of: "'", with: "") : ""
             let tzEsc = privacyProfile.proxyEnabled ? privacyProfile.effectiveProxyTimezone.replacingOccurrences(of: "'", with: "") : ""

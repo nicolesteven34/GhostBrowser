@@ -51,13 +51,12 @@ public class ProfileManager: ObservableObject {
                 self.saveProfiles()
             }
         } else {
-            let detectedHost = AppleDeviceProfile.detectPhysicalHostPreset()
             let defaultProfile = BrowserProfile(
                 id: UUID(),
                 name: "Personal",
                 icon: "person.crop.circle.fill",
                 themeColorHex: "#0A84FF",
-                deviceProfile: detectedHost
+                deviceProfile: .nativeHost
             )
             self.profiles = [defaultProfile]
             self.activeProfileID = defaultProfile.id
@@ -112,36 +111,7 @@ public class ProfileManager: ObservableObject {
     }
 
     public func nextRecommendedDeviceProfile() -> AppleDeviceProfile {
-        let hostPreset = AppleDeviceProfile.detectPhysicalHostPreset()
-        var realisticPool: [AppleDeviceProfile] = [
-            hostPreset,
-            .iPadProM4_13,
-            .iPadProM4_11,
-            .iPadAirM3_11,
-            .iPadAirM2_11,
-            .iPad11_A16,
-            .iPad10_A14,
-            .iPadMini7_A17Pro,
-            .iPhone18ProMax_A20,
-            .iPhone17ProMax_A19,
-            .iPhone16ProMax_A18,
-            .iPhone16Pro_A18,
-            .iPhone16_A18,
-            .iPhone15ProMax_A17,
-            .macBookProM4Max_16,
-            .macBookProM4Pro_14,
-            .macBookAirM3_13,
-            .iPadMini6_A15
-        ]
-        // Deduplicate while preserving order
-        var seen = Set<AppleDeviceProfile>()
-        realisticPool = realisticPool.filter { seen.insert($0).inserted }
-
-        let usedDevices = Set(profiles.map { $0.deviceProfile })
-        if let unused = realisticPool.first(where: { !usedDevices.contains($0) }) {
-            return unused
-        }
-        return realisticPool[profiles.count % realisticPool.count]
+        return .nativeHost
     }
 
     @discardableResult
@@ -222,7 +192,7 @@ public class ProfileManager: ObservableObject {
         let dedicated = self.privacyProfile(for: updated.id)
         syncPrivacyProfile(dedicated, from: updated)
 
-        if updated.id == activeProfileID, let privacyProfile = privacyProfile, privacyProfile !== dedicated {
+        if updated.id == activeProfileID, let privacyProfile = privacyProfile, privacyProfile !== dedicated, privacyProfile.sessionDataStoreID == updated.id {
             syncPrivacyProfile(privacyProfile, from: updated)
         }
     }
@@ -296,7 +266,7 @@ public class ProfileManager: ObservableObject {
         }
         saveProfiles()
 
-        if let privacyProfile = privacyProfile, privacyProfile !== dedicated {
+        if let privacyProfile = privacyProfile, privacyProfile !== dedicated, privacyProfile.sessionDataStoreID == id {
             syncPrivacyProfile(privacyProfile, from: profiles.first(where: { $0.id == id }) ?? target)
         }
     }
