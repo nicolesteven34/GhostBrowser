@@ -1913,8 +1913,7 @@ public final class LocalSocks5DnsBridge {
         clientConn: NWConnection,
         connectHost: String,
         originalHost: String? = nil,
-        targetPort: UInt16,
-        isFailoverRetry: Bool = false
+        targetPort: UInt16
     ) {
         let hostKey = (originalHost ?? connectHost).lowercased()
         guard let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
@@ -1930,30 +1929,14 @@ public final class LocalSocks5DnsBridge {
         let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(upConn)
         var handshaked = false
-        let connectTimeoutSec: Double = isFailoverRetry ? 6.5 : 5.0
-        queue.asyncAfter(deadline: .now() + connectTimeoutSec) { [weak self] in
+        queue.asyncAfter(deadline: .now() + 6.5) { [weak self] in
             guard let self = self, !handshaked else { return }
             handshaked = true
+            self.cacheLock.lock()
+            self.recentUpstreamFailure = true
+            self.cacheLock.unlock()
             self.unregisterAndCancel(upConn)
-            if !isFailoverRetry && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
-                let rotated = Self.rotateSessionUsername(self.username, attempt: 1)
-                self.cacheLock.lock()
-                self.cujoBlockedHosts.insert(hostKey)
-                if self.cleanFailoverUsername == nil { self.cleanFailoverUsername = rotated }
-                self.cacheLock.unlock()
-                self.connectUpstreamAndRelay(
-                    clientConn: clientConn,
-                    connectHost: connectHost,
-                    originalHost: originalHost,
-                    targetPort: targetPort,
-                    isFailoverRetry: true
-                )
-            } else {
-                self.cacheLock.lock()
-                self.recentUpstreamFailure = true
-                self.cacheLock.unlock()
-                self.unregisterAndCancel(clientConn)
-            }
+            self.unregisterAndCancel(clientConn)
         }
         upConn.stateUpdateHandler = { [weak self] state in
             guard let self = self else { return }
@@ -1964,24 +1947,9 @@ public final class LocalSocks5DnsBridge {
                     guard ok else {
                         handshaked = true
                         self.unregisterAndCancel(upConn)
-                        if !isFailoverRetry && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
-                            let rotated = Self.rotateSessionUsername(self.username, attempt: 1)
-                            self.cacheLock.lock()
-                            self.cujoBlockedHosts.insert(hostKey)
-                            if self.cleanFailoverUsername == nil { self.cleanFailoverUsername = rotated }
-                            self.cacheLock.unlock()
-                            self.connectUpstreamAndRelay(
-                                clientConn: clientConn,
-                                connectHost: connectHost,
-                                originalHost: originalHost,
-                                targetPort: targetPort,
-                                isFailoverRetry: true
-                            )
-                        } else {
-                            clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
-                                self?.unregisterAndCancel(clientConn)
-                            })
-                        }
+                        clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
+                            self?.unregisterAndCancel(clientConn)
+                        })
                         return
                     }
                     handshaked = true
@@ -2031,6 +1999,37 @@ public final class LocalSocks5DnsBridge {
         upConn.start(queue: queue)
     }
 
+    private func readFullTlsClientHello(
+        clientConn: NWConnection,
+        accumulated: Data,
+        expectedTotal: Int,
+        completion: @escaping (Data?, Bool) -> Void
+    ) {
+        if accumulated.count >= expectedTotal || expectedTotal > 16384 {
+            completion(accumulated, false)
+            return
+        }
+        let remaining = expectedTotal - accumulated.count
+        clientConn.receive(minimumIncompleteLength: 1, maximumLength: remaining) { [weak self] moreData, _, isComplete, err in
+            guard let self = self, let moreData = moreData, !moreData.isEmpty, err == nil else {
+                completion(accumulated, isComplete)
+                return
+            }
+            var combined = accumulated
+            combined.append(moreData)
+            if isComplete || combined.count >= expectedTotal {
+                completion(combined, isComplete)
+            } else {
+                self.readFullTlsClientHello(
+                    clientConn: clientConn,
+                    accumulated: combined,
+                    expectedTotal: expectedTotal,
+                    completion: completion
+                )
+            }
+        }
+    }
+
     private func relayWithTlsGuard(
         clientConn: NWConnection,
         upConn: NWConnection,
@@ -2038,16 +2037,16 @@ public final class LocalSocks5DnsBridge {
         hostKey: String,
         targetPort: UInt16
     ) {
-        clientConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] firstClientData, _, isComplete, err in
-            guard let self = self, let firstClientData = firstClientData, !firstClientData.isEmpty, err == nil else {
+        clientConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] initialData, _, isComplete, err in
+            guard let self = self, let initialData = initialData, !initialData.isEmpty, err == nil else {
                 self?.unregisterAndCancel(clientConn)
                 self?.unregisterAndCancel(upConn)
                 return
             }
-            let bytes = Array(firstClientData)
+            let bytes = Array(initialData)
             let isTlsClientHello = bytes.count >= 5 && bytes[0] == 0x16 && bytes[1] == 0x03
             guard isTlsClientHello else {
-                upConn.send(content: firstClientData, isComplete: isComplete, completion: .contentProcessed { [weak self] sErr in
+                upConn.send(content: initialData, isComplete: isComplete, completion: .contentProcessed { [weak self] sErr in
                     guard let self = self, sErr == nil else {
                         self?.unregisterAndCancel(clientConn)
                         self?.unregisterAndCancel(upConn)
@@ -2059,45 +2058,71 @@ public final class LocalSocks5DnsBridge {
                 return
             }
 
-            upConn.send(content: firstClientData, completion: .contentProcessed { [weak self] sendErr in
-                guard let self = self, sendErr == nil else {
+            let expectedRecordTotal = 5 + ((Int(bytes[3]) << 8) | Int(bytes[4]))
+            self.readFullTlsClientHello(
+                clientConn: clientConn,
+                accumulated: initialData,
+                expectedTotal: expectedRecordTotal
+            ) { [weak self] fullClientData, _ in
+                guard let self = self, let firstClientData = fullClientData, !firstClientData.isEmpty else {
                     self?.unregisterAndCancel(clientConn)
                     self?.unregisterAndCancel(upConn)
                     return
                 }
-                upConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] firstServerData, _, sComplete, rErr in
-                    guard let self = self else { return }
-                    if let firstServerData = firstServerData, !firstServerData.isEmpty, rErr == nil, firstServerData.first != 0xFF {
-                        // Valid TLS ServerHello — forward to WebKit and relay normally
-                        clientConn.send(content: firstServerData, isComplete: sComplete, completion: .contentProcessed { [weak self] cSendErr in
-                            guard let self = self, cSendErr == nil else {
-                                self?.unregisterAndCancel(clientConn)
-                                self?.unregisterAndCancel(upConn)
-                                return
-                            }
-                            self.pipe(from: clientConn, to: upConn)
-                            self.pipe(from: upConn, to: clientConn)
-                        })
+
+                upConn.send(content: firstClientData, completion: .contentProcessed { [weak self] sendErr in
+                    guard let self = self, sendErr == nil else {
+                        self?.unregisterAndCancel(clientConn)
+                        self?.unregisterAndCancel(upConn)
                         return
                     }
+                    upConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] firstServerData, _, sComplete, rErr in
+                        guard let self = self else { return }
+                        guard let firstServerData = firstServerData, !firstServerData.isEmpty, rErr == nil else {
+                            self.unregisterAndCancel(clientConn)
+                            self.unregisterAndCancel(upConn)
+                            return
+                        }
 
-                    // CUJO AI 0xFF packet or immediate drop detected on TLS ClientHello — fail over to clean sibling session!
-                    self.unregisterAndCancel(upConn)
-                    self.cacheLock.lock()
-                    self.cujoBlockedHosts.insert(hostKey)
-                    let existingFailover = self.cleanFailoverUsername
-                    self.cacheLock.unlock()
+                        let sBytes = Array(firstServerData.prefix(16))
+                        let isCujoBlockPacket = sBytes.count >= 16 &&
+                            sBytes[0] == 0xFF &&
+                            sBytes[1] == 0xFF &&
+                            sBytes[2] == 0xFF &&
+                            sBytes[3] == 0xFF
 
-                    self.attemptTlsFailover(
-                        clientConn: clientConn,
-                        connectHost: connectHost,
-                        targetPort: targetPort,
-                        firstClientData: firstClientData,
-                        existingFailover: existingFailover,
-                        attempt: 1
-                    )
-                }
-            })
+                        if !isCujoBlockPacket {
+                            // Valid TLS ServerHello — forward to WebKit and relay normally
+                            clientConn.send(content: firstServerData, isComplete: sComplete, completion: .contentProcessed { [weak self] cSendErr in
+                                guard let self = self, cSendErr == nil else {
+                                    self?.unregisterAndCancel(clientConn)
+                                    self?.unregisterAndCancel(upConn)
+                                    return
+                                }
+                                self.pipe(from: clientConn, to: upConn)
+                                self.pipe(from: upConn, to: clientConn)
+                            })
+                            return
+                        }
+
+                        // CUJO AI 256-byte 0xFF packet detected on TLS ClientHello — fail over to clean sibling session!
+                        self.unregisterAndCancel(upConn)
+                        self.cacheLock.lock()
+                        self.cujoBlockedHosts.insert(hostKey)
+                        let existingFailover = self.cleanFailoverUsername
+                        self.cacheLock.unlock()
+
+                        self.attemptTlsFailover(
+                            clientConn: clientConn,
+                            connectHost: connectHost,
+                            targetPort: targetPort,
+                            firstClientData: firstClientData,
+                            existingFailover: existingFailover,
+                            attempt: 1
+                        )
+                    }
+                })
+            }
         }
     }
 
