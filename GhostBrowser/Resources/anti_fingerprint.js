@@ -2509,6 +2509,7 @@
         return u.includes('/api/v1/servers-for-result') ||
                u.includes('/api/v1/servers-for-round') ||
                u.includes('/api/v1/dns-leak/result') ||
+               u.includes('/v2/api/client/entry') ||
                u.includes('/api/dns-check') ||
                u.includes('edns.ip-api.com') ||
                u.includes('/api/ip?ip=') ||
@@ -3770,6 +3771,105 @@
             if (rootObj.summary !== undefined && rootObj.summary !== 'isp_private') {
                 rootObj.summary = 'isp_private';
                 modified = true;
+            }
+        }
+
+        // Universal Schema: Control D / Scrapfly / Generic `dns_servers` array
+        if (Array.isArray(rootObj.dns_servers)) {
+            if (rootObj.dns_servers.length === 0) {
+                rootObj.dns_servers.push({
+                    ip: primary.ip_address,
+                    isp: primary.isp,
+                    org: primary.org,
+                    as_name: primary.org,
+                    asn: primary.asn_number,
+                    country: primary.country_code,
+                    country_name: primary.country,
+                    city: primary.city,
+                    region: primary.region,
+                    hostname: primary.hostname
+                });
+                modified = true;
+            } else {
+                for (let i = 0; i < rootObj.dns_servers.length; i++) {
+                    const srv = dnsChain[i % dnsChain.length];
+                    const item = rootObj.dns_servers[i];
+                    if (typeof item === 'string') {
+                        rootObj.dns_servers[i] = srv.ip_address;
+                        modified = true;
+                    } else if (item && typeof item === 'object') {
+                        harmonizeSingleDnsNode(item, srv);
+                        modified = true;
+                    }
+                }
+            }
+        }
+
+        // Universal Schema: OVPN (`/v2/api/client/entry`) `{ status, ip, connected, sources: [...] }`
+        if (Array.isArray(rootObj.sources) && ('connected' in rootObj || 'ip' in rootObj || 'status' in rootObj)) {
+            if (typeof rootObj.ip === 'string' && meta.ip && rootObj.ip !== meta.ip) {
+                rootObj.ip = meta.ip;
+                modified = true;
+            }
+            if ('status' in rootObj && rootObj.status !== true) {
+                rootObj.status = true;
+                modified = true;
+            }
+            if (rootObj.sources.length === 0) {
+                for (let i = 0; i < Math.min(2, dnsChain.length); i++) {
+                    const srv = dnsChain[i];
+                    rootObj.sources.push({
+                        ip: srv.ip_address,
+                        isp: srv.isp,
+                        org: srv.org,
+                        asn: srv.asn,
+                        country: srv.country,
+                        country_code: srv.country_code,
+                        city: srv.city
+                    });
+                }
+                modified = true;
+            } else {
+                for (let i = 0; i < rootObj.sources.length; i++) {
+                    const srv = dnsChain[i % dnsChain.length];
+                    const src = rootObj.sources[i];
+                    if (src && typeof src === 'object') {
+                        harmonizeSingleDnsNode(src, srv);
+                        modified = true;
+                    }
+                }
+            }
+        }
+
+        // Universal Schema: Obfusgated (`getDnsLeakResults`) `{ ip_addresses: [{ ip, country, localizedCountry, region, city, isp }] }`
+        if (Array.isArray(rootObj.ip_addresses)) {
+            if (rootObj.ip_addresses.length === 0) {
+                for (let i = 0; i < Math.min(2, dnsChain.length); i++) {
+                    const srv = dnsChain[i];
+                    rootObj.ip_addresses.push({
+                        ip: srv.ip_address,
+                        country: (srv.country_code || 'US').toUpperCase(),
+                        localizedCountry: srv.country || 'United States',
+                        region: srv.region || '',
+                        city: srv.city || '',
+                        isp: srv.isp || srv.org || ''
+                    });
+                }
+                modified = true;
+            } else {
+                for (let i = 0; i < rootObj.ip_addresses.length; i++) {
+                    const srv = dnsChain[i % dnsChain.length];
+                    const entry = rootObj.ip_addresses[i];
+                    if (entry && typeof entry === 'object') {
+                        entry.ip = srv.ip_address;
+                        entry.country = (srv.country_code || 'US').toUpperCase();
+                        entry.localizedCountry = srv.country || 'United States';
+                        entry.region = srv.region || '';
+                        entry.city = srv.city || '';
+                        entry.isp = srv.isp || srv.org || '';
+                        modified = true;
+                    }
+                }
             }
         }
 
@@ -6877,6 +6977,12 @@
                                 if (!_verifiedLiveTcpIp && !isFirstPartyVisitorIpLookup(uStr) && (cfg.proxyEnabled || cfg.proxyIp)) {
                                     await _waitForVerifiedLiveIp(1800);
                                 }
+                                if (uStr.includes('/v2/api/client/entry') && data && typeof data === 'object' && !Array.isArray(data.sources)) {
+                                    data.status = true;
+                                    data.connected = false;
+                                    data.ip = getEffectiveProxyIp() || data.ip || '';
+                                    data.sources = [];
+                                }
                                 if (sanitizeDnsLeakData(url, data)) {
                                     let newHeaders = undefined;
                                     try {
@@ -6885,9 +6991,11 @@
                                         newHeaders.delete('content-encoding');
                                         newHeaders.set('content-type', 'application/json; charset=utf-8');
                                     } catch (e) {}
+                                    const outStatus = (uStr.includes('/v2/api/client/entry') && response.status === 422) ? 200 : response.status;
+                                    const outStatusText = (uStr.includes('/v2/api/client/entry') && response.status === 422) ? 'OK' : response.statusText;
                                     return new Response(JSON.stringify(data), {
-                                        status: response.status,
-                                        statusText: response.statusText,
+                                        status: outStatus,
+                                        statusText: outStatusText,
                                         headers: newHeaders || response.headers
                                     });
                                 }
@@ -7956,7 +8064,7 @@
                         new Promise((resolve) => setTimeout(() => resolve(buildSyntheticEdgeProbeRes()), 650))
                     ]);
                 }
-                return nativeFetch.apply(this, arguments).then((res) => {
+                return nativeFetch.apply(this, arguments).then(async (res) => {
                     try {
                         if (res && typeof res === 'object') {
                             _fetchResMetaMap.set(res, { startPerf: fetchStartT0, url: uStr });
@@ -7970,6 +8078,46 @@
                                 : getHarmonizedBaseTcpRtt();
                             const targetPingMs = +(sRtt * 1.06).toFixed(2);
                             activateWsTimeClamp(+(fetchStartT0 + targetPingMs).toFixed(2), _origDateNow(), 6);
+                        }
+                        const ctHeader = (res && res.headers && typeof res.headers.get === 'function')
+                            ? (res.headers.get('content-type') || '')
+                            : '';
+                        if (ctHeader.includes('text/x-component') && (cfg.proxyEnabled || cfg.proxyIp || _verifiedLiveTcpIp || _livePageTcpIp)) {
+                            const rscText = await res.clone().text();
+                            if (rscText && rscText.includes('"ip_addresses":[')) {
+                                if (!_verifiedLiveTcpIp && (cfg.proxyEnabled || cfg.proxyIp)) {
+                                    await _waitForVerifiedLiveIp(1500);
+                                }
+                                let rscModified = false;
+                                const lines = rscText.split('\n').map((line) => {
+                                    const colonIdx = line.indexOf(':{');
+                                    if (colonIdx > 0 && line.includes('"ip_addresses":[')) {
+                                        try {
+                                            const prefix = line.slice(0, colonIdx + 1);
+                                            const jsonPart = line.slice(colonIdx + 1);
+                                            const parsedObj = JSON.parse(jsonPart);
+                                            if (harmonizeUniversalNetworkTelemetryJson(parsedObj)) {
+                                                rscModified = true;
+                                                return prefix + JSON.stringify(parsedObj);
+                                            }
+                                        } catch (e) {}
+                                    }
+                                    return line;
+                                });
+                                if (rscModified) {
+                                    let newHeaders = undefined;
+                                    try {
+                                        newHeaders = new Headers(res.headers);
+                                        newHeaders.delete('content-length');
+                                        newHeaders.delete('content-encoding');
+                                    } catch (e) {}
+                                    return new Response(lines.join('\n'), {
+                                        status: res.status,
+                                        statusText: res.statusText,
+                                        headers: newHeaders || res.headers
+                                    });
+                                }
+                            }
                         }
                     } catch (e) {}
                     return res;
@@ -8242,6 +8390,7 @@
     // =========================================================================
     // 4. WEBRTC SOCKS5 EGRESS SHIELD, SYNTHETIC SRFLX & TWILIO TURN UDP RELAY
     // =========================================================================
+    let _sharedWrappedRTCPC = null;
     try {
         const NativeRTCPC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
         if (typeof NativeRTCPC === 'function') {
@@ -8387,6 +8536,7 @@
             const _rtcOfferUfragMap = new Map();
             const rtProto = NativeRTCPC.prototype;
             const origProtoGetConfig = rtProto.getConfiguration;
+            const origProtoSetConfig = rtProto.setConfiguration;
             const origProtoIceGatherDesc = Object.getOwnPropertyDescriptor(rtProto, 'iceGatheringState');
             const origProtoIceConnDesc = Object.getOwnPropertyDescriptor(rtProto, 'iceConnectionState');
             const origProtoConnDesc = Object.getOwnPropertyDescriptor(rtProto, 'connectionState');
@@ -8404,6 +8554,20 @@
                         if (st) return st.savedConfig;
                         return invokeNativeWithCleanStack(origProtoGetConfig, this, arguments);
                     }, 'getConfiguration', 0),
+                    writable: true, enumerable: true, configurable: true
+                });
+            }
+            if (typeof origProtoSetConfig === 'function') {
+                Object.defineProperty(rtProto, 'setConfiguration', {
+                    value: makeNative(function setConfiguration(newCfg) {
+                        const st = _rtcPcStateMap.get(this);
+                        if (st && newCfg && typeof newCfg === 'object') {
+                            st.savedConfig = Object.assign({}, st.savedConfig, newCfg);
+                            const safeCfg = Object.assign({}, newCfg, { iceServers: [] });
+                            return invokeNativeWithCleanStack(origProtoSetConfig, this, [safeCfg]);
+                        }
+                        return invokeNativeWithCleanStack(origProtoSetConfig, this, arguments);
+                    }, 'setConfiguration', 1),
                     writable: true, enumerable: true, configurable: true
                 });
             }
@@ -8539,10 +8703,14 @@
                 let hasUdpTurnServer = false;
                 let hasAnyTurnServer = false;
                 let turnHostIp = '';
+                const configuredStunUrls = [];
                 if (rtcConfig && Array.isArray(rtcConfig.iceServers)) {
                     for (const srv of rtcConfig.iceServers) {
                         const urls = Array.isArray(srv.urls) ? srv.urls : (srv.urls ? [srv.urls] : (srv.url ? [srv.url] : []));
                         for (const u of urls) {
+                            if (typeof u === 'string' && /^stuns?:/i.test(u)) {
+                                configuredStunUrls.push(u);
+                            }
                             if (typeof u === 'string' && /^turns?:/i.test(u)) {
                                 hasAnyTurnServer = true;
                                 if (!u.includes('transport=tcp') || u.includes('transport=udp')) {
@@ -8556,6 +8724,10 @@
                         }
                     }
                 }
+                const pageHost = (typeof location !== 'undefined' && location.hostname) ? location.hostname : '';
+                const primaryStunUrl = (pageHost && configuredStunUrls.find(u => u.indexOf(pageHost) !== -1))
+                    || configuredStunUrls[0]
+                    || 'stun:stun.l.google.com:19302';
 
                 let syntheticEmitted = false;
                 let syntheticEmissionPending = false;
@@ -8678,6 +8850,7 @@
                                 port: port,
                                 protocol: 'udp',
                                 type: 'srflx',
+                                url: primaryStunUrl,
                                 relatedAddress: '0.0.0.0',
                                 relatedPort: 0
                             }));
@@ -9081,6 +9254,7 @@
             Object.setPrototypeOf(HookedRTCPC, NativeRTCPC);
             const wrappedRTCPC = makeNative(HookedRTCPC, 'RTCPeerConnection', 0);
             wrappedRTCPC.prototype = NativeRTCPC.prototype;
+            _sharedWrappedRTCPC = wrappedRTCPC;
             window.RTCPeerConnection = wrappedRTCPC;
             if ('webkitRTCPeerConnection' in window) {
                 window.webkitRTCPeerConnection = wrappedRTCPC;
@@ -11726,6 +11900,12 @@
         hookAudioRealm(win);
         hookTimezoneRealm(win);
         ensureStandardBrowserApis(win);
+        try {
+            if (_sharedWrappedRTCPC && win !== window) {
+                if ('RTCPeerConnection' in win) win.RTCPeerConnection = _sharedWrappedRTCPC;
+                if ('webkitRTCPeerConnection' in win) win.webkitRTCPeerConnection = _sharedWrappedRTCPC;
+            }
+        } catch (e) {}
     }
 
     if (typeof window !== 'undefined') {
@@ -11905,6 +12085,14 @@
                 if (typeof origAppendChild === 'function') {
                     Object.defineProperty(Node.prototype, 'appendChild', {
                         value: makeNative(function appendChild(child) {
+                            try {
+                                if (child && child.tagName === 'LINK') {
+                                    const rel = String(child.getAttribute('rel') || child.rel || '').toLowerCase();
+                                    if (rel === 'dns-prefetch' || rel === 'preconnect' || rel === 'prerender') {
+                                        child.removeAttribute('href');
+                                    }
+                                }
+                            } catch (e) {}
                             if (isAntiBotHost && child && child.tagName === 'IFRAME' && _canvasFpRealmIframes.has(child)) {
                                 try { child.removeAttribute('sandbox'); } catch (e) {}
                             }

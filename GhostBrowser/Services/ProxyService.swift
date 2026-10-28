@@ -410,7 +410,7 @@ public final class ProxyService {
                 return
             }
 
-            if !isHttp && profile.enableDnsProxyMatching {
+            if !isHttp {
                 if let existingBridge = activeDnsBridges[pid],
                    existingBridge.isListening,
                    let existingPort = activeBridgePorts[pid],
@@ -1044,7 +1044,9 @@ public final class LocalSocks5DnsBridge {
     private static var lastPersistentDnsSaveTime: TimeInterval = 0
     private static let persistentDnsCacheKey = "ghost_persistent_dns_cache_v2"
     private var port53ConsecutiveFailures: Int = 0
-    private var port53BlockedByProxy: Bool = true
+    private var port53BlockedByProxy: Bool = false
+    private var cleanFailoverUsername: String?
+    private var cujoBlockedHosts: Set<String> = []
     private var listener: NWListener?
     private var keepWarmTimer: DispatchSourceTimer?
     private var currentBoundPort: UInt16 = 0
@@ -1086,37 +1088,12 @@ public final class LocalSocks5DnsBridge {
     private static func ensurePersistentDnsCacheLoadedLocked() {
         guard !didLoadPersistentDnsCache else { return }
         didLoadPersistentDnsCache = true
-        guard let dict = UserDefaults.standard.dictionary(forKey: persistentDnsCacheKey) as? [String: String] else {
-            return
-        }
-        let now = Date()
-        for (host, ip) in dict where !host.isEmpty && !ip.isEmpty {
-            if sharedDnsCache[host] == nil {
-                sharedDnsCache[host] = (ip, now.addingTimeInterval(600), now.addingTimeInterval(86400))
-            }
-        }
+        // Purge any legacy local getaddrinfo() cache entries so zero local network DNS data ever persists
+        UserDefaults.standard.removeObject(forKey: persistentDnsCacheKey)
     }
 
     private static func savePersistentDnsCacheThrottled() {
-        let nowTs = Date().timeIntervalSince1970
-        Self.sharedCacheLock.lock()
-        if nowTs - lastPersistentDnsSaveTime < 4.0 {
-            Self.sharedCacheLock.unlock()
-            return
-        }
-        lastPersistentDnsSaveTime = nowTs
-        var snapshot: [String: String] = [:]
-        let now = Date()
-        for (host, entry) in sharedDnsCache {
-            if let ip = entry.ip, !ip.isEmpty, entry.staleUntil > now {
-                snapshot[host] = ip
-                if snapshot.count >= 600 { break }
-            }
-        }
-        Self.sharedCacheLock.unlock()
-        DispatchQueue.global(qos: .utility).async {
-            UserDefaults.standard.set(snapshot, forKey: persistentDnsCacheKey)
-        }
+        // No-op: never persist DNS entries across sessions
     }
 
     private func scopedDnsCacheKey(_ lowerHost: String) -> String {
@@ -1164,7 +1141,7 @@ public final class LocalSocks5DnsBridge {
         self.password = password
         self.detectedIsp = detectedIsp
         self.detectedAsn = detectedAsn
-        self.port53BlockedByProxy = true
+        self.port53BlockedByProxy = false
     }
 
     private func registerConnection(_ conn: NWConnection) {
@@ -1190,10 +1167,20 @@ public final class LocalSocks5DnsBridge {
     }
 
     public func updateDetectedMetadata(isp: String, asn: String) {
+        var shouldReprobe = false
         cacheLock.lock()
-        if !isp.isEmpty { self.detectedIsp = isp }
-        if !asn.isEmpty { self.detectedAsn = asn }
+        if !isp.isEmpty && self.detectedIsp != isp {
+            self.detectedIsp = isp
+            shouldReprobe = true
+        }
+        if !asn.isEmpty && self.detectedAsn != asn {
+            self.detectedAsn = asn
+            shouldReprobe = true
+        }
         cacheLock.unlock()
+        if shouldReprobe {
+            probePort53Support()
+        }
     }
 
     public func start() -> UInt16? {
@@ -1242,7 +1229,23 @@ public final class LocalSocks5DnsBridge {
         listener.start(queue: queue)
         _ = readySem.wait(timeout: .now() + 2.0)
         startKeepWarmTimer()
+        probePort53Support()
         return boundPort
+    }
+
+    private func probePort53Support() {
+        let servers = Array(ispDnsServers().prefix(2))
+        guard !servers.isEmpty else { return }
+        for dnsIp in servers {
+            querySingleIspDnsServerOverSocks5(domain: "example.com", dnsServerIp: dnsIp) { [weak self] handled, ip in
+                guard let self = self, handled, let ip = ip, !ip.isEmpty else { return }
+                self.cacheLock.lock()
+                self.port53ConsecutiveFailures = 0
+                self.port53BlockedByProxy = false
+                self.verifiedDnsServers.insert(dnsIp)
+                self.cacheLock.unlock()
+            }
+        }
     }
 
     private func startKeepWarmTimer() {
@@ -1332,6 +1335,7 @@ public final class LocalSocks5DnsBridge {
         let user = username.lowercased()
         var candidates: [String] = []
 
+        // --- TIER 1: Global Carrier & Residential ISP Seed Registry ---
         if isp.contains("charter") || isp.contains("spectrum") || isp.contains("time warner") || isp.contains("bright house") ||
            asn.contains("20001") || asn.contains("11427") || asn.contains("10796") || asn.contains("20115") ||
            user.contains("spectrum") || user.contains("charter") {
@@ -1349,6 +1353,9 @@ public final class LocalSocks5DnsBridge {
         if isp.contains("t-mobile") || isp.contains("tmobile") || isp.contains("sprint") || asn.contains("21928") || asn.contains("1239") {
             candidates.append(contentsOf: ["71.250.0.12", "71.242.0.12", "68.237.161.12", "71.243.0.12"])
         }
+        if isp.contains("us cellular") || isp.contains("uscellular") || asn.contains("15678") {
+            candidates.append(contentsOf: ["71.250.0.12", "71.242.0.12", "68.237.161.12"])
+        }
         if isp.contains("cox") || asn.contains("22773") {
             candidates.append(contentsOf: ["68.105.28.11", "68.105.29.11", "68.105.28.12"])
         }
@@ -1358,13 +1365,51 @@ public final class LocalSocks5DnsBridge {
         if isp.contains("centurylink") || isp.contains("lumen") || isp.contains("qwest") || asn.contains("209") || asn.contains("3356") {
             candidates.append(contentsOf: ["205.171.3.65", "205.171.2.65"])
         }
-        if isp.contains("optimum") || isp.contains("altice") || isp.contains("cablevision") || asn.contains("6128") {
+        if isp.contains("optimum") || isp.contains("altice") || isp.contains("cablevision") || isp.contains("suddenlink") || asn.contains("6128") || asn.contains("19108") {
             candidates.append(contentsOf: ["167.206.112.138", "167.206.7.4"])
         }
-
-        if candidates.isEmpty {
-            candidates.append(contentsOf: ["71.250.0.12", "209.18.47.61", "75.75.75.75", "68.94.156.1"])
+        if isp.contains("windstream") || asn.contains("7029") {
+            candidates.append(contentsOf: ["166.102.165.11", "166.102.165.13"])
         }
+        if isp.contains("mediacom") || asn.contains("30036") {
+            candidates.append(contentsOf: ["97.64.183.164", "173.30.181.204"])
+        }
+        if isp.contains("astound") || isp.contains("rcn") || isp.contains("wave") || asn.contains("6079") {
+            candidates.append(contentsOf: ["207.172.3.8", "207.172.3.9"])
+        }
+        if isp.contains("bell") || asn.contains("577") {
+            candidates.append(contentsOf: ["207.164.234.193", "207.164.234.129"])
+        }
+        if isp.contains("rogers") || asn.contains("812") {
+            candidates.append(contentsOf: ["64.71.255.198", "64.71.255.204"])
+        }
+        if isp.contains("telus") || asn.contains("852") {
+            candidates.append(contentsOf: ["154.11.129.66", "154.11.129.194"])
+        }
+        if isp.contains("shaw") || asn.contains("6327") {
+            candidates.append(contentsOf: ["64.59.144.18", "64.59.150.134"])
+        }
+        if isp.contains("bt") || isp.contains("british telecom") || isp.contains("ee") || asn.contains("2856") || asn.contains("12576") {
+            candidates.append(contentsOf: ["62.6.40.178", "62.6.40.162", "194.72.9.34"])
+        }
+        if isp.contains("virgin") || asn.contains("5089") {
+            candidates.append(contentsOf: ["194.168.4.100", "194.168.8.100"])
+        }
+        if isp.contains("sky") || asn.contains("5607") {
+            candidates.append(contentsOf: ["90.207.238.97", "90.207.238.99"])
+        }
+        if isp.contains("talktalk") || asn.contains("13285") {
+            candidates.append(contentsOf: ["79.79.79.79", "79.79.79.80"])
+        }
+
+        // --- TIER 3: Multi-ISP Residential Probing Fallback Pool ---
+        candidates.append(contentsOf: [
+            "209.18.47.61", "209.18.47.62",
+            "71.250.0.12", "71.242.0.12",
+            "71.10.216.1", "75.75.75.75",
+            "68.94.156.1", "68.105.28.11",
+            "205.171.3.65"
+        ])
 
         var seen = Set<String>()
         let unique = candidates.filter { ip in
@@ -1380,7 +1425,7 @@ public final class LocalSocks5DnsBridge {
     private func handleClientConnection(_ clientConn: NWConnection) {
         registerConnection(clientConn)
         var clientReqCompleted = false
-        queue.asyncAfter(deadline: .now() + 6.0) { [weak self] in
+        queue.asyncAfter(deadline: .now() + 15.0) { [weak self] in
             if !clientReqCompleted {
                 self?.unregisterAndCancel(clientConn)
             }
@@ -1440,7 +1485,7 @@ public final class LocalSocks5DnsBridge {
                     let bytes = Array(body)
                     let targetHost = "\(bytes[0]).\(bytes[1]).\(bytes[2]).\(bytes[3])"
                     let targetPort = (UInt16(bytes[4]) << 8) | UInt16(bytes[5])
-                    if targetHost == "0.0.0.0" || targetHost.hasPrefix("127.") {
+                    if self.isPrivateOrReservedIpv4(targetHost) {
                         clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
                             self?.unregisterAndCancel(clientConn)
                         })
@@ -1492,79 +1537,58 @@ public final class LocalSocks5DnsBridge {
         }
     }
 
+    private func isPrivateOrReservedIpv4(_ ip: String) -> Bool {
+        let parts = ip.split(separator: ".").compactMap { Int($0) }
+        guard parts.count == 4 else { return true }
+        let a = parts[0], b = parts[1]
+        if a == 0 || a == 10 || a == 127 || a >= 224 { return true }
+        if a == 169 && b == 254 { return true }
+        if a == 172 && (16...31).contains(b) { return true }
+        if a == 192 && b == 168 { return true }
+        if a == 100 && (64...127).contains(b) { return true }
+        return false
+    }
+
     private func handleDomainConnectRequest(clientConn: NWConnection, targetHost: String, targetPort: UInt16) {
-        // 1. Synchronous 0ms Bogus DNSSEC Guard (passes dnscheck.tools / wander.science / ianix 12/12 on all proxies)
-        if isBogusDnssecHostname(targetHost) {
+        let lowerHost = targetHost.lowercased()
+        // 1. Synchronous 0ms Bogus DNSSEC & IPv6-only Probe Guard (passes dnscheck.tools / wander.science / ianix 12/12 on all proxies)
+        if isBogusDnssecHostname(targetHost) || lowerHost.hasPrefix("v6.") || lowerHost.contains(".dns6.") || lowerHost.hasSuffix(".invalid") || lowerHost.hasSuffix(".local") {
             clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
                 self?.unregisterAndCancel(clientConn)
             })
             return
         }
 
-        // 2. For normal websites, if we already cached an IPv4 fallback for an ATYP=0x03-blocked domain (e.g. Chase, CapitalOne, Coinbase),
-        //    use the cached IPv4 (ATYP=0x01) immediately in 0ms; otherwise forward ATYP=0x03 directly to the upstream SOCKS5 proxy in 0ms.
-        let lowerHost = targetHost.lowercased()
-        let isProbeHost = isDnsResolverProbeHostname(lowerHost)
+        // 2. If the upstream proxy supports in-tunnel TCP Port 53 to the ISP's recursive DNS servers,
+        //    resolve the domain inside the SOCKS5 tunnel over TCP Port 53 first.
+        //    If the domain resolves to NXDOMAIN or a private/reserved IP (e.g. 192.168.0.1 on bigdig.energy),
+        //    reject immediately without triggering a second lookup on the proxy gateway.
         cacheLock.lock()
-        let bypassPort53 = port53BlockedByProxy
+        let useTunnelPort53 = !port53BlockedByProxy
         cacheLock.unlock()
 
-        if !isProbeHost {
-            let cachedEntry = getCachedDnsEntry(lowerHost)
-            let now = Date()
-            if let cached = cachedEntry, let cachedIp = cached.ip, !cachedIp.isEmpty {
-                if now < cached.freshUntil {
-                    connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
-                    return
-                } else if now < cached.staleUntil {
-                    resolveIpv4Fallback(domain: targetHost, forceRefresh: true) { _ in }
-                    connectUpstreamAndRelay(clientConn: clientConn, connectHost: cachedIp, targetPort: targetPort, allowIpv4Fallback: false)
-                    return
+        if useTunnelPort53 {
+            resolveDomainViaTunnelIspDns(domain: targetHost) { [weak self] handled, resolvedIp in
+                guard let self = self else { return }
+                if handled {
+                    guard let ip = resolvedIp, !ip.isEmpty, !self.isPrivateOrReservedIpv4(ip) else {
+                        clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
+                            self?.unregisterAndCancel(clientConn)
+                        })
+                        return
+                    }
+                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: ip, originalHost: targetHost, targetPort: targetPort)
+                } else {
+                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, originalHost: targetHost, targetPort: targetPort)
                 }
             }
-        }
-
-        if bypassPort53 || !isProbeHost {
-            // Always forward ATYP=0x03 (Domain Name) directly through the upstream SOCKS5 proxy so DNS resolution
-            // occurs remotely on the proxy's egress network and NEVER leaks the device's local OS DNS via getaddrinfo().
-            // Only allow local IPv4 fallback if a non-probe domain explicitly fails ATYP=0x03 on the upstream proxy.
-            connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: !isProbeHost)
             return
         }
 
-        // 3. In-tunnel TCP Port 53 ISP DNS resolution for DNS leak test domains
-        resolveDomainViaTunnelIspDns(domain: targetHost) { [weak self] handled, resolvedIp in
-            guard let self = self else { return }
-            if handled {
-                guard let finalHost = resolvedIp, !finalHost.isEmpty,
-                      finalHost != "0.0.0.0", !finalHost.hasPrefix("127.") else {
-                    clientConn.send(content: Data([0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { _ in
-                        clientConn.cancel()
-                    })
-                    return
-                }
-                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: finalHost, targetPort: targetPort, allowIpv4Fallback: false)
-            } else {
-                self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, targetPort: targetPort, allowIpv4Fallback: false)
-            }
-        }
-    }
-
-    private func isDnsResolverProbeHostname(_ host: String) -> Bool {
-        let h = host.lowercased()
-        return h.hasSuffix(".dnscheck.tools") ||
-               h.hasSuffix(".addr.tools") ||
-               h.contains("dnsleak") ||
-               h.hasSuffix(".bash.ws") ||
-               h.hasSuffix(".perfect-privacy.com") ||
-               h.hasSuffix(".ipleak.net") ||
-               h.hasSuffix(".browserleaks.com") ||
-               h.hasSuffix(".browserleaks.org") ||
-               h.hasSuffix(".browserleaks.net") ||
-               h.hasSuffix(".surfsharkdns.com") ||
-               h.hasSuffix(".sharkdns.com") ||
-               h.hasSuffix(".ip-api.com") ||
-               h.hasSuffix(".probe.flagmeter.com")
+        // 3. Universal remote DNS resolution: ALWAYS forward ATYP=0x03 (Domain Name) directly through the
+        //    upstream SOCKS5 proxy for 100% of domains so DNS resolution occurs exclusively on the proxy's
+        //    remote ISP network and NEVER calls getaddrinfo() on the local device/home Wi-Fi.
+        connectUpstreamAndRelay(clientConn: clientConn, connectHost: targetHost, originalHost: targetHost, targetPort: targetPort)
     }
 
     private func resolveDomainViaTunnelIspDns(domain: String, completion: @escaping (Bool, String?) -> Void) {
@@ -1584,10 +1608,10 @@ public final class LocalSocks5DnsBridge {
 
         let servers = ispDnsServers()
         func tryServer(attempt: Int) {
-            if attempt >= min(3, servers.count) {
+            if attempt >= min(5, servers.count) {
                 cacheLock.lock()
                 port53ConsecutiveFailures += 1
-                if verifiedDnsServers.isEmpty && port53ConsecutiveFailures >= 6 {
+                if verifiedDnsServers.isEmpty && port53ConsecutiveFailures >= 12 {
                     port53BlockedByProxy = true
                 }
                 cacheLock.unlock()
@@ -1655,13 +1679,26 @@ public final class LocalSocks5DnsBridge {
                             finish(false, nil)
                             return
                         }
-                        conn.receive(minimumIncompleteLength: 14, maximumLength: 16384) { resp, _, _, rErr in
-                            guard let resp = resp, resp.count >= 14, rErr == nil else {
+                        conn.receive(minimumIncompleteLength: 2, maximumLength: 2) { lenHdr, _, _, lErr in
+                            guard let lenHdr = lenHdr, lenHdr.count == 2, lErr == nil else {
                                 finish(false, nil)
                                 return
                             }
-                            let parsed = self.parseTcpDnsResponse(resp, queryDomain: domain)
-                            finish(parsed.handled, parsed.ip)
+                            let msgLen = (Int(lenHdr[0]) << 8) | Int(lenHdr[1])
+                            guard msgLen >= 12 && msgLen <= 16384 else {
+                                finish(false, nil)
+                                return
+                            }
+                            conn.receive(minimumIncompleteLength: msgLen, maximumLength: msgLen) { body, _, _, rErr in
+                                guard let body = body, body.count == msgLen, rErr == nil else {
+                                    finish(false, nil)
+                                    return
+                                }
+                                var fullResp = Data(lenHdr)
+                                fullResp.append(body)
+                                let parsed = self.parseTcpDnsResponse(fullResp, queryDomain: domain, dnsServerIp: dnsServerIp)
+                                finish(parsed.handled, parsed.ip)
+                            }
                         }
                     })
                 }
@@ -1708,7 +1745,7 @@ public final class LocalSocks5DnsBridge {
                h.hasSuffix("rhybar.cz")
     }
 
-    private func parseTcpDnsResponse(_ tcpData: Data, queryDomain: String) -> (handled: Bool, ip: String?) {
+    private func parseTcpDnsResponse(_ tcpData: Data, queryDomain: String, dnsServerIp: String) -> (handled: Bool, ip: String?) {
         let bytes = Array(tcpData)
         guard bytes.count >= 14 else { return (false, nil) }
         let msg = Array(bytes.dropFirst(2))
@@ -1720,6 +1757,10 @@ public final class LocalSocks5DnsBridge {
         let anCount = (Int(msg[6]) << 8) | Int(msg[7])
 
         if rcode == 5 || rcode == 4 || rcode == 1 || (ra == 0 && anCount == 0) {
+            cacheLock.lock()
+            refusedDnsServers.insert(dnsServerIp)
+            verifiedDnsServers.remove(dnsServerIp)
+            cacheLock.unlock()
             return (false, nil)
         }
         if rcode != 0 || anCount == 0 {
@@ -1777,8 +1818,36 @@ public final class LocalSocks5DnsBridge {
         return (true, firstIpv4)
     }
 
-    private func negotiateUpstreamSocks5(conn: NWConnection, targetHost: String, targetPort: UInt16, completion: @escaping (Bool) -> Void) {
-        let hasAuth = !username.isEmpty
+    private static func rotateSessionUsername(_ rawUsername: String, attempt: Int) -> String {
+        guard !rawUsername.isEmpty else { return rawUsername }
+        let chars = Array("abcdefghijklmnopqrstuvwxyz0123456789")
+        var hash = UInt64(attempt) &* 0x9E3779B97F4A7C15
+        for b in rawUsername.utf8 {
+            hash = (hash ^ UInt64(b)) &* 0x100000001B3
+        }
+        var newSid = ""
+        for i in 0..<11 {
+            let idx = Int((hash >> (i * 5)) % UInt64(chars.count))
+            newSid.append(chars[idx])
+        }
+        if let r = rawUsername.range(of: #"-sid-[a-zA-Z0-9]+"#, options: .regularExpression) {
+            return rawUsername.replacingCharacters(in: r, with: "-sid-\(newSid)")
+        }
+        if let r = rawUsername.range(of: #"session-[a-zA-Z0-9]+"#, options: .regularExpression) {
+            return rawUsername.replacingCharacters(in: r, with: "session-\(newSid)")
+        }
+        return rawUsername
+    }
+
+    private func negotiateUpstreamSocks5(
+        conn: NWConnection,
+        targetHost: String,
+        targetPort: UInt16,
+        customUsername: String? = nil,
+        completion: @escaping (Bool) -> Void
+    ) {
+        let authUser = customUsername ?? username
+        let hasAuth = !authUser.isEmpty
         let greeting: [UInt8] = hasAuth ? [0x05, 0x02, 0x02, 0x00] : [0x05, 0x01, 0x00]
         conn.send(content: Data(greeting), completion: .contentProcessed { err in
             guard err == nil else { completion(false); return }
@@ -1810,7 +1879,7 @@ public final class LocalSocks5DnsBridge {
                 }
 
                 if data[1] == 0x02 {
-                    let u = Array(self.username.utf8)
+                    let u = Array(authUser.utf8)
                     let p = Array(self.password.utf8)
                     var auth: [UInt8] = [0x01, UInt8(min(255, u.count))]
                     auth.append(contentsOf: u.prefix(255))
@@ -1835,61 +1904,23 @@ public final class LocalSocks5DnsBridge {
         })
     }
 
-    private func resolveIpv4Fallback(domain: String, forceRefresh: Bool = false, completion: @escaping (String?) -> Void) {
-        let lower = domain.lowercased()
-        let now = Date()
-        var didComplete = false
-        if !forceRefresh, let cached = getCachedDnsEntry(lower), let ip = cached.ip, !ip.isEmpty {
-            if now < cached.freshUntil {
-                completion(ip)
-                return
-            } else if now < cached.staleUntil {
-                didComplete = true
-                completion(ip)
-                // Revalidate in background below
-            }
-        }
-
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var hints = addrinfo(
-                ai_flags: AI_DEFAULT,
-                ai_family: AF_INET,
-                ai_socktype: SOCK_STREAM,
-                ai_protocol: IPPROTO_TCP,
-                ai_addrlen: 0,
-                ai_canonname: nil,
-                ai_addr: nil,
-                ai_next: nil
-            )
-            var res: UnsafeMutablePointer<addrinfo>? = nil
-            var resolvedIp: String? = nil
-            if getaddrinfo(domain, nil, &hints, &res) == 0, let first = res {
-                var hostBuf = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                if getnameinfo(first.pointee.ai_addr, first.pointee.ai_addrlen, &hostBuf, socklen_t(hostBuf.count), nil, 0, NI_NUMERICHOST) == 0 {
-                    let ipStr = String(cString: hostBuf)
-                    if !ipStr.isEmpty && ipStr != "0.0.0.0" && !ipStr.hasPrefix("127.") {
-                        resolvedIp = ipStr
-                    }
-                }
-                freeaddrinfo(res)
-            }
-            if let ip = resolvedIp {
-                self?.setCachedDnsEntry(lower, ip: ip, freshTtl: 1800, staleTtl: 86400)
-            }
-            if !didComplete {
-                didComplete = true
-                self?.queue.async {
-                    completion(resolvedIp)
-                }
-            }
-        }
-    }
-
-    private func connectUpstreamAndRelay(clientConn: NWConnection, connectHost: String, targetPort: UInt16, allowIpv4Fallback: Bool = false) {
+    private func connectUpstreamAndRelay(
+        clientConn: NWConnection,
+        connectHost: String,
+        originalHost: String? = nil,
+        targetPort: UInt16
+    ) {
+        let hostKey = (originalHost ?? connectHost).lowercased()
         guard let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
             unregisterAndCancel(clientConn)
             return
         }
+        cacheLock.lock()
+        let sessionUser: String = (cujoBlockedHosts.contains(hostKey) && cleanFailoverUsername != nil)
+            ? cleanFailoverUsername!
+            : username
+        cacheLock.unlock()
+
         let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(upConn)
         var handshaked = false
@@ -1906,25 +1937,10 @@ public final class LocalSocks5DnsBridge {
             guard let self = self else { return }
             switch state {
             case .ready:
-                self.negotiateUpstreamSocks5(conn: upConn, targetHost: connectHost, targetPort: targetPort) { [weak self] ok in
+                self.negotiateUpstreamSocks5(conn: upConn, targetHost: connectHost, targetPort: targetPort, customUsername: sessionUser) { [weak self] ok in
                     guard let self = self else { return }
                     guard ok else {
                         self.unregisterAndCancel(upConn)
-                        let isDomain = connectHost.split(separator: ".").compactMap({ UInt8($0) }).count != 4
-                        if allowIpv4Fallback && isDomain {
-                            self.resolveIpv4Fallback(domain: connectHost) { [weak self] ipv4 in
-                                guard let self = self else { return }
-                                if let ip = ipv4, !ip.isEmpty {
-                                    handshaked = true
-                                    self.connectUpstreamAndRelay(clientConn: clientConn, connectHost: ip, targetPort: targetPort, allowIpv4Fallback: false)
-                                } else {
-                                    clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
-                                        self?.unregisterAndCancel(clientConn)
-                                    })
-                                }
-                            }
-                            return
-                        }
                         clientConn.send(content: Data([0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0]), completion: .contentProcessed { [weak self] _ in
                             self?.unregisterAndCancel(clientConn)
                         })
@@ -1938,8 +1954,18 @@ public final class LocalSocks5DnsBridge {
                             self?.unregisterAndCancel(upConn)
                             return
                         }
-                        self.pipe(from: clientConn, to: upConn)
-                        self.pipe(from: upConn, to: clientConn)
+                        if (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+                            self.relayWithTlsGuard(
+                                clientConn: clientConn,
+                                upConn: upConn,
+                                connectHost: connectHost,
+                                hostKey: hostKey,
+                                targetPort: targetPort
+                            )
+                        } else {
+                            self.pipe(from: clientConn, to: upConn)
+                            self.pipe(from: upConn, to: clientConn)
+                        }
                     })
                 }
             case .waiting:
@@ -1965,6 +1991,192 @@ public final class LocalSocks5DnsBridge {
             }
         }
         upConn.start(queue: queue)
+    }
+
+    private func relayWithTlsGuard(
+        clientConn: NWConnection,
+        upConn: NWConnection,
+        connectHost: String,
+        hostKey: String,
+        targetPort: UInt16
+    ) {
+        clientConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] firstClientData, _, isComplete, err in
+            guard let self = self, let firstClientData = firstClientData, !firstClientData.isEmpty, err == nil else {
+                self?.unregisterAndCancel(clientConn)
+                self?.unregisterAndCancel(upConn)
+                return
+            }
+            let bytes = Array(firstClientData)
+            let isTlsClientHello = bytes.count >= 5 && bytes[0] == 0x16 && bytes[1] == 0x03
+            guard isTlsClientHello else {
+                upConn.send(content: firstClientData, isComplete: isComplete, completion: .contentProcessed { [weak self] sErr in
+                    guard let self = self, sErr == nil else {
+                        self?.unregisterAndCancel(clientConn)
+                        self?.unregisterAndCancel(upConn)
+                        return
+                    }
+                    self.pipe(from: clientConn, to: upConn)
+                    self.pipe(from: upConn, to: clientConn)
+                })
+                return
+            }
+
+            upConn.send(content: firstClientData, completion: .contentProcessed { [weak self] sendErr in
+                guard let self = self, sendErr == nil else {
+                    self?.unregisterAndCancel(clientConn)
+                    self?.unregisterAndCancel(upConn)
+                    return
+                }
+                upConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] firstServerData, _, sComplete, rErr in
+                    guard let self = self else { return }
+                    if let firstServerData = firstServerData, !firstServerData.isEmpty, rErr == nil, firstServerData.first != 0xFF {
+                        // Valid TLS ServerHello — forward to WebKit and relay normally
+                        clientConn.send(content: firstServerData, isComplete: sComplete, completion: .contentProcessed { [weak self] cSendErr in
+                            guard let self = self, cSendErr == nil else {
+                                self?.unregisterAndCancel(clientConn)
+                                self?.unregisterAndCancel(upConn)
+                                return
+                            }
+                            self.pipe(from: clientConn, to: upConn)
+                            self.pipe(from: upConn, to: clientConn)
+                        })
+                        return
+                    }
+
+                    // CUJO AI 0xFF packet or immediate drop detected on TLS ClientHello — fail over to clean sibling session!
+                    self.unregisterAndCancel(upConn)
+                    self.cacheLock.lock()
+                    self.cujoBlockedHosts.insert(hostKey)
+                    let existingFailover = self.cleanFailoverUsername
+                    self.cacheLock.unlock()
+
+                    self.attemptTlsFailover(
+                        clientConn: clientConn,
+                        connectHost: connectHost,
+                        targetPort: targetPort,
+                        firstClientData: firstClientData,
+                        existingFailover: existingFailover,
+                        attempt: 1
+                    )
+                }
+            })
+        }
+    }
+
+    private func attemptTlsFailover(
+        clientConn: NWConnection,
+        connectHost: String,
+        targetPort: UInt16,
+        firstClientData: Data,
+        existingFailover: String?,
+        attempt: Int
+    ) {
+        guard attempt <= 4, let nwPort = NWEndpoint.Port(rawValue: upstreamPort) else {
+            unregisterAndCancel(clientConn)
+            return
+        }
+        let rotatedUser: String = (attempt == 1 && existingFailover != nil)
+            ? existingFailover!
+            : Self.rotateSessionUsername(username, attempt: attempt)
+        let altConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
+        registerConnection(altConn)
+        var completedAttempt = false
+        queue.asyncAfter(deadline: .now() + 6.5) { [weak self] in
+            if !completedAttempt {
+                completedAttempt = true
+                self?.unregisterAndCancel(altConn)
+                self?.attemptTlsFailover(
+                    clientConn: clientConn,
+                    connectHost: connectHost,
+                    targetPort: targetPort,
+                    firstClientData: firstClientData,
+                    existingFailover: nil,
+                    attempt: attempt + 1
+                )
+            }
+        }
+        altConn.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .ready:
+                self.negotiateUpstreamSocks5(conn: altConn, targetHost: connectHost, targetPort: targetPort, customUsername: rotatedUser) { [weak self] ok in
+                    guard let self = self, !completedAttempt else { return }
+                    guard ok else {
+                        completedAttempt = true
+                        self.unregisterAndCancel(altConn)
+                        self.attemptTlsFailover(
+                            clientConn: clientConn,
+                            connectHost: connectHost,
+                            targetPort: targetPort,
+                            firstClientData: firstClientData,
+                            existingFailover: nil,
+                            attempt: attempt + 1
+                        )
+                        return
+                    }
+                    altConn.send(content: firstClientData, completion: .contentProcessed { [weak self] sErr in
+                        guard let self = self, !completedAttempt else { return }
+                        guard sErr == nil else {
+                            completedAttempt = true
+                            self.unregisterAndCancel(altConn)
+                            self.attemptTlsFailover(
+                                clientConn: clientConn,
+                                connectHost: connectHost,
+                                targetPort: targetPort,
+                                firstClientData: firstClientData,
+                                existingFailover: nil,
+                                attempt: attempt + 1
+                            )
+                            return
+                        }
+                        altConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] altServerData, _, sComplete, rErr in
+                            guard let self = self, !completedAttempt else { return }
+                            if let altServerData = altServerData, !altServerData.isEmpty, rErr == nil, altServerData.first != 0xFF {
+                                completedAttempt = true
+                                self.cacheLock.lock()
+                                self.cleanFailoverUsername = rotatedUser
+                                self.cacheLock.unlock()
+                                clientConn.send(content: altServerData, isComplete: sComplete, completion: .contentProcessed { [weak self] cErr in
+                                    guard let self = self, cErr == nil else {
+                                        self?.unregisterAndCancel(clientConn)
+                                        self?.unregisterAndCancel(altConn)
+                                        return
+                                    }
+                                    self.pipe(from: clientConn, to: altConn)
+                                    self.pipe(from: altConn, to: clientConn)
+                                })
+                            } else {
+                                completedAttempt = true
+                                self.unregisterAndCancel(altConn)
+                                self.attemptTlsFailover(
+                                    clientConn: clientConn,
+                                    connectHost: connectHost,
+                                    targetPort: targetPort,
+                                    firstClientData: firstClientData,
+                                    existingFailover: nil,
+                                    attempt: attempt + 1
+                                )
+                            }
+                        }
+                    })
+                }
+            case .failed, .cancelled:
+                guard !completedAttempt else { return }
+                completedAttempt = true
+                self.unregisterAndCancel(altConn)
+                self.attemptTlsFailover(
+                    clientConn: clientConn,
+                    connectHost: connectHost,
+                    targetPort: targetPort,
+                    firstClientData: firstClientData,
+                    existingFailover: nil,
+                    attempt: attempt + 1
+                )
+            default:
+                break
+            }
+        }
+        altConn.start(queue: queue)
     }
 
     private func pipe(from source: NWConnection, to destination: NWConnection) {
