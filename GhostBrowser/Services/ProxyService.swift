@@ -1929,20 +1929,20 @@ public final class LocalSocks5DnsBridge {
             return
         }
         cacheLock.lock()
-        let sessionUser: String = failoverAttempt > 0
-            ? Self.rotateSessionUsername(username, attempt: failoverAttempt)
-            : ((cujoBlockedHosts.contains(hostKey) && cleanFailoverUsername != nil) ? cleanFailoverUsername! : username)
+        let sessionUser: String = (cujoBlockedHosts.contains(hostKey) && cleanFailoverUsername != nil)
+            ? cleanFailoverUsername!
+            : username
         cacheLock.unlock()
 
         let upConn = NWConnection(host: NWEndpoint.Host(upstreamHost), port: nwPort, using: Self.makeLowLatencyTcpParams())
         registerConnection(upConn)
         var handshaked = false
-        let timeoutSec: Double = failoverAttempt == 0 ? 3.5 : 5.0
+        let timeoutSec: Double = failoverAttempt == 0 ? 6.5 : 6.0
         queue.asyncAfter(deadline: .now() + timeoutSec) { [weak self] in
             guard let self = self, !handshaked else { return }
             handshaked = true
             self.unregisterAndCancel(upConn)
-            if failoverAttempt < 3 && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+            if failoverAttempt < 2 {
                 self.connectUpstreamAndRelay(
                     clientConn: clientConn,
                     connectHost: connectHost,
@@ -1966,7 +1966,7 @@ public final class LocalSocks5DnsBridge {
                     guard ok else {
                         handshaked = true
                         self.unregisterAndCancel(upConn)
-                        if failoverAttempt < 3 && (targetPort == 443 || targetPort == 8443) && self.username.lowercased().contains("-sid-") {
+                        if failoverAttempt < 2 {
                             self.connectUpstreamAndRelay(
                                 clientConn: clientConn,
                                 connectHost: connectHost,
@@ -1982,12 +1982,6 @@ public final class LocalSocks5DnsBridge {
                         return
                     }
                     handshaked = true
-                    if failoverAttempt > 0 {
-                        self.cacheLock.lock()
-                        self.cujoBlockedHosts.insert(hostKey)
-                        self.cleanFailoverUsername = sessionUser
-                        self.cacheLock.unlock()
-                    }
                     self.markTrafficActivity()
                     clientConn.send(content: Data([0x05, 0x00, 0x00, 0x01, 127, 0, 0, 1, 0, 0]), completion: .contentProcessed { [weak self] err in
                         guard let self = self, err == nil else {
@@ -2124,10 +2118,7 @@ public final class LocalSocks5DnsBridge {
                             sBytes[0] == 0xFF &&
                             sBytes[1] == 0xFF &&
                             sBytes[2] == 0xFF &&
-                            sBytes[3] == 0xFF) ||
-                            (sBytes.count >= 5 &&
-                             sBytes[0] == 0x15 &&
-                             sBytes[1] == 0x03)
+                            sBytes[3] == 0xFF)
 
                         if !isCujoBlockPacket {
                             // Valid TLS ServerHello — forward to WebKit and relay normally
@@ -2232,7 +2223,7 @@ public final class LocalSocks5DnsBridge {
                         }
                         altConn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] altServerData, _, sComplete, rErr in
                             guard let self = self, !completedAttempt else { return }
-                            if let altServerData = altServerData, !altServerData.isEmpty, rErr == nil, altServerData.first != 0xFF, altServerData.first != 0x15 {
+                            if let altServerData = altServerData, !altServerData.isEmpty, rErr == nil, altServerData.first != 0xFF {
                                 completedAttempt = true
                                 self.cacheLock.lock()
                                 self.cleanFailoverUsername = rotatedUser

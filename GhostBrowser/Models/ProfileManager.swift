@@ -375,28 +375,35 @@ public class ProfileManager: ObservableObject {
 
     @discardableResult
     public func regenerateProfileDevice(id: UUID, privacyProfile: PrivacyProfile? = nil) -> AppleDeviceProfile {
-        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return .iPadProM4_13 }
+        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return .nativeHost }
         let current = profiles[index].deviceProfile
-        let pool: [AppleDeviceProfile] = [
+        let isPadHost = UIDevice.current.userInterfaceIdiom == .pad
+        let padPool: [AppleDeviceProfile] = [
+            .nativeHost,
             .iPadProM4_13,
             .iPadProM4_11,
+            .iPadAirM3_13,
             .iPadAirM3_11,
             .iPadAirM2_11,
             .iPad11_A16,
             .iPad10_A14,
             .iPadMini7_A17Pro,
+            .iPadMini6_A15
+        ]
+        let phonePool: [AppleDeviceProfile] = [
+            .nativeHost,
             .iPhone18ProMax_A20,
             .iPhone17ProMax_A19,
+            .iPhone17Pro_A19,
+            .iPhone17Air_A19,
+            .iPhone17_A19,
             .iPhone16ProMax_A18,
             .iPhone16Pro_A18,
             .iPhone16_A18,
-            .iPhone15ProMax_A17,
-            .macBookProM4Max_16,
-            .macBookProM4Pro_14,
-            .macBookAirM3_13,
-            .iPadMini6_A15
+            .iPhone15ProMax_A17
         ]
-        let candidate = pool.filter { $0 != current }.randomElement() ?? .iPadProM4_11
+        let pool = isPadHost ? padPool : phonePool
+        let candidate = pool.filter { $0 != current }.randomElement() ?? .nativeHost
         profiles[index].deviceProfile = candidate
         profiles[index].sessionSeed = uniqueRandomSeed()
         profiles[index].buildIndex = Int.random(in: 0...4)
@@ -434,6 +441,7 @@ public class ProfileManager: ObservableObject {
             }
         }
         store.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast) {}
+        ProxyService.shared.invalidateDataStore(for: dedicated)
         if #available(iOS 17.0, *) {
             WKWebsiteDataStore.remove(forIdentifier: id) { _ in }
         }

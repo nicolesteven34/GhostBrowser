@@ -166,6 +166,13 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
     }
 
     public func userAgent(buildIndex: Int = 0) -> String {
+        let isPadHost = UIDevice.current.userInterfaceIdiom == .pad
+        if isPadHost && isIPhonePreset {
+            return Self.nativeHostSafariUserAgent(buildIndex: buildIndex)
+        }
+        if !isPadHost && !isIPhonePreset {
+            return Self.nativeHostSafariUserAgent(buildIndex: buildIndex)
+        }
         switch self {
         case .nativeHost:
             return Self.nativeHostSafariUserAgent(buildIndex: buildIndex)
@@ -285,29 +292,14 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
     }
 
     public var preferredContentMode: WKWebpagePreferences.ContentMode {
-        if isIPhonePreset {
-            return .mobile
-        }
-        if self == .nativeHost {
-            return UIDevice.current.userInterfaceIdiom == .pad ? .desktop : .mobile
-        }
-        return .desktop
+        return UIDevice.current.userInterfaceIdiom == .pad ? .desktop : .mobile
     }
 
     public var platform: String {
-        if isIPhonePreset {
-            return "iPhone"
-        }
-        if self == .nativeHost {
-            return UIDevice.current.userInterfaceIdiom == .pad ? "MacIntel" : "iPhone"
-        }
-        return "MacIntel"
+        return UIDevice.current.userInterfaceIdiom == .pad ? "MacIntel" : "iPhone"
     }
 
     public var maxTouchPoints: Int {
-        if isMacPreset {
-            return 0
-        }
         return 5
     }
 
@@ -354,65 +346,20 @@ public enum AppleDeviceProfile: String, CaseIterable, Identifiable, Codable {
     }
 
     public var screenWidth: Int {
-        switch self {
-        case .iPadProM4_13, .iPadProM2_12_9, .iPadAirM3_13, .iPadAirM2_13: return 1024
-        case .iPadProM4_11, .iPadProM2_11: return 834
-        case .iPadAirM3_11, .iPadAirM2_11, .iPad11_A16, .iPad10_A14: return 820
-        case .iPad9_A13: return 810
-        case .iPadMini7_A17Pro, .iPadMini6_A15: return 744
-        case .iPhone18ProMax_A20, .iPhone17ProMax_A19, .iPhone16ProMax_A18: return 440
-        case .iPhone17Pro_A19, .iPhone16Pro_A18: return 402
-        case .iPhone17Air_A19, .iPhone16Plus_A18, .iPhone15ProMax_A17, .iPhone14ProMax_A16: return 430
-        case .iPhone17_A19, .iPhone16_A18, .iPhone15Pro_A17, .iPhone15_A16, .iPhone14Pro_A16: return 393
-        case .iPhone16e_A18, .iPhone14_A15, .iPhone13_A15: return 390
-        case .iPhoneSE3_A15: return 375
-        case .macBookProM4Max_16: return 1728
-        case .macBookProM4Pro_14: return 1512
-        case .macBookAirM3_15: return 1710
-        case .macBookAirM3_13: return 1470
-        case .custom: return 1024
-        case .nativeHost:
-            let b = UIScreen.main.bounds
-            return Int(min(b.width, b.height))
-        }
+        let b = UIScreen.main.bounds
+        let w = Int(min(b.width, b.height))
+        return w > 0 ? w : (UIDevice.current.userInterfaceIdiom == .pad ? 820 : 393)
     }
 
     public var screenHeight: Int {
-        switch self {
-        case .iPadProM4_13, .iPadProM2_12_9, .iPadAirM3_13, .iPadAirM2_13: return 1366
-        case .iPadProM4_11: return 1210
-        case .iPadProM2_11: return 1194
-        case .iPadAirM3_11, .iPadAirM2_11, .iPad11_A16, .iPad10_A14: return 1180
-        case .iPad9_A13: return 1080
-        case .iPadMini7_A17Pro, .iPadMini6_A15: return 1133
-        case .iPhone18ProMax_A20, .iPhone17ProMax_A19, .iPhone16ProMax_A18: return 956
-        case .iPhone17Pro_A19, .iPhone16Pro_A18: return 874
-        case .iPhone17Air_A19, .iPhone16Plus_A18, .iPhone15ProMax_A17, .iPhone14ProMax_A16: return 932
-        case .iPhone17_A19, .iPhone16_A18, .iPhone15Pro_A17, .iPhone15_A16, .iPhone14Pro_A16: return 852
-        case .iPhone16e_A18, .iPhone14_A15, .iPhone13_A15: return 844
-        case .iPhoneSE3_A15: return 667
-        case .macBookProM4Max_16: return 1117
-        case .macBookProM4Pro_14: return 982
-        case .macBookAirM3_15: return 1107
-        case .macBookAirM3_13: return 956
-        case .custom: return 1366
-        case .nativeHost:
-            let b = UIScreen.main.bounds
-            return Int(max(b.width, b.height))
-        }
+        let b = UIScreen.main.bounds
+        let h = Int(max(b.width, b.height))
+        return h > 0 ? h : (UIDevice.current.userInterfaceIdiom == .pad ? 1180 : 852)
     }
 
     public var devicePixelRatio: Double {
-        if self == .iPhoneSE3_A15 {
-            return 2.0
-        }
-        if isIPhonePreset {
-            return 3.0
-        }
-        if self == .nativeHost {
-            return Double(UIScreen.main.scale)
-        }
-        return 2.0
+        let s = Double(UIScreen.main.scale)
+        return s > 0 ? s : (UIDevice.current.userInterfaceIdiom == .pad ? 2.0 : 3.0)
     }
 }
 
@@ -568,26 +515,34 @@ public class PrivacyProfile: ObservableObject {
 
     @discardableResult
     public func regenerateRealisticIdentity() -> AppleDeviceProfile {
-        let realisticPool: [AppleDeviceProfile] = [
+        let isPadHost = UIDevice.current.userInterfaceIdiom == .pad
+        let padPool: [AppleDeviceProfile] = [
+            .nativeHost,
             .iPadProM4_13,
             .iPadProM4_11,
+            .iPadAirM3_13,
             .iPadAirM3_11,
             .iPadAirM2_11,
             .iPad11_A16,
             .iPad10_A14,
             .iPadMini7_A17Pro,
+            .iPadMini6_A15
+        ]
+        let phonePool: [AppleDeviceProfile] = [
+            .nativeHost,
             .iPhone18ProMax_A20,
             .iPhone17ProMax_A19,
+            .iPhone17Pro_A19,
+            .iPhone17Air_A19,
+            .iPhone17_A19,
             .iPhone16ProMax_A18,
             .iPhone16Pro_A18,
             .iPhone16_A18,
-            .iPhone15ProMax_A17,
-            .macBookProM4Max_16,
-            .macBookProM4Pro_14,
-            .macBookAirM3_13
+            .iPhone15ProMax_A17
         ]
+        let realisticPool = isPadHost ? padPool : phonePool
         let candidates = realisticPool.filter { $0 != selectedDevice }
-        let chosen = candidates.randomElement() ?? .iPadProM4_11
+        let chosen = candidates.randomElement() ?? .nativeHost
         self.selectedDevice = chosen
         self.sessionSeed = Int.random(in: 100000...999999)
         self.buildIndex = Int.random(in: 0...4)

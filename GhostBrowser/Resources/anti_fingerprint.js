@@ -27,6 +27,7 @@
     if (_rawInjectedCfg.pixelRatio !== undefined && _rawInjectedCfg.devicePixelRatio === undefined) _rawInjectedCfg.devicePixelRatio = _rawInjectedCfg.pixelRatio;
     if (_rawInjectedCfg.gpuVendor !== undefined && _rawInjectedCfg.webglVendor === undefined) _rawInjectedCfg.webglVendor = _rawInjectedCfg.gpuVendor;
     if (_rawInjectedCfg.gpuRenderer !== undefined && _rawInjectedCfg.webglRenderer === undefined) _rawInjectedCfg.webglRenderer = _rawInjectedCfg.gpuRenderer;
+    if (_rawInjectedCfg.timezoneId !== undefined && _rawInjectedCfg.timezone === undefined) _rawInjectedCfg.timezone = _rawInjectedCfg.timezoneId;
 
     const cfg = Object.assign({
         stealthMode: true,
@@ -101,41 +102,76 @@
         _idHash = Math.imul(_idHash, 0x01000193) >>> 0;
     }
     const profileSeed = (_idHash >>> 0) || _rawProfileSeed;
-    const _deterministicBlVid = 'v_' +
-        (fmix32(profileSeed, 701) >>> 0).toString(16).padStart(8, '0') +
-        (fmix32(profileSeed, 702) >>> 0).toString(16).padStart(8, '0') +
-        (fmix32(profileSeed, 703) & 0xff).toString(16).padStart(2, '0');
+    const _seedEpochToken = 'ep_' + (profileSeed >>> 0).toString(36);
     try {
         if (typeof window !== 'undefined') {
-            const hostStr = (window.location && window.location.hostname) ? String(window.location.hostname) : '';
-            const hasBlVidLs = !!(window.localStorage && window.localStorage.getItem('bl_vid'));
-            const hasBlVidCookie = !!(window.document && typeof window.document.cookie === 'string' && /(?:^|;\s*)bl_vid=/.test(window.document.cookie));
-            if (hostStr.includes('flagmeter') || hasBlVidLs || hasBlVidCookie) {
-                try {
-                    if (window.localStorage && window.localStorage.getItem('bl_vid') !== _deterministicBlVid) {
-                        window.localStorage.setItem('bl_vid', _deterministicBlVid);
-                    }
-                } catch (e) {}
-                try {
-                    if (window.document) {
-                        const isHttps = window.location && window.location.protocol === 'https:';
-                        window.document.cookie = `bl_vid=${_deterministicBlVid}; Path=/; Max-Age=31536000; SameSite=Lax${isHttps ? '; Secure' : ''}`;
-                    }
-                } catch (e) {}
-                try {
-                    if (window.indexedDB && typeof window.indexedDB.open === 'function') {
-                        const req = window.indexedDB.open('botlens', 1);
-                        req.onupgradeneeded = function() {
-                            try { req.result.createObjectStore('kv'); } catch (e) {}
-                        };
-                        req.onsuccess = function() {
-                            try {
-                                const db = req.result;
-                                db.transaction('kv', 'readwrite').objectStore('kv').put(_deterministicBlVid, 'vid');
-                            } catch (e) {}
-                        };
-                    }
-                } catch (e) {}
+            let isTopFrameForStorage = false;
+            try { isTopFrameForStorage = (window === window.top); } catch (e) {}
+            const hostForStorage = (window.location && window.location.hostname) ? String(window.location.hostname).toLowerCase() : '';
+            const isAntiBotHost = /(^|\.)(google\.|gstatic\.com|googleapis\.com|youtube\.com|recaptcha\.net|cloudflare\.com|arkoselabs\.com|funcaptcha\.com|hcaptcha\.com)/i.test(hostForStorage);
+            if (isTopFrameForStorage && !isAntiBotHost) {
+                const ls = window.localStorage;
+                const ss = window.sessionStorage;
+                const prevEpoch = (ls && ls.getItem('__ge_ep__')) || (ss && ss.getItem('__ge_ep__')) || null;
+                if (ls) { try { ls.removeItem('__ge_ep__'); } catch (e) {} }
+                if (ss) { try { ss.removeItem('__ge_ep__'); } catch (e) {} }
+
+                if (prevEpoch !== _seedEpochToken) {
+                    // Seed rotated, Panic Wiped, or brand-new profile: synchronously purge any residual cross-profile storage/evercookies
+                    if (ls) { try { ls.clear(); } catch (e) {} }
+                    if (ss) { try { ss.clear(); } catch (e) {} }
+                    try {
+                        if (window.document && typeof window.document.cookie === 'string' && window.document.cookie.length > 0) {
+                            const host = (window.location && window.location.hostname) ? String(window.location.hostname) : '';
+                            const parts = window.document.cookie.split(';');
+                            for (let i = 0; i < parts.length; i++) {
+                                const eqIdx = parts[i].indexOf('=');
+                                const cName = (eqIdx !== -1 ? parts[i].slice(0, eqIdx) : parts[i]).trim();
+                                if (!cName || cName === 'bl_sid' || cName === 'bl_js') continue;
+                                window.document.cookie = `${cName}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+                                if (host) {
+                                    window.document.cookie = `${cName}=; Domain=${host}; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+                                    window.document.cookie = `${cName}=; Domain=.${host}; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                    try {
+                        if (window.indexedDB && typeof window.indexedDB.open === 'function') {
+                            for (const dbName of ['botlens', 'fingerprint_scan']) {
+                                try {
+                                    const req = window.indexedDB.open(dbName, 1);
+                                    req.onupgradeneeded = function() {
+                                        try {
+                                            if (!req.result.objectStoreNames.contains('kv')) req.result.createObjectStore('kv');
+                                        } catch (e) {}
+                                    };
+                                    req.onsuccess = function() {
+                                        try {
+                                            const db = req.result;
+                                            if (db.objectStoreNames.contains('kv')) {
+                                                db.transaction('kv', 'readwrite').objectStore('kv').clear();
+                                            }
+                                        } catch (e) {}
+                                    };
+                                } catch (e) {}
+                            }
+                        }
+                    } catch (e) {}
+                    try {
+                        if (window.caches && typeof window.caches.delete === 'function') {
+                            window.caches.delete('bl_hard_cookie_v1').catch(function(){});
+                        }
+                    } catch (e) {}
+                }
+
+                const persistEpoch = function() {
+                    try { if (window.localStorage) window.localStorage.setItem('__ge_ep__', _seedEpochToken); } catch (e) {}
+                    try { if (window.sessionStorage) window.sessionStorage.setItem('__ge_ep__', _seedEpochToken); } catch (e) {}
+                };
+                window.addEventListener('pagehide', persistEpoch, { capture: true });
+                window.addEventListener('beforeunload', persistEpoch, { capture: true });
+                setTimeout(persistEpoch, 3500);
             }
         }
     } catch (e) {}
@@ -8913,6 +8949,50 @@
                 });
             }
 
+            // Sanitize SDP on RTCPeerConnection.prototype.{localDescription,currentLocalDescription,pendingLocalDescription} & createOffer
+            function sanitizeRtcSdpString(sdpStr) {
+                if (typeof sdpStr !== 'string' || !sdpStr) return sdpStr;
+                const cleanIp = getEffectiveProxyIp() || (cfg && cfg.proxyIp) || '0.0.0.0';
+                let out = sdpStr
+                    .replace(/c=IN IP4 (?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+)/gi, 'c=IN IP4 0.0.0.0')
+                    .replace(/c=IN IP6 (?:fe80:[^\r\n\s]*|fc00:[^\r\n\s]*|fd00:[^\r\n\s]*|::1)/gi, 'c=IN IP6 ::')
+                    .replace(/o=- (\d+ \d+) IN IP4 (?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+)/gi, 'o=- $1 IN IP4 127.0.0.1');
+                out = out.replace(/a=candidate:([^\r\n]*)/gi, function(fullLine, rest) {
+                    if (/(?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|fe80:[0-9a-f:]*|fc00:[0-9a-f:]*|fd00:[0-9a-f:]*)/i.test(rest)) {
+                        if (/typ host/i.test(rest)) {
+                            return 'a=candidate:' + rest.replace(/(?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|fe80:[0-9a-f:%]*|fc00:[0-9a-f:%]*|fd00:[0-9a-f:%]*)/i, mDnsHost);
+                        }
+                        return 'a=candidate:' + rest.replace(/(?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|fe80:[0-9a-f:%]*|fc00:[0-9a-f:%]*|fd00:[0-9a-f:%]*)/i, cleanIp);
+                    }
+                    return fullLine;
+                });
+                return out;
+            }
+
+            ['localDescription', 'currentLocalDescription', 'pendingLocalDescription'].forEach(function(prop) {
+                const desc = Object.getOwnPropertyDescriptor(rtProto, prop);
+                if (desc && typeof desc.get === 'function') {
+                    const origGet = desc.get;
+                    const hookedGet = makeNative(function() {
+                        const raw = invokeNativeWithCleanStack(origGet, this, arguments);
+                        if (!raw || typeof raw.sdp !== 'string') return raw;
+                        const cleanSdp = sanitizeRtcSdpString(raw.sdp);
+                        if (cleanSdp === raw.sdp) return raw;
+                        const DescCtor = win.RTCSessionDescription || window.RTCSessionDescription;
+                        if (typeof DescCtor === 'function') {
+                            try { return new DescCtor({ type: raw.type, sdp: cleanSdp }); } catch (_) {}
+                        }
+                        return { type: raw.type, sdp: cleanSdp, toJSON: function() { return { type: raw.type, sdp: cleanSdp }; } };
+                    }, 'get ' + prop, 0, origGet);
+                    Object.defineProperty(rtProto, prop, {
+                        get: hookedGet,
+                        set: undefined,
+                        enumerable: desc.enumerable,
+                        configurable: true
+                    });
+                }
+            });
+
             const HookedRTCPC = function RTCPeerConnection(rtcConfig, constraints) {
                 // Strip external STUN/TURN servers from the underlying C++ NativeRTCPC
                 // so WebKit libwebrtc never sends raw UDP packets over the iPad's physical interface.
@@ -9833,10 +9913,15 @@
 
                 if (!isAntiBotHost && typeof proto.shaderSource === 'function') {
                     const origShaderSource = proto.shaderSource;
-                    const ulpEps = (((fmix32(profileSeed, 206) % 997) + 1) * 0.0000137).toFixed(7);
+                    const ulpEps = (((fmix32(profileSeed, 206) % 8999) + 1000) * 0.0000973).toFixed(7);
+                    const phaseEpsX = (0.1234567 + (((fmix32(profileSeed, 207) % 8999) + 1000) * 0.0000317)).toFixed(7);
+                    const phaseEpsY = (0.7654321 + (((fmix32(profileSeed, 208) % 8999) + 1000) * 0.0000293)).toFixed(7);
                     const hookedShaderSource = makeNative(function shaderSource(shader, src) {
                         if (typeof src === 'string' && /\bfract\s*\(/.test(src) && !/floor\s*\(\s*y\s*\)/.test(src)) {
-                            const modSrc = src.replace(/\bfract\s*\(/g, `fract(${ulpEps} + `);
+                            const modSrc = src
+                                .replace(/0\.1234567/g, phaseEpsX)
+                                .replace(/0\.7654321/g, phaseEpsY)
+                                .replace(/\bfract\s*\(/g, `fract(${ulpEps} + `);
                             return invokeNativeWithCleanStack(origShaderSource, this, [shader, modSrc]);
                         }
                         return invokeNativeWithCleanStack(origShaderSource, this, arguments);
@@ -10820,7 +10905,7 @@
             _hookedProtos.add(screenProto);
             const w = cfg.screenWidth || 1024;
             const h = cfg.screenHeight || 1366;
-            const toolbarOffset = (profileSeed % 3) * 20 + 24;
+            const toolbarOffset = (_isWinPersona || _isMacPersona) ? ((profileSeed % 2) * 8 + 40) : 0;
 
             function installScreenGetter(prop, value) {
                 const origDesc = Object.getOwnPropertyDescriptor(screenProto, prop);
@@ -11027,6 +11112,11 @@
                 const getter = makeNative(function() {
                     let rawVal = 0;
                     try { rawVal = invokeNativeWithCleanStack(origGet, this, arguments); } catch (e) {}
+                    try {
+                        if (win !== win.top && typeof rawVal === 'number' && Number.isFinite(rawVal) && rawVal > 0 && rawVal <= maxAllowed) {
+                            return rawVal;
+                        }
+                    } catch (e) {}
                     if (typeof rawVal !== 'number' || !Number.isFinite(rawVal) || rawVal <= 240 || rawVal > maxAllowed) {
                         return fallbackDim;
                     }
@@ -11052,12 +11142,19 @@
                     let rawVal = 0;
                     try { rawVal = invokeNativeWithCleanStack(origGet, this, arguments); } catch (e) {}
                     try {
+                        if (win !== win.top && win.top) {
+                            const topVal = Number(win.top[prop]);
+                            if (Number.isFinite(topVal) && topVal > 0) return topVal;
+                        }
+                    } catch (e) {}
+                    try {
                         const innerProp = isHeight ? 'innerHeight' : 'innerWidth';
                         let rawInner = 0;
                         try { rawInner = Number((this && this[innerProp]) || (win && win[innerProp]) || 0); } catch (e) {}
                         const inner = (Number.isFinite(rawInner) && rawInner > 240 && rawInner <= maxOuterAllowed) ? rawInner : fallbackDim;
-                        if (typeof rawVal !== 'number' || !Number.isFinite(rawVal) || rawVal <= 240 || rawVal < inner || (isHeight && chromeExtraH > 0 && rawVal === inner) || rawVal > maxOuterAllowed) {
-                            return isHeight ? Math.min(maxScreenH, inner + chromeExtraH) : inner;
+                        const minAllowed = isHeight ? Math.min(maxScreenH, inner + chromeExtraH) : inner;
+                        if (typeof rawVal !== 'number' || !Number.isFinite(rawVal) || rawVal <= 240 || rawVal < minAllowed || rawVal > maxOuterAllowed) {
+                            return minAllowed;
                         }
                     } catch (e) {
                         return isHeight ? Math.min(maxScreenH, fallbackDim + chromeExtraH) : fallbackDim;
@@ -11132,7 +11229,7 @@
                 }
             }
 
-            // Harmonize Element.prototype.clientWidth / clientHeight on documentElement / body so clientWidth <= innerWidth across all presets
+            // Harmonize Element.prototype.clientWidth on documentElement in top-level frames so clientWidth <= innerWidth across all presets
             if (win.Element && win.Element.prototype && !_hookedProtos.has(win.Element.prototype)) {
                 const elProto = win.Element.prototype;
                 _hookedProtos.add(elProto);
@@ -11146,8 +11243,8 @@
                                 try { rawC = invokeNativeWithCleanStack(origCGet, this, arguments); } catch (e) {}
                                 try {
                                     const doc = win.document;
-                                    if (doc && (this === doc.documentElement || this === doc.body)) {
-                                        const innerBound = isH ? (Number(win.innerHeight) || maxAvailH) : (Number(win.innerWidth) || maxScreenW);
+                                    if (!isH && doc && this === doc.documentElement && win === win.top) {
+                                        const innerBound = Number(win.innerWidth) || maxScreenW;
                                         if (typeof rawC !== 'number' || rawC <= 0 || rawC > innerBound) {
                                             return innerBound;
                                         }
@@ -12012,6 +12109,48 @@
     function ensureStandardBrowserApis(win) {
         if (!win) return;
         try {
+            if (!win.StorageManager) {
+                const StorageManagerCtor = makeNative(function StorageManager() {
+                    throw scrubHookStack(new win.TypeError('Illegal constructor'));
+                }, 'StorageManager', 0);
+                if (typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+                    Object.defineProperty(StorageManagerCtor.prototype, Symbol.toStringTag, {
+                        value: 'StorageManager',
+                        writable: false,
+                        enumerable: false,
+                        configurable: true
+                    });
+                }
+                Object.defineProperty(StorageManagerCtor.prototype, 'persist', {
+                    value: makeNative(function persist() { return Promise.resolve(false); }, 'persist', 0),
+                    writable: true, enumerable: true, configurable: true
+                });
+                Object.defineProperty(StorageManagerCtor.prototype, 'persisted', {
+                    value: makeNative(function persisted() { return Promise.resolve(false); }, 'persisted', 0),
+                    writable: true, enumerable: true, configurable: true
+                });
+                Object.defineProperty(win, 'StorageManager', {
+                    value: StorageManagerCtor,
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                });
+            }
+            if (win.Navigator && win.Navigator.prototype && !(win.navigator && win.navigator.storage)) {
+                const smInst = Object.create(win.StorageManager.prototype);
+                const storageGetter = makeNative(function() {
+                    if (this !== win.navigator && !(this instanceof win.Navigator)) {
+                        throw scrubHookStack(new win.TypeError('Illegal invocation'));
+                    }
+                    return smInst;
+                }, 'get storage', 0);
+                Object.defineProperty(win.Navigator.prototype, 'storage', {
+                    get: storageGetter,
+                    set: undefined,
+                    enumerable: true,
+                    configurable: true
+                });
+            }
             const estimateFn = makeNative(function estimate() {
                 if (win.StorageManager && (!(this instanceof win.StorageManager) || Object.getPrototypeOf(this) === win.StorageManager.prototype && this !== (win.navigator && win.navigator.storage))) {
                     return Promise.reject(scrubHookStack(new win.TypeError('Illegal invocation')));
@@ -13731,7 +13870,7 @@
                     }
                 } catch (e) {}
 
-                const harmonizeWorkerPayloadObj = (obj, depth) => {
+                const harmonizeWorkerPayloadObj = (obj, depth, isMessagePortTarget) => {
                     if (!obj || typeof obj !== 'object') return obj;
                     const d = depth || 0;
                     if (d > 6) return obj;
@@ -13771,7 +13910,7 @@
                                     try { obj[i] = (new Date()).toString(); } catch (e) {}
                                 }
                             } else if (el && typeof el === 'object') {
-                                harmonizeWorkerPayloadObj(el, d + 1);
+                                harmonizeWorkerPayloadObj(el, d + 1, isMessagePortTarget);
                             }
                         }
                         return obj;
@@ -13803,10 +13942,10 @@
                     const mainDm = (typeof navigator !== 'undefined') ? navigator.deviceMemory : undefined;
                     if ('cores' in obj && (typeof obj.cores === 'number' || obj.cores == null)) obj.cores = effHc;
                     if ('hardwareConcurrency' in obj && (typeof obj.hardwareConcurrency === 'number' || obj.hardwareConcurrency == null)) obj.hardwareConcurrency = effHc;
-                    if ('hc' in obj && (typeof obj.hc === 'number' || obj.hc == null)) obj.hc = effHc;
+                    if (!isMessagePortTarget && 'hc' in obj && (typeof obj.hc === 'number' || obj.hc == null)) obj.hc = effHc;
                     if ('hwc' in obj && (typeof obj.hwc === 'number' || obj.hwc == null)) obj.hwc = effHc;
                     if ('deviceMemory' in obj && (typeof obj.deviceMemory === 'number' || obj.deviceMemory == null)) obj.deviceMemory = mainDm;
-                    if ('dm' in obj && (typeof obj.dm === 'number' || obj.dm == null)) obj.dm = mainDm;
+                    if (!isMessagePortTarget && 'dm' in obj && (typeof obj.dm === 'number' || obj.dm == null)) obj.dm = mainDm;
                     if (effTz) {
                         if ('tz' in obj && typeof obj.tz === 'string') obj.tz = effTz;
                         if ('timeZone' in obj && typeof obj.timeZone === 'string') obj.timeZone = effTz;
@@ -13824,16 +13963,16 @@
                                          ('uaFullVersion' in obj && 'platformVersion' in obj));
                     if (isUaDataNode && !/^(Win32|Win64|MacIntel|iPhone|iPad|iPod|Linux )/i.test(String(obj.platform || ''))) {
                         if ('platform' in obj && typeof obj.platform === 'string') obj.platform = chPlat;
-                        if ('brands' in obj && Array.isArray(obj.brands)) harmonizeWorkerPayloadObj(obj.brands, d + 1);
-                        if ('fullVersionList' in obj && Array.isArray(obj.fullVersionList)) harmonizeWorkerPayloadObj(obj.fullVersionList, d + 1);
+                        if ('brands' in obj && Array.isArray(obj.brands)) harmonizeWorkerPayloadObj(obj.brands, d + 1, isMessagePortTarget);
+                        if ('fullVersionList' in obj && Array.isArray(obj.fullVersionList)) harmonizeWorkerPayloadObj(obj.fullVersionList, d + 1, isMessagePortTarget);
                     } else {
                         if ('platform' in obj && typeof obj.platform === 'string') obj.platform = effPlat;
                     }
                     if ('plat' in obj && typeof obj.plat === 'string') obj.plat = effPlat;
                     if ('navPlat' in obj && typeof obj.navPlat === 'string') obj.navPlat = effPlat;
-                    if ('pl' in obj && typeof obj.pl === 'string') obj.pl = effPlat;
-                    if ('wp' in obj && typeof obj.wp === 'string') obj.wp = effPlat;
-                    if ('wh' in obj && (typeof obj.wh === 'number' || obj.wh == null)) obj.wh = effHc;
+                    if (!isMessagePortTarget && 'pl' in obj && typeof obj.pl === 'string') obj.pl = effPlat;
+                    if (!isMessagePortTarget && 'wp' in obj && typeof obj.wp === 'string') obj.wp = effPlat;
+                    if (!isMessagePortTarget && 'wh' in obj && (typeof obj.wh === 'number' || obj.wh == null)) obj.wh = effHc;
                     if ('effectiveType' in obj && (obj.effectiveType === '3g' || obj.effectiveType === '2g' || obj.effectiveType === 'slow-2g')) {
                         obj.effectiveType = '4g';
                         if ('rtt' in obj) obj.rtt = 50;
@@ -13841,7 +13980,7 @@
                     }
                     if (typeof navigator !== 'undefined') {
                         if (navigator.userAgent) {
-                            if ('ua' in obj && typeof obj.ua === 'string') obj.ua = navigator.userAgent;
+                            if (!isMessagePortTarget && 'ua' in obj && typeof obj.ua === 'string') obj.ua = navigator.userAgent;
                             if ('userAgent' in obj && typeof obj.userAgent === 'string') obj.userAgent = navigator.userAgent;
                             if ('navigatorUa' in obj && typeof obj.navigatorUa === 'string') obj.navigatorUa = navigator.userAgent;
                         }
@@ -13860,14 +13999,26 @@
                                 if (typeof obj.uaBrands === 'string') {
                                     obj.uaBrands = navigator.userAgentData.brands.map(b => b.brand + ' ' + b.version).join(', ');
                                 } else if (Array.isArray(obj.uaBrands)) {
-                                    harmonizeWorkerPayloadObj(obj.uaBrands, d + 1);
+                                    harmonizeWorkerPayloadObj(obj.uaBrands, d + 1, isMessagePortTarget);
                                 }
                             }
                         }
                     }
                     if ('webdriver' in obj) obj.webdriver = false;
-                    if ('renderer' in obj && typeof obj.renderer === 'string') obj.renderer = targetRenderer;
-                    if ('vendor' in obj && typeof obj.vendor === 'string') obj.vendor = targetVendor;
+                    const isWebGpuAdapterNode = !('renderer' in obj) && !('bitness' in obj) && !('brands' in obj) && !('platformVersion' in obj) && ('device' in obj || ('vendor' in obj && 'architecture' in obj));
+                    if (isWebGpuAdapterNode) {
+                        const wGpuVendor = cfg.webgpuVendor || (_isWinPersona ? (targetRenderer.includes('AMD') ? 'amd' : (targetRenderer.includes('Intel') ? 'intel' : 'nvidia')) : 'apple');
+                        const wGpuArch = cfg.webgpuArchitecture || (_isWinPersona ? (wGpuVendor === 'amd' ? 'rdna-3' : (wGpuVendor === 'intel' ? 'xe-lpg' : 'ada-lovelace')) : 'metal-3');
+                        const wGpuDev = cfg.webgpuDevice || (_isWinPersona ? (targetRenderer || 'NVIDIA GeForce RTX 4090') : 'Apple GPU');
+                        const wGpuDesc = cfg.webgpuDescription || wGpuDev;
+                        if ('vendor' in obj && typeof obj.vendor === 'string') obj.vendor = wGpuVendor;
+                        if ('architecture' in obj && typeof obj.architecture === 'string') obj.architecture = wGpuArch;
+                        if ('device' in obj && typeof obj.device === 'string') obj.device = wGpuDev;
+                        if ('description' in obj && typeof obj.description === 'string') obj.description = wGpuDesc;
+                    } else {
+                        if ('renderer' in obj && typeof obj.renderer === 'string') obj.renderer = targetRenderer;
+                        if ('vendor' in obj && typeof obj.vendor === 'string') obj.vendor = targetVendor;
+                    }
                     if ('unmaskedRenderer' in obj && typeof obj.unmaskedRenderer === 'string') obj.unmaskedRenderer = targetRenderer;
                     if ('unmaskedVendor' in obj && typeof obj.unmaskedVendor === 'string') obj.unmaskedVendor = targetVendor;
                     if ('unmasked_renderer' in obj && typeof obj.unmasked_renderer === 'string') obj.unmasked_renderer = targetRenderer;
@@ -13895,7 +14046,7 @@
                                 try { obj[k] = (new Date()).toString(); } catch (e) {}
                             }
                         } else if (sub && typeof sub === 'object') {
-                            harmonizeWorkerPayloadObj(sub, d + 1);
+                            harmonizeWorkerPayloadObj(sub, d + 1, isMessagePortTarget);
                         }
                     }
                     return obj;
@@ -13905,17 +14056,18 @@
                         const raw = invokeNativeWithCleanStack(origDataGet, this, arguments);
                         try {
                             const tgt = this.target || this.currentTarget;
+                            const isMessagePortTarget = (typeof MessagePort !== 'undefined' && tgt instanceof MessagePort);
                             const isWorkerOrFrameMsg = (typeof Worker !== 'undefined' && tgt instanceof Worker) ||
-                                                       (typeof MessagePort !== 'undefined' && tgt instanceof MessagePort) ||
+                                                       isMessagePortTarget ||
                                                        (typeof ServiceWorkerContainer !== 'undefined' && tgt instanceof ServiceWorkerContainer) ||
                                                        (tgt === window);
                             if (isWorkerOrFrameMsg) {
                                 if (raw && typeof raw === 'object') {
-                                    harmonizeWorkerPayloadObj(raw, 0);
+                                    harmonizeWorkerPayloadObj(raw, 0, isMessagePortTarget);
                                 } else if (typeof raw === 'string' && ((raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']')))) {
                                     const parsed = JSON.parse(raw);
                                     if (parsed && typeof parsed === 'object') {
-                                        harmonizeWorkerPayloadObj(parsed, 0);
+                                        harmonizeWorkerPayloadObj(parsed, 0, isMessagePortTarget);
                                         return JSON.stringify(parsed);
                                     }
                                 }
