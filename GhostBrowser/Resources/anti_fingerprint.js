@@ -95,7 +95,7 @@
     }
 
     const _rawProfileSeed = Number(cfg.sessionSeed) || 123456;
-    const _idComposite = `${_rawProfileSeed}|${cfg.profileId || ''}|${cfg.visitorId || ''}|${cfg.userAgent || ''}|${cfg.platform || ''}|${cfg.screenWidth || ''}x${cfg.screenHeight || ''}|${cfg.webglRenderer || ''}|${cfg.timezone || ''}|${cfg.proxyIp || ''}|ge_v5`;
+    const _idComposite = `${_rawProfileSeed}|${cfg.profileId || ''}|${cfg.visitorId || ''}|${cfg.userAgent || ''}|${cfg.platform || ''}|${cfg.screenWidth || ''}x${cfg.screenHeight || ''}|${cfg.webglRenderer || ''}|ge_v6`;
     let _idHash = 0x811c9dc5;
     for (let i = 0; i < _idComposite.length; i++) {
         _idHash ^= _idComposite.charCodeAt(i);
@@ -103,6 +103,13 @@
     }
     const profileSeed = (_idHash >>> 0) || _rawProfileSeed;
     const _seedEpochToken = 'ep_' + (profileSeed >>> 0).toString(36);
+    const _legacyCompositeV5 = `${_rawProfileSeed}|${cfg.profileId || ''}|${cfg.visitorId || ''}|${cfg.userAgent || ''}|${cfg.platform || ''}|${cfg.screenWidth || ''}x${cfg.screenHeight || ''}|${cfg.webglRenderer || ''}|${cfg.timezone || ''}|${cfg.proxyIp || ''}|ge_v5`;
+    let _legacyHashV5 = 0x811c9dc5;
+    for (let i = 0; i < _legacyCompositeV5.length; i++) {
+        _legacyHashV5 ^= _legacyCompositeV5.charCodeAt(i);
+        _legacyHashV5 = Math.imul(_legacyHashV5, 0x01000193) >>> 0;
+    }
+    const _legacyEpochTokenV5 = 'ep_' + ((_legacyHashV5 >>> 0) || _rawProfileSeed).toString(36);
     try {
         if (typeof window !== 'undefined') {
             let isTopFrameForStorage = false;
@@ -113,13 +120,17 @@
                 const ls = window.localStorage;
                 const ss = window.sessionStorage;
                 const prevEpoch = (ls && ls.getItem('__ge_ep__')) || (ss && ss.getItem('__ge_ep__')) || null;
-                if (ls) { try { ls.removeItem('__ge_ep__'); } catch (e) {} }
-                if (ss) { try { ss.removeItem('__ge_ep__'); } catch (e) {} }
+                const isSameEpoch = (prevEpoch === _seedEpochToken) || (prevEpoch === _legacyEpochTokenV5);
 
-                if (prevEpoch !== _seedEpochToken) {
-                    // Seed rotated, Panic Wiped, or brand-new profile: synchronously purge any residual cross-profile storage/evercookies
+                if (prevEpoch !== null && !isSameEpoch) {
+                    // Seed rotated or Panic Wiped on an existing profile: synchronously purge any residual cross-profile storage/evercookies
                     if (ls) { try { ls.clear(); } catch (e) {} }
                     if (ss) { try { ss.clear(); } catch (e) {} }
+                    try {
+                        if (typeof window.name === 'string' && window.name.indexOf('bl_wn_vid=') !== -1) {
+                            window.name = window.name.replace(/(?:^|[;&])bl_wn_vid=v_[0-9a-f]+/g, '').replace(/^[;&]+|[;&]+$/g, '');
+                        }
+                    } catch (e) {}
                     try {
                         if (window.document && typeof window.document.cookie === 'string' && window.document.cookie.length > 0) {
                             const host = (window.location && window.location.hostname) ? String(window.location.hostname) : '';
@@ -169,9 +180,9 @@
                     try { if (window.localStorage) window.localStorage.setItem('__ge_ep__', _seedEpochToken); } catch (e) {}
                     try { if (window.sessionStorage) window.sessionStorage.setItem('__ge_ep__', _seedEpochToken); } catch (e) {}
                 };
+                persistEpoch();
                 window.addEventListener('pagehide', persistEpoch, { capture: true });
                 window.addEventListener('beforeunload', persistEpoch, { capture: true });
-                setTimeout(persistEpoch, 3500);
             }
         }
     } catch (e) {}
