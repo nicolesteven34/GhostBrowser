@@ -8767,7 +8767,7 @@
 
             function buildSyntheticCandidateEvent(candStr, ufrag, extraProps) {
                 if (!candStr) {
-                    const nullEv = new Event('icecandidate');
+                    const nullEv = typeof Event === 'function' ? new Event('icecandidate') : { type: 'icecandidate', stopImmediatePropagation() {} };
                     Object.defineProperty(nullEv, 'candidate', { value: null, enumerable: true });
                     Object.defineProperty(nullEv, 'url', { value: '', enumerable: true });
                     _syntheticIceEvents.add(nullEv);
@@ -8810,7 +8810,7 @@
                         Object.defineProperty(candObj, 'url', { value: candUrl, enumerable: true, configurable: true });
                     } catch (e) {}
                 }
-                const ev = new Event('icecandidate');
+                const ev = typeof Event === 'function' ? new Event('icecandidate') : { type: 'icecandidate', stopImmediatePropagation() {} };
                 Object.defineProperty(ev, 'candidate', { value: candObj, enumerable: true });
                 Object.defineProperty(ev, 'url', { value: candUrl, enumerable: true });
                 _syntheticIceEvents.add(ev);
@@ -8826,6 +8826,7 @@
             const origProtoIceConnDesc = Object.getOwnPropertyDescriptor(rtProto, 'iceConnectionState');
             const origProtoConnDesc = Object.getOwnPropertyDescriptor(rtProto, 'connectionState');
             const origProtoOnIceDesc = Object.getOwnPropertyDescriptor(rtProto, 'onicecandidate');
+            const origProtoOnIceGatherDesc = Object.getOwnPropertyDescriptor(rtProto, 'onicegatheringstatechange');
             const origProtoCreateDC = rtProto.createDataChannel;
             const origProtoSetRemoteDesc = rtProto.setRemoteDescription;
             const origProtoSetLocalDesc = rtProto.setLocalDescription;
@@ -8907,6 +8908,30 @@
                         } : null);
                     }, 'set onicecandidate', 1),
                     enumerable: origProtoOnIceDesc.enumerable, configurable: true
+                });
+            }
+            if (origProtoOnIceGatherDesc && origProtoOnIceGatherDesc.get && origProtoOnIceGatherDesc.set) {
+                Object.defineProperty(rtProto, 'onicegatheringstatechange', {
+                    get: makeNative(function() {
+                        const st = _rtcPcStateMap.get(this);
+                        if (st) return st.userOnIceGatheringStateChange;
+                        return invokeNativeWithCleanStack(origProtoOnIceGatherDesc.get, this, arguments);
+                    }, 'get onicegatheringstatechange', 0),
+                    set: makeNative(function(fn) {
+                        const st = _rtcPcStateMap.get(this);
+                        if (!st) return invokeNativeWithCleanStack(origProtoOnIceGatherDesc.set, this, arguments);
+                        st.userOnIceGatheringStateChange = typeof fn === 'function' ? fn : null;
+                        origProtoOnIceGatherDesc.set.call(this, st.userOnIceGatheringStateChange ? function(ev) {
+                            if (!st.gatheringComplete) {
+                                st.emitSyntheticCandidatesIfNeeded();
+                                return;
+                            }
+                            if (st.dispatchedToOnIceGather.has(ev)) return;
+                            st.dispatchedToOnIceGather.add(ev);
+                            return st.userOnIceGatheringStateChange.call(this, ev);
+                        } : null);
+                    }, 'set onicegatheringstatechange', 1),
+                    enumerable: origProtoOnIceGatherDesc.enumerable, configurable: true
                 });
             }
             if (typeof origProtoCreateDC === 'function') {
@@ -9072,7 +9097,9 @@
                     simulatedIceState: null,
                     simulatedConnState: null,
                     userOnIceCandidate: null,
+                    userOnIceGatheringStateChange: null,
                     dispatchedToOnIce: new WeakSet(),
+                    dispatchedToOnIceGather: new WeakSet(),
                     emitSyntheticCandidatesIfNeeded: null,
                     createDataChannelImpl: null,
                     setRemoteDescImpl: null,
@@ -9087,6 +9114,15 @@
                     if (st.userOnIceCandidate && !st.dispatchedToOnIce.has(ev)) {
                         st.dispatchedToOnIce.add(ev);
                         try { st.userOnIceCandidate.call(pc, ev); } catch (e) {}
+                    }
+                }
+
+                function dispatchIceGatheringComplete() {
+                    const gatherEv = typeof Event === 'function' ? new Event('icegatheringstatechange') : { type: 'icegatheringstatechange', stopImmediatePropagation() {} };
+                    try { pc.dispatchEvent(gatherEv); } catch (e) {}
+                    if (st.userOnIceGatheringStateChange && !st.dispatchedToOnIceGather.has(gatherEv)) {
+                        st.dispatchedToOnIceGather.add(gatherEv);
+                        try { st.userOnIceGatheringStateChange.call(pc, gatherEv); } catch (e) {}
                     }
                 }
 
@@ -9151,14 +9187,14 @@
                                 st.simulatedIceState = 'connected';
                                 st.simulatedConnState = 'connected';
                                 dispatchIceCandidateToAll(buildSyntheticCandidateEvent(null, ufrag));
-                                try { pc.dispatchEvent(new Event('icegatheringstatechange')); } catch (e) {}
+                                dispatchIceGatheringComplete();
                                 try { pc.dispatchEvent(new Event('iceconnectionstatechange')); } catch (e) {}
                                 try { pc.dispatchEvent(new Event('connectionstatechange')); } catch (e) {}
                                 rtpTimer = setInterval(() => {
                                     rtpPacketsSent += 50;
                                     rtpBytesSent += 8600;
                                 }, 100);
-                            }, 95);
+                            }, 55);
                         }, 42);
                     } else if (proxyIp) {
                         const hostCand = `candidate:1428591234 1 udp 2122260223 ${mDnsHost} ${hostPort} typ host generation 0`;
@@ -9195,12 +9231,12 @@
                                     relatedPort: port
                                 }));
                             }
+                            setTimeout(() => {
+                                st.gatheringComplete = true;
+                                dispatchIceCandidateToAll(buildSyntheticCandidateEvent(null, ufrag));
+                                dispatchIceGatheringComplete();
+                            }, 50);
                         }, 42);
-                        setTimeout(() => {
-                            st.gatheringComplete = true;
-                            dispatchIceCandidateToAll(buildSyntheticCandidateEvent(null, ufrag));
-                            try { pc.dispatchEvent(new Event('icegatheringstatechange')); } catch (e) {}
-                        }, 95);
                     }
                 }
                 st.emitSyntheticCandidatesIfNeeded = emitSyntheticCandidatesIfNeeded;
